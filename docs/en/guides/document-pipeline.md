@@ -133,12 +133,11 @@ the document is split again into different segments.
 
 ## Request previews
 
-Pipeline configuration shows the structure of the prompts. The segment’s
-**Preview** tab builds the selected stage’s request for the current text.
-Besides the stages, the selector offers **Audit** and **Coherence**: they show
-the message each would receive with the segment’s current translation
-(coherence also with the neighbouring segments). On a segment without a
-translation both entries are disabled, with the reason next to the name.
+The **Prompt preview** in pipeline options has two modes. **Structure** shows
+the pieces of each request with placeholders where data goes. **Open chunk**
+fills them with the chunk open in the Studio: text, neighbouring chunks,
+checked memory phrases, previous translation. Audit and Coherence use the
+chunk’s current translation and say so when there is none.
 This action does not call a model or generate a translation.
 
 ## Export

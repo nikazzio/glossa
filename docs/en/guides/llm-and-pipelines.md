@@ -29,7 +29,8 @@ context, terminology, examples and references must be included in the request.
 | Coherence | Translations and neighbouring translated segments | Findings about consistency across segments |
 
 Format uses a separate prompt. It does not receive the Translation context,
-glossary or source context. Its instructions limit it to formatting repairs,
+glossary, memory phrases or source context. The glossary appears once, in the
+rules at the start of the translation and Refine instructions. Its instructions limit it to formatting repairs,
 but the output still requires review.
 
 In DeepL Hybrid mode, the initial stage uses the DeepL API and its language,

@@ -97,7 +97,6 @@ describe('TranslationStudio', () => {
     expect(tabs.map((label) => label?.split(' — ')[0])).toEqual([
       'document.insightsTabGlossary',
       'document.insightsTabMemory',
-      'document.insightsTabPromptPreview',
       'document.insightsTabReview',
       'document.insightsTabDocument',
     ]);

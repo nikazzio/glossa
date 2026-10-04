@@ -1,12 +1,11 @@
 import { useEffect, type ReactNode } from 'react';
-import { BookText, Brain, Eye, FileStack, ShieldCheck, Wrench } from 'lucide-react';
+import { BookText, Brain, FileStack, ShieldCheck, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUiStore, type TranslationStudioTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { InspectorShell, type InspectorTab } from '../ui';
 import { ChunkCostPanel, PipelineSidebarRunSection } from '../layout/PipelineSidebarSections';
-import { ChunkPromptPreviewTab } from '../document/tabs/ChunkPromptPreviewTab';
 import { GlossaryTab } from '../document/tabs/GlossaryTab';
 import { DocumentGroupTab, type DocumentView } from './DocumentGroupTab';
 import { MemoryGroupTab, type MemoryView } from './MemoryGroupTab';
@@ -18,19 +17,19 @@ import { openAuditIssueCount, ReviewTab, type ReviewView } from './ReviewTab';
  * `studioTab`, così chi apre le note da un altro punto le trova al loro posto.
  * La ricerca nel documento sta nella fila sopra i fogli.
  */
-type ColumnTab = 'glossary' | 'phraseMemory' | 'promptPreview' | 'review' | 'document';
+type ColumnTab = 'glossary' | 'phraseMemory' | 'review' | 'document';
 
 /**
  * Ordine: il Glossario per primo, da solo, perché si consulta di continuo
  * durante il controllo; poi il lavoro sul frammento nell'ordine in cui si fa
- * (memoria, richiesta al modello, revisione); in coda il documento intero.
+ * (memoria, revisione); in coda il documento intero. La richiesta al modello
+ * si guarda nell'Anteprima prompt delle opzioni, in modo «Frammento aperto».
  */
-const TAB_ORDER: ColumnTab[] = ['glossary', 'phraseMemory', 'promptPreview', 'review', 'document'];
+const TAB_ORDER: ColumnTab[] = ['glossary', 'phraseMemory', 'review', 'document'];
 
 const TAB_ICON: Record<ColumnTab, ReactNode> = {
   glossary: <BookText size={16} />,
   phraseMemory: <Brain size={16} />,
-  promptPreview: <Eye size={16} />,
   review: <ShieldCheck size={16} />,
   document: <FileStack size={16} />,
 };
@@ -38,7 +37,6 @@ const TAB_ICON: Record<ColumnTab, ReactNode> = {
 const TAB_LABEL_KEY: Record<ColumnTab, string> = {
   glossary: 'document.insightsTabGlossary',
   phraseMemory: 'document.insightsTabMemory',
-  promptPreview: 'document.insightsTabPromptPreview',
   review: 'document.insightsTabReview',
   document: 'document.insightsTabDocument',
 };
@@ -148,8 +146,6 @@ export function TranslationInspector({
         return (
           <MemoryGroupTab {...tabProps('phraseMemory')} view={memoryView} onViewChange={setStudioTab} currentChunk={currentChunk} />
         );
-      case 'promptPreview':
-        return <ChunkPromptPreviewTab {...tabProps('promptPreview')} currentChunk={currentChunk} />;
       case 'review':
         return (
           <ReviewTab
@@ -199,8 +195,8 @@ export function TranslationInspector({
       onTabChange={(id) => openTab(id as ColumnTab)}
       actions={<span className="font-display text-sm italic text-editorial-ink">{t(TAB_LABEL_KEY[shownTab])}</span>}
       ownsPanelSemantics={false}
-      // Solo l'Anteprima scorre nella colonna; le altre portano il loro elenco.
-      bodyScrolls={shownTab === 'promptPreview'}
+      // Ogni linguetta porta il suo elenco che scorre.
+      bodyScrolls={false}
       panelIcon={<Wrench size={15} />}
       panelLabel={t('transcription.inspectorPanelTitle')}
       collapsed={collapsed}

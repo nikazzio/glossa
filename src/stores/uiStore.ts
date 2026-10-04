@@ -12,7 +12,7 @@ import type { CatalogView } from '../components/ui/CatalogViewSwitch';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
-export type ChunkRailTab = 'audit' | 'notes' | 'sourceNotes' | 'history' | 'memory' | 'references' | 'promptPreview';
+export type ChunkRailTab = 'audit' | 'notes' | 'sourceNotes' | 'history' | 'memory' | 'references';
 /** Le linguette della colonna destra dello Studio di traduzione: quelle del frammento e quelle del documento. */
 export type TranslationStudioTab = ChunkRailTab | InsightsDrawerTab;
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';

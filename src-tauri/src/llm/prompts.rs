@@ -1,3 +1,4 @@
+use crate::llm::composition::{ComposedPrompt, Parts};
 use crate::llm::types::{
     CoherenceChunkInput, FewShotExample, ImageAttachment, PipelineConfig, PromptBlock,
     ProviderRuntimeConfig, StageConfig, StructuredPrompt,
@@ -100,6 +101,16 @@ pub(crate) fn build_ocr_prompt(resolved_prompt: &str, image: ImageAttachment) ->
     }
 }
 
+#[cfg(test)]
+pub(crate) fn format_glossary_table_for_tests(glossary: &[crate::llm::types::GlossaryEntry]) -> String {
+    format_glossary_table(glossary)
+}
+
+#[cfg(test)]
+pub(crate) fn format_few_shot_block_for_tests(examples: &[FewShotExample]) -> String {
+    format_few_shot_block(examples)
+}
+
 fn work_brief(config: &PipelineConfig) -> Option<&str> {
     config
         .work_brief
@@ -110,7 +121,7 @@ fn work_brief(config: &PipelineConfig) -> Option<&str> {
 
 fn work_brief_block(config: &PipelineConfig) -> String {
     work_brief(config)
-        .map(|brief| format!("\n\nWork brief:\n{brief}"))
+        .map(|brief| format!("\n\nTranslation context:\n{brief}"))
         .unwrap_or_default()
 }
 
@@ -121,8 +132,21 @@ pub(crate) fn build_stage_prompts(
     previous_result: Option<&str>,
     audit_context: Option<&str>,
 ) -> StructuredPrompt {
+    compose_stage_prompts(text, stage, config, previous_result, audit_context).into_structured()
+}
+
+/// Translation and refine: [static: role, context, rules, glossary, markdown,
+/// examples] → [neighbouring chunks] → [stage instructions]. The order never
+/// changes: it is the cacheable prefix every provider relies on.
+pub(crate) fn compose_stage_prompts(
+    text: &str,
+    stage: &StageConfig,
+    config: &PipelineConfig,
+    previous_result: Option<&str>,
+    audit_context: Option<&str>,
+) -> ComposedPrompt {
     if stage.role.as_deref() == Some("format") {
-        return build_format_stage_prompts(text, stage);
+        return compose_format_stage_prompts(text, stage);
     }
 
     let glossary_table = format_glossary_table(&config.glossary);
@@ -151,65 +175,60 @@ pub(crate) fn build_stage_prompts(
         )
     };
 
-    let opener = "You are an expert translator and linguist. Follow the work brief and the instructions for the current stage.";
+    let mut system = vec![Parts::default()
+        .push(
+            "role",
+            "You are an expert translator and linguist. Follow the translation context and the instructions for the current stage.",
+        )
+        .push("translation-context", work_brief_block(config))
+        .push(
+            "structural-rules",
+            "\n\nStructural Preservation Rules:\n\
+             - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
+             - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n",
+        )
+        .push("glossary-rules", glossary_rules)
+        .push("markdown-rules", markdown_rules)
+        .push("examples", format_few_shot_block(&config.few_shot_examples))
+        .block(true)];
 
-    let few_shot_block = format_few_shot_block(&config.few_shot_examples);
-    let work_context = work_brief_block(config);
-
-    // Block 1 (cacheable): static project-level context — role, work brief, constraints, glossary,
-    // few-shot examples. Identical for every chunk in the run, so caches across the whole
-    // document. Few-shot examples are folded into this same block (not a separate one) so
-    // they consume no extra Anthropic cache breakpoint.
-    let static_block = format!(
-        "{opener}{work_context}\n\n\
-         Structural Preservation Rules:\n\
-         - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
-         - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
-         {glossary_rules}{markdown_rules}{few_shot_block}",
-    );
-
-    let mut system = vec![PromptBlock {
-        text: static_block,
-        cacheable: true,
-    }];
-
-    // Blob context (cacheable) comes BEFORE stage instructions so all stable content
+    // Neighbouring chunks (cacheable) come BEFORE stage instructions so all stable content
     // forms a contiguous prefix: [static + blob]. This lets every provider cache the
     // longest common prefix — Anthropic via a single breakpoint here, OpenAI/DeepSeek/
     // Gemini via automatic prefix caching — giving cache hits across all stages within
     // the same blob, not only within a single stage.
     if let Some(blob) = config.blob_context.as_deref().filter(|s| !s.is_empty()) {
-        system.push(PromptBlock {
-            text: format!(
-                "[Reference document block - context only]\n\
-                 This block may include the current chunk. Use it for terminology, continuity, names, pronouns, formatting, and narrative context.\n\
-                 Do not translate this block as a whole. Translate only the current chunk identified in the user message.\n\
-                 {blob}\n\
-                 [End reference document block]"
-            ),
-            cacheable: true,
-        });
+        system.push(
+            Parts::default()
+                .push(
+                    "neighbour-chunks",
+                    format!(
+                        "[Reference document block - context only]\n\
+                         This block may include the current chunk. Use it for terminology, continuity, names, pronouns, formatting, and narrative context.\n\
+                         Do not translate this block as a whole. Translate only the current chunk identified in the user message.\n\
+                         {blob}\n\
+                         [End reference document block]"
+                    ),
+                )
+                .block(true),
+        );
     }
 
     // Stage-specific instructions come last: they vary per stage but are smaller than
-    // the static+blob prefix, so non-caching them costs less than before.
-    let glossary_reminder = if config.glossary.is_empty() {
-        ""
-    } else {
-        "\n\nGlossary Reminder:\n- Apply the glossary entries specified above when they appear in the source text."
-    };
-    let output_contract = if stage.role.as_deref() == Some("refine") {
+    // the static+blob prefix, so non-caching them costs less than before. The glossary
+    // rules sit once in the static block: no reminder is repeated here.
+    let is_refine = stage.role.as_deref() == Some("refine");
+    let output_contract = if is_refine {
         "Output the complete refined translation in full. Do not summarize, abbreviate, or output only the changed portions — rewrite the entire chunk from start to finish."
     } else {
         "Output only the translated text."
     };
-    system.push(PromptBlock {
-        text: format!(
-            "Core Instructions:\n{}{}\n\n{}",
-            stage.prompt, glossary_reminder, output_contract
-        ),
-        cacheable: false,
-    });
+    system.push(
+        Parts::default()
+            .push("stage-prompt", format!("Core Instructions:\n{}", stage.prompt))
+            .push("output-contract", format!("\n\n{output_contract}"))
+            .block(false),
+    );
 
     let current_chunk_line = config
         .blob_current_chunk_id
@@ -218,53 +237,72 @@ pub(crate) fn build_stage_prompts(
         .map(|id| format!("Current chunk id: {id}\n\n"))
         .unwrap_or_default();
 
-    let user = if stage.role.as_deref() == Some("refine") {
-        let base = format!(
-            "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
-             Previous Iteration for the current chunk:\n{}\n\n\
-             Refine only the current chunk according to your instructions. Output the complete refined translation in full — every sentence, from start to finish. Do not abbreviate or output only the changed portions.",
-            previous_result.unwrap_or_default()
-        );
-        if let Some(ctx) = audit_context.filter(|s| !s.trim().is_empty()) {
-            format!("{base}\n\n---\nPrevious audit findings to address:\n{ctx}\n---")
-        } else {
-            base
-        }
+    let user = if is_refine {
+        Parts::default()
+            .push("chunk-id", current_chunk_line)
+            .push("chunk-text", format!("Original text for the current chunk:\n{text}\n\n"))
+            .push(
+                "previous-result",
+                format!(
+                    "Previous Iteration for the current chunk:\n{}\n\n",
+                    previous_result.unwrap_or_default()
+                ),
+            )
+            .push(
+                "task",
+                "Refine only the current chunk according to your instructions. Output the complete refined translation in full — every sentence, from start to finish. Do not abbreviate or output only the changed portions.",
+            )
+            .push(
+                "audit-findings",
+                audit_context
+                    .filter(|s| !s.trim().is_empty())
+                    .map(|ctx| format!("\n\n---\nPrevious audit findings to address:\n{ctx}\n---"))
+                    .unwrap_or_default(),
+            )
     } else {
-        format!(
-            "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
-             Translate only the current chunk. Output only its translation."
-        )
+        Parts::default()
+            .push("chunk-id", current_chunk_line)
+            .push("chunk-text", format!("Text to translate from the current chunk:\n{text}\n\n"))
+            .push("task", "Translate only the current chunk. Output only its translation.")
     };
 
-    StructuredPrompt::new(system, user)
+    ComposedPrompt {
+        system,
+        user: user.into_vec(),
+    }
 }
 
-fn build_format_stage_prompts(text: &str, stage: &StageConfig) -> StructuredPrompt {
+fn compose_format_stage_prompts(text: &str, stage: &StageConfig) -> ComposedPrompt {
     let system = vec![
-        PromptBlock {
-            text: "\
+        Parts::default()
+            .push(
+                "role",
+                "\
 You are a deterministic text post-processor for already translated text.\n\
 The input is already translated. Do not translate, retranslate, paraphrase, improve style, correct meaning, expand, shorten, or alter wording except where a minimal formatting repair requires it.\n\
 Allowed changes: repair broken Markdown or footnote syntax, and restore clearly corrupted spacing or line breaks.\n\
 Do not add new emphasis, code, link, heading, list, quote, table, or other markup. Change existing Markdown markers only when necessary to restore valid syntax.\n\
 Return the complete text. If no change is needed, return the input exactly.\n\
-Do not return explanations, comments, JSON, diffs, or 'no changes'."
-                .to_string(),
-            cacheable: true,
-        },
-        PromptBlock {
-            text: format!("Core Formatting Instructions:\n{}\n\nOutput only the formatted text.", stage.prompt),
-            cacheable: false,
-        },
+Do not return explanations, comments, JSON, diffs, or 'no changes'.",
+            )
+            .block(true),
+        Parts::default()
+            .push("stage-prompt", format!("Core Formatting Instructions:\n{}", stage.prompt))
+            .push("output-contract", "\n\nOutput only the formatted text.")
+            .block(false),
     ];
 
-    let user = format!(
-        "Text to format from the current chunk:\n{text}\n\n\
-         Apply only the formatting instructions. Output only the complete formatted text."
-    );
+    let user = Parts::default()
+        .push("chunk-text", format!("Text to format from the current chunk:\n{text}\n\n"))
+        .push(
+            "task",
+            "Apply only the formatting instructions. Output only the complete formatted text.",
+        );
 
-    StructuredPrompt::new(system, user)
+    ComposedPrompt {
+        system,
+        user: user.into_vec(),
+    }
 }
 
 pub(crate) fn build_judge_prompts(
@@ -272,10 +310,15 @@ pub(crate) fn build_judge_prompts(
     translation: &str,
     config: &PipelineConfig,
 ) -> StructuredPrompt {
+    compose_judge_prompts(source_text, translation, config).into_structured()
+}
+
+pub(crate) fn compose_judge_prompts(
+    source_text: &str,
+    translation: &str,
+    config: &PipelineConfig,
+) -> ComposedPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
-    let opener =
-        "You are a translation quality judge. Evaluate the translation against the work brief.";
-    let work_context = work_brief_block(config);
     let ui_lang = config
         .ui_language
         .as_deref()
@@ -295,49 +338,65 @@ pub(crate) fn build_judge_prompts(
         ""
     };
 
-    // Block 1 (cacheable): static judge context — role, instructions, glossary, format spec.
-    // The source text and translation are in the user turn so this block is constant for the
-    // whole project run, enabling near-100% cache hit rate across all chunk judge calls.
-    let system_block = format!(
-        "{opener}{work_context}\n\n\
-         Specific Audit Instructions:\n{instructions}\n\n\
-         {glossary_section}\
-         {markdown_rules}\
-         Scanning protocol: go through the translation sentence by sentence, checking every \
-         sentence against the source for accuracy, every glossary term for adherence, grammar \
-         for correctness, and fluency throughout. Complete the full scan before building the issues list. \
-         Report EVERY issue you find and EVERY occurrence separately — do not merge, suppress, or \
-         limit repeated issues.\n\n\
-         You MUST respond with a valid JSON object containing:\n\
-         - checkedSentenceIndices: array of 1-based source sentence numbers you verified, in scan order \
-           (e.g. [1, 2, 3] for a 3-sentence source) — indices only, never the sentence text itself\n\
-         - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
-           (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
-           good=solid, excellent=publication-ready)\n\
-         - issues: array of objects with these fields:\n\
-           - type: 'glossary'|'fluency'|'accuracy'|'grammar'\n\
-           - severity: 'low'|'medium'|'high'\n\
-           - description: string — explanation of the issue in {ui_lang}\n\
-           - suggestedFix: string — how to correct it in {ui_lang}\n\
-           - phrase: string or null — the exact verbatim substring of the WRONG or problematic text \
-             as it appears in the TARGET translation (character-for-character copy from the target text)\n\
-           - sourcePhrase: string or null — the exact verbatim substring from the SOURCE text \
-             that corresponds to this issue\n\
-           - confidence: number or null — your confidence this is a real issue (0.0–1.0)\n\
-         Write description and suggestedFix in {ui_lang}. \
-         Keep rating and type values as the English literals above.",
-        instructions = config.judge_prompt,
-    );
+    // One cacheable block: the source text and translation are in the user turn so this
+    // block is constant for the whole project run, enabling near-100% cache hit rate
+    // across all chunk judge calls.
+    let system = vec![Parts::default()
+        .push(
+            "role",
+            "You are a translation quality judge. Evaluate the translation against the translation context.",
+        )
+        .push("translation-context", work_brief_block(config))
+        .push(
+            "stage-prompt",
+            format!(
+                "\n\nSpecific Audit Instructions:\n{}\n\n",
+                config.judge_prompt
+            ),
+        )
+        .push("glossary-table", glossary_section)
+        .push("markdown-rules", markdown_rules)
+        .push(
+            "review-method",
+            "Scanning protocol: go through the translation sentence by sentence, checking every \
+             sentence against the source for accuracy, every glossary term for adherence, grammar \
+             for correctness, and fluency throughout. Complete the full scan before building the issues list. \
+             Report EVERY issue you find and EVERY occurrence separately — do not merge, suppress, or \
+             limit repeated issues.\n\n",
+        )
+        .push(
+            "response-format",
+            format!(
+                "You MUST respond with a valid JSON object containing:\n\
+                 - checkedSentenceIndices: array of 1-based source sentence numbers you verified, in scan order \
+                   (e.g. [1, 2, 3] for a 3-sentence source) — indices only, never the sentence text itself\n\
+                 - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
+                   (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
+                   good=solid, excellent=publication-ready)\n\
+                 - issues: array of objects with these fields:\n\
+                   - type: 'glossary'|'fluency'|'accuracy'|'grammar'\n\
+                   - severity: 'low'|'medium'|'high'\n\
+                   - description: string — explanation of the issue in {ui_lang}\n\
+                   - suggestedFix: string — how to correct it in {ui_lang}\n\
+                   - phrase: string or null — the exact verbatim substring of the WRONG or problematic text \
+                     as it appears in the TARGET translation (character-for-character copy from the target text)\n\
+                   - sourcePhrase: string or null — the exact verbatim substring from the SOURCE text \
+                     that corresponds to this issue\n\
+                   - confidence: number or null — your confidence this is a real issue (0.0–1.0)\n\
+                 Write description and suggestedFix in {ui_lang}. \
+                 Keep rating and type values as the English literals above."
+            ),
+        )
+        .block(true)];
 
-    let user = format!("Source: {source_text}\nTarget: {translation}\n\nPerform the audit now and return the JSON report.");
+    let user = Parts::default()
+        .push("chunk-text", format!("Source: {source_text}\n"))
+        .push("translation", format!("Target: {translation}\n\n"))
+        .push("task", "Perform the audit now and return the JSON report.");
 
-    StructuredPrompt {
-        system: vec![PromptBlock {
-            text: system_block,
-            cacheable: true,
-        }],
-        user,
-        images: Vec::new(),
+    ComposedPrompt {
+        system,
+        user: user.into_vec(),
     }
 }
 
@@ -345,10 +404,14 @@ pub(crate) fn build_coherence_prompts(
     input: &CoherenceChunkInput,
     config: &PipelineConfig,
 ) -> StructuredPrompt {
+    compose_coherence_prompts(input, config).into_structured()
+}
+
+pub(crate) fn compose_coherence_prompts(
+    input: &CoherenceChunkInput,
+    config: &PipelineConfig,
+) -> ComposedPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
-    let opener =
-        "You are a translation coherence auditor. Evaluate consistency against the work brief.";
-    let work_context = work_brief_block(config);
     let ui_lang = config
         .ui_language
         .as_deref()
@@ -378,34 +441,51 @@ pub(crate) fn build_coherence_prompts(
 
     // Block 1 (cacheable): static coherence context — role, instructions, glossary, format spec.
     // Constant for the whole project run.
-    let system_block = format!(
-        "{opener}{work_context}\n\
-         Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
-         {instructions}\n\
-         {glossary_section}\
-         Write description and suggestedFix values in {ui_lang}.\n\
-         Respond with valid JSON only:\n\
-         {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
-         \"severity\": \"low\"|\"medium\"|\"high\", \
-         \"description\": \"string\", \
-         \"suggestedFix\": \"string\", \
-         \"phrase\": \"exact verbatim substring of the WRONG text as it appears in the target translation, not the source term nor the correction; first occurrence only\"}}]}}",
-    );
+    let mut system = vec![Parts::default()
+        .push(
+            "role",
+            "You are a translation coherence auditor. Evaluate consistency against the translation context.",
+        )
+        .push("translation-context", work_brief_block(config))
+        .push(
+            "review-method",
+            "\nYour task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n",
+        )
+        .push("stage-prompt", format!("{instructions}\n"))
+        .push("glossary-table", glossary_section)
+        .push(
+            "response-format",
+            format!(
+                "Write description and suggestedFix values in {ui_lang}.\n\
+                 Respond with valid JSON only:\n\
+                 {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
+                 \"severity\": \"low\"|\"medium\"|\"high\", \
+                 \"description\": \"string\", \
+                 \"suggestedFix\": \"string\", \
+                 \"phrase\": \"exact verbatim substring of the WRONG text as it appears in the target translation, not the source term nor the correction; first occurrence only\"}}]}}"
+            ),
+        )
+        .block(true)];
 
     // Block 2 (cacheable): reference document block. Identical for every chunk in the same
     // blob, so it's a second cache breakpoint — placed in system, not the user turn, so
     // providers actually cache it instead of rebilling it at full price on every chunk.
-    let context_block = input
-        .blob_context
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .map(|ctx| format!(
-            "[Reference translated document block - context only]\n\
-             This block may include the current chunk. Use it to compare terminology and continuity across the document block.\n\
-             The current chunk to audit is identified below.\n\
-             {ctx}\n\
-             [End reference translated document block]"
-        ));
+    if let Some(ctx) = input.blob_context.as_deref().filter(|s| !s.is_empty()) {
+        system.push(
+            Parts::default()
+                .push(
+                    "neighbour-chunks",
+                    format!(
+                        "[Reference translated document block - context only]\n\
+                         This block may include the current chunk. Use it to compare terminology and continuity across the document block.\n\
+                         The current chunk to audit is identified below.\n\
+                         {ctx}\n\
+                         [End reference translated document block]"
+                    ),
+                )
+                .block(true),
+        );
+    }
 
     let current_chunk_line = input
         .current_chunk_id
@@ -414,27 +494,30 @@ pub(crate) fn build_coherence_prompts(
         .map(|id| format!("Current chunk id: {id}\n\n"))
         .unwrap_or_default();
 
-    let user = format!(
-        "{current_chunk_line}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
-         [End of current segment]\n\n\
-         Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
-        original = input.original,
-        translation = input.translation,
-    );
+    let user = Parts::default()
+        .push("chunk-id", current_chunk_line)
+        .push(
+            "chunk-text",
+            format!("[Current segment]\nOriginal: {}\n", input.original),
+        )
+        .push(
+            "translation",
+            format!(
+                "Translation: {}\n[End of current segment]\n\n",
+                input.translation
+            ),
+        )
+        .push(
+            "task",
+            "Identify cross-segment coherence issues and return the JSON. If no issues, return {\"issues\": []}.",
+        );
 
-    let mut system = vec![PromptBlock {
-        text: system_block,
-        cacheable: true,
-    }];
-    if let Some(ctx) = context_block {
-        system.push(PromptBlock {
-            text: ctx,
-            cacheable: true,
-        });
+    ComposedPrompt {
+        system,
+        user: user.into_vec(),
     }
-
-    StructuredPrompt::new(system, user)
 }
+
 
 /// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.
 pub(crate) fn sanitize_llm_json_output(raw: &str) -> &str {
@@ -562,7 +645,7 @@ mod tests {
         let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
         assert!(prompt.system[0]
             .text
-            .contains("Work brief:\nLiterary translation from English to Italian."));
+            .contains("Translation context:\nLiterary translation from English to Italian."));
     }
 
     #[test]

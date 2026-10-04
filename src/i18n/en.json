@@ -430,81 +430,8 @@
     "tabGlossary": "Glossary",
     "tabPreview": "Prompt preview",
     "promptPreviewTitle": "Prompt Preview",
-    "promptViewLabel": "Prompt view",
-    "promptPreviewHint": "How the prompt is built from the current configuration; placeholders mark where the chunk text and the context go.",
+    "promptPreviewHint": "Each phase's request, piece by piece in sending order. “Structure” shows placeholders where chunk data goes; “Open chunk” fills them with the chunk open in the Studio, including the checked memory phrases.",
     "promptPreviewEmpty": "No translation stages are enabled yet.",
-    "promptPreviewStatic": "Static",
-    "promptPreviewRuntime": "Runtime",
-    "promptPreviewBlocks": {
-      "system-opener": {
-        "title": "System opener",
-        "hint": "Fixed in the code: tells the model it is a translator and must follow the Translation context and the stage instructions. It contains no languages. Cacheable, identical for every chunk."
-      },
-      "structural-rules": {
-        "title": "Structural preservation rules",
-        "hint": "Cached: paragraph boundaries, whitespace, and footnote placement rules applied at every stage."
-      },
-      "glossary-constraints": {
-        "title": "Glossary constraints",
-        "hint": "Cached: mandatory terminology enforcement. When a glossary is present this block expands with the full term table."
-      },
-      "markdown-rules": {
-        "title": "Markdown preservation rules",
-        "hint": "Cached: Markdown syntax preservation rules. Only shown when markdown-aware mode is enabled."
-      },
-      "stage-instructions": {
-        "title": "Stage instructions",
-        "hint": "Cached per run: your custom stage prompt followed by the output contract. The output contract is intentionally repeated in the user turn below to reinforce the instruction across both turns."
-      },
-      "blob-context": {
-        "title": "Optional blob context",
-        "hint": "Reference document block reused across chunks in the same blob. It is context-only and belongs in the cacheable prefix."
-      },
-      "current-chunk-id": {
-        "title": "Optional chunk id",
-        "hint": "Runtime chunk identifier injected only when blob chunk tracking is available. It scopes the request to the current chunk."
-      },
-      "source-chunk-text": {
-        "title": "Runtime source text",
-        "hint": "Current chunk payload injected at execution time. For refine, this remains the original source chunk, not the previous translation."
-      },
-      "previous-stage-result": {
-        "title": "Previous stage result",
-        "hint": "Runtime text produced by the previous stage. Refine receives this alongside the original source chunk."
-      },
-      "runtime-task": {
-        "title": "Runtime task instruction",
-        "hint": "Execution-only instruction that tells the model to translate, refine, or format only the current chunk."
-      },
-      "phrase-memory": {
-        "title": "Phrase memory",
-        "hint": "Translation memory pairs matched for this chunk. Appended to stage instructions at execution time — only enabled matches are injected."
-      },
-      "output-contract": {
-        "title": "Runtime output contract",
-        "hint": "Final output requirement repeated in the user turn to reinforce the system instruction. Constrains the reply to the complete stage-specific text result."
-      },
-      "system-post-processor": {
-        "title": "System post-processor",
-        "hint": "Cached: hard constraints for the format stage. Prevents retranslation or wording changes — only minimal formatting repairs are allowed."
-      },
-      "work-brief": {
-        "title": "Translation context",
-        "hint": "Shared context in the cacheable prefix, before stage instructions."
-      },
-      "deepl-request": {
-        "title": "DeepL request",
-        "hint": "API body assembled by the backend as for execution. Chunk text is a placeholder; DeepL does not receive the Translation context."
-      },
-      "system-message": {
-        "title": "System",
-        "hint": "Backend composition: shared context, instructions, resources and response contract. Placeholders mark optional runtime data."
-      },
-      "user-message": {
-        "title": "User",
-        "hint": "Backend composition with placeholders for chunk text and results. This configuration preview uses current settings, not a historical request."
-      }
-    },
     "customLanguageReset": "Reset to standard",
     "customSourceLanguagePlaceholder": "e.g. Old Norse, Medieval Latin",
     "customTargetLanguagePlaceholder": "e.g. Modern Italian, Contemporary English",
@@ -597,11 +524,9 @@
     "workBriefLabel": "Translation context",
     "workBriefHint": "Languages, varieties, goal and register. Translation, refinement, audit and coherence receive it; it cannot be empty.",
     "workBriefPlaceholder": "E.g. Translate seventeenth-century Venetian into contemporary Italian, preserving the tone and explaining historical terms in notes.",
-    "completePrompt": "Complete prompt",
     "auditPreviewLabel": "Audit",
     "coherencePreviewLabel": "Coherence",
     "phaseNotUsed": "Not used in this mode",
-    "promptConstruction": "Construction",
     "modeShort": {
       "standard": "Simple",
       "editorial": "Editorial",
@@ -613,7 +538,118 @@
       "default": "Default",
       "custom": "Custom"
     },
-    "promptRequired": "the text cannot be empty"
+    "promptRequired": "the text cannot be empty",
+    "promptParts": {
+      "systemMessage": "System message",
+      "systemMessageHint": "Instructions, rules and resources: identical for every chunk, so the provider caches it and it costs less.",
+      "userMessage": "User message",
+      "userMessageHint": "The chunk to work on and the final request: changes with every chunk.",
+      "kind": {
+        "fixed": "Fixed in the program",
+        "yours": "Your text",
+        "data": "Data",
+        "auto": "Automatic",
+        "fixedAt": "Fixed · {{place}}",
+        "yoursAt": "Your text · {{place}}",
+        "dataAt": "Data · {{place}}",
+        "autoAt": "Automatic · {{place}}"
+      },
+      "place": {
+        "general": "General",
+        "stages": "Stages",
+        "quality": "Quality control",
+        "glossary": "Glossary",
+        "memory": "Memory"
+      },
+      "reason": {
+        "noGlossary": "no dictionary assigned",
+        "notMarkdown": "only for documents imported as Markdown",
+        "noExamples": "no examples entered",
+        "onlyRefineLoop": "only when the refine loop revises after an audit",
+        "whenGrouped": "appears only when the document is split into groups of chunks",
+        "notInThisRequest": "not present in this request"
+      },
+      "role": {
+        "title": "Role",
+        "hint": "Tells the model what it is in this phase."
+      },
+      "translation-context": {
+        "title": "Translation context",
+        "hint": "Languages, varieties, goal and register, written in General."
+      },
+      "structural-rules": {
+        "title": "Structural rules",
+        "hint": "Keep paragraphs, line breaks, spaces, lists and notes."
+      },
+      "glossary-rules": {
+        "title": "Glossary rules",
+        "hint": "Mandatory terms and the assigned dictionary table; without a dictionary a sentence says so."
+      },
+      "glossary-table": {
+        "title": "Glossary",
+        "hint": "The assigned dictionary table, to check terminology."
+      },
+      "markdown-rules": {
+        "title": "Markdown rules",
+        "hint": "Do not break Markdown asterisks, notes and headings."
+      },
+      "examples": {
+        "title": "Translation examples",
+        "hint": "The example pairs entered in the Memory tab."
+      },
+      "neighbour-chunks": {
+        "title": "Neighbouring chunks",
+        "hint": "Text of the surrounding chunks, as reference only; the amount is set in Stages."
+      },
+      "stage-prompt": {
+        "title": "Prompt",
+        "hint": "The phase prompt; for translation and Refine, with memory on, the checked phrases are appended at the end."
+      },
+      "output-contract": {
+        "title": "Result request",
+        "hint": "What the model must return."
+      },
+      "review-method": {
+        "title": "Review method",
+        "hint": "How the check must be carried out."
+      },
+      "response-format": {
+        "title": "Response format",
+        "hint": "The structure the app reads: changing it badly makes the check fail."
+      },
+      "chunk-id": {
+        "title": "Chunk identifier",
+        "hint": "Tells which of the neighbouring chunks is the one to work on."
+      },
+      "chunk-text": {
+        "title": "Chunk text",
+        "hint": "The source of the current chunk."
+      },
+      "previous-result": {
+        "title": "Previous translation",
+        "hint": "The result of the previous phase, to revise."
+      },
+      "translation": {
+        "title": "Translation to check",
+        "hint": "The current translation of the chunk."
+      },
+      "task": {
+        "title": "Request",
+        "hint": "The final request for this chunk."
+      },
+      "audit-findings": {
+        "title": "Audit findings",
+        "hint": "The problems found by the audit, to fix."
+      },
+      "deepl-request": {
+        "title": "DeepL request",
+        "hint": "The request body sent to DeepL: no prompt, only parameters."
+      }
+    },
+    "promptPreviewMode": "What to show",
+    "promptPreviewStructure": "Structure",
+    "promptPreviewChunk": "Open chunk",
+    "promptPreviewNoChunk": "No chunk open: open or import a document in the Studio."
   },
   "audit": {
     "title": "Audit Logs",
@@ -2335,23 +2371,12 @@
     "watchdogCancel": "Cancel & retry",
     "insightsTabMemory": "Memory",
     "insightsTabReferences": "References",
-    "insightsTabPromptPreview": "Preview",
     "viewOptions": "View options",
     "chunkTabLockedForAudit": "Available after the chunk is translated"
   },
   "promptPreview": {
-    "title": "Message preview",
-    "stageLabel": "Stage to preview",
-    "buildButton": "Build preview",
-    "building": "Building…",
-    "systemLabel": "System instructions",
-    "userLabel": "User message",
-    "copyBlock": "Copy this block",
     "copiedToClipboard": "Copied to clipboard",
-    "emptyNoChunk": "Select a chunk to build the preview.",
-    "emptyBeforeBuild": "Press \"Build preview\" to see the full message for this stage.",
-    "deeplNotice": "This stage uses DeepL: it doesn't generate a text message for a language model.",
-    "buildFailed": "Couldn't build the preview.",
+    "copyBlock": "Copy this block",
     "translationRequired": "the chunk has no translation yet"
   },
   "help": {
@@ -2465,7 +2490,7 @@
               "In General choose the mode and edit the Translation context with the pencil: languages, historical varieties, audience and register. Confirm with the checkmark or discard with X. It is never empty: it starts from a default text (English into Italian) that you can rewrite or replace with a saved template; the circular arrow restores it. Translation, refinement, audit and coherence receive it; languages are never added automatically to LLM prompts. The DeepL pair stays visible and is enabled only in DeepL mode. Unused stages are disabled; switching modes preserves their configuration.",
               "In Stages and Quality control choose service, model and instructions for each stage. Once translations exist the model is closed by the lock: opening it leaves already translated chunks on the previous model. Explanations appear when you hover titles and rows.",
               "In Memory set phrase memory and translation examples (DeepL mode does not use them); in Glossary assign the dictionary and save its terms with the disk icon.",
-              "Prompt preview opens on the complete request; for LLM stages you can switch to construction blocks. Audit and Coherence show complete messages, DeepL the API request body. Expand text with the eye and copy it in full with the clipboard. Placeholders represent chunk data and optional context. The backend builds requests as for execution, without contacting services. Unused stages are disabled; audit and coherence remain available with DeepL.",
+              "Prompt preview shows each phase’s request piece by piece, each marked as fixed, yours, data or automatic with where it is changed; absent pieces stay disabled with the reason. Audit and Coherence show complete messages, DeepL the API request body. Expand text with the eye and copy it in full with the clipboard. Placeholders represent chunk data and optional context. The backend builds requests as for execution, without contacting services. Unused stages are disabled; audit and coherence remain available with DeepL.",
               "Choose a separate language pair for standard translation in the DeepL stage. Automatic source detection is available, but a glossary requires an explicit source. DeepL Context is separate from the Translation context. Previews and logs show the API body; the configuration preview uses a chunk-text placeholder."
             ]
           },
@@ -2475,7 +2500,7 @@
               "Use Test on a representative segment to inspect the result while keeping configuration editable. Then switch to production and choose whether to process one segment or several.",
               "The estimate beside the controls applies to the selected action. It is approximate: usage depends on the submitted text and response. Statistics show available usage data after processing.",
               "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unverified segments can replace their results. During execution you cannot switch pipelines or create a new one. Memory, Review and Document remember the selected subtab when you visit another tab.",
-              "The Studio’s Preview tab builds the selected stage’s message for the open segment, without calling the model. The selector also offers Audit and Coherence, which use the segment’s current translation: without one they stay disabled. If models, prompts, the Translation context or DeepL options change after an interruption, resuming tells you.",
+              "To see the real request for a chunk, open it in the Studio and choose “Open chunk” in Prompt preview: the same pieces fill with its text, neighbouring chunks, checked memory phrases and previous translation; Audit and Coherence use the current translation and say so when there is none. If models, prompts, the Translation context or DeepL options change after an interruption, resuming tells you.",
               "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free.",
               "In the Studio's Memory tab, References shows similar phrases already in memory, with where they come from; the circled check decides which to use in the translation. Memory opens once the translation is verified: saved pairs are removed with the bin, new ones are checked and added with the disk, which never deletes anything."
             ]
@@ -2524,7 +2549,7 @@
             "paragraphs": [
               "Above the document a window of seven circles keeps the open segment still in the middle. Single arrows move to the neighbouring segment, double ones jump by seven; the wheel over the circles scrolls them, a click opens one. On the right are the open segment's stage indicators and the magnifier to search the whole document. The central mark shows whether a segment is ready, processing, completed or in error.",
               "Corner indicators identify audit findings, notes, a verified translation (green) and a source changed after translation (ochre). The triangle marks the current segment. The tooltip provides a full summary.",
-              "Glossary and Document (Index, Statistics, Coherence) cover the whole document; Memory, Preview and Review the open segment. They all live in the Tools column.",
+              "Glossary and Document (Index, Statistics, Coherence) cover the whole document; Memory and Review the open segment. They all live in the Tools column.",
               "You cannot leave the Studio while translation is running: wait until it finishes or stop processing. If saving fails, use “Retry”; technical details remain in the log. Disabled tabs stay reachable with Tab so you can read why they are unavailable, but cannot be opened."
             ]
           },
@@ -2688,7 +2713,7 @@
           {
             "title": "Checking what is sent",
             "paragraphs": [
-              "In the segment’s Preview tab, choose a stage and build its message. Read the instructions and text without calling the model or incurring translation charges.",
+              "In pipeline options, Prompt preview in “Open chunk” mode shows each phase’s message for the chunk open in the Studio. Read its instructions and text without calling the model or incurring charges.",
               "Revision receives the source and draft. Formatting receives only translated text. Consistency review compares translated passages."
             ]
           },

@@ -8,7 +8,7 @@ import { showPreflightDialog } from '../../stores/preflightStore';
 import { withRetry, friendlyError, is429Error } from '../../utils/retry';
 import { pipelineLog } from '../../utils/pipelineLogging';
 import { useOperationLogStore } from '../../stores/operationLogStore';
-import type { PromptInfo, TokenUsage, TranslationChunk } from '../../types';
+import type { PipelineStageConfig, PromptInfo, TokenUsage, TranslationChunk } from '../../types';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
@@ -63,13 +63,19 @@ function buildProviderChecks(config: ReturnType<typeof usePipelineStore.getState
   ];
 }
 
+function receivesMemory(stage: PipelineStageConfig): boolean {
+  const role = stage.role ?? 'translation';
+  return stage.provider !== 'deepl' && (role === 'translation' || role === 'refine');
+}
+
 function appendMemoryBlock(
   config: ReturnType<typeof usePipelineStore.getState>['config'],
   memoryBlock?: string,
 ) {
   if (!memoryBlock) return config.stages;
+  // Solo traduzione e Refine: Format corregge la forma e DeepL non ha prompt.
   return config.stages.map((stage) =>
-    stage.enabled ? { ...stage, prompt: `${stage.prompt}\n\n${memoryBlock}` } : stage,
+    stage.enabled && receivesMemory(stage) ? { ...stage, prompt: `${stage.prompt}\n\n${memoryBlock}` } : stage,
   );
 }
 

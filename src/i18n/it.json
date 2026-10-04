@@ -430,81 +430,8 @@
     "tabGlossary": "Glossario",
     "tabPreview": "Anteprima prompt",
     "promptPreviewTitle": "Anteprima Prompt",
-    "promptViewLabel": "Vista del prompt",
-    "promptPreviewHint": "Com'è costruito il prompt con la configurazione attuale; i segnaposto indicano dove entrano il testo del frammento e il contesto.",
+    "promptPreviewHint": "La richiesta di ogni fase, pezzo per pezzo e nell'ordine in cui parte. «Struttura» mostra i segnaposto dove entrano i dati del frammento; «Frammento aperto» li riempie con il frammento aperto nello Studio, comprese le frasi della memoria spuntate.",
     "promptPreviewEmpty": "Non ci sono ancora fasi di traduzione abilitate.",
-    "promptPreviewStatic": "Statico",
-    "promptPreviewRuntime": "Runtime",
-    "promptPreviewBlocks": {
-      "system-opener": {
-        "title": "Apertura di sistema",
-        "hint": "Fisso nel codice: dice al modello che è un traduttore e che deve seguire il Contesto di traduzione e le istruzioni della fase. Non contiene lingue. Cacheabile, identico per ogni frammento."
-      },
-      "structural-rules": {
-        "title": "Regole strutturali",
-        "hint": "Cacheabile: regole di preservazione di paragrafi, spazi e note a piè di pagina, applicate a ogni stage."
-      },
-      "glossary-constraints": {
-        "title": "Vincoli glossario",
-        "hint": "Cacheabile: terminologia obbligatoria. Quando è presente un glossario, questo blocco include la tabella completa dei termini."
-      },
-      "markdown-rules": {
-        "title": "Regole Markdown",
-        "hint": "Cacheabile: regole di preservazione della sintassi Markdown. Mostrato solo quando la modalità markdown-aware è attivata."
-      },
-      "stage-instructions": {
-        "title": "Istruzioni di fase",
-        "hint": "Cacheabile per run: il tuo prompt personalizzato seguito dal contratto di output. Il contratto di output è ripetuto nel turno utente per rinforzare l'istruzione su entrambi i turni — è intenzionale."
-      },
-      "blob-context": {
-        "title": "Contesto blob opzionale",
-        "hint": "Blocco documento di riferimento riusato tra i chunk dello stesso blob. E solo contesto e appartiene al prefisso cacheabile."
-      },
-      "current-chunk-id": {
-        "title": "ID chunk opzionale",
-        "hint": "Identificatore runtime del chunk inserito solo quando e disponibile il tracciamento del blob. Delimita la richiesta al chunk corrente."
-      },
-      "source-chunk-text": {
-        "title": "Testo sorgente runtime",
-        "hint": "Payload del chunk corrente inserito a esecuzione. Nel refine resta il chunk sorgente originale, non la traduzione precedente."
-      },
-      "previous-stage-result": {
-        "title": "Risultato fase precedente",
-        "hint": "Testo runtime prodotto dalla fase precedente. Il refine lo riceve insieme al chunk sorgente originale."
-      },
-      "runtime-task": {
-        "title": "Istruzione task runtime",
-        "hint": "Istruzione valida solo a esecuzione che dice al modello di tradurre, rifinire o formattare solo il chunk corrente."
-      },
-      "phrase-memory": {
-        "title": "Memoria frasi",
-        "hint": "Coppie di memoria di traduzione trovate per questo chunk. Aggiunte alle istruzioni della fase a esecuzione — vengono iniettate solo le corrispondenze abilitate."
-      },
-      "output-contract": {
-        "title": "Contratto output runtime",
-        "hint": "Requisito finale dell'output ripetuto nel turno utente per rinforzare l'istruzione di sistema. Limita la risposta al testo completo specifico della fase."
-      },
-      "system-post-processor": {
-        "title": "Post-processore di sistema",
-        "hint": "Cacheabile: vincoli rigidi per lo stage di formattazione. Impedisce al modello di ritradurre o modificare il testo — sono ammessi solo interventi minimi di correzione della formattazione."
-      },
-      "work-brief": {
-        "title": "Contesto di traduzione",
-        "hint": "Contesto comune nel prefisso cacheabile, prima delle istruzioni della fase."
-      },
-      "deepl-request": {
-        "title": "Richiesta DeepL",
-        "hint": "Corpo API costruito dal backend come in esecuzione. Il testo del frammento è un segnaposto; DeepL non riceve il Contesto di traduzione."
-      },
-      "system-message": {
-        "title": "Sistema",
-        "hint": "Composizione backend: contesto comune, istruzioni, risorse e contratto di risposta. I segnaposto indicano i dati runtime opzionali."
-      },
-      "user-message": {
-        "title": "Utente",
-        "hint": "Composizione backend con segnaposto per testo e risultati del frammento. L’anteprima delle opzioni usa la configurazione attuale, non una richiesta storica."
-      }
-    },
     "customLanguageReset": "Torna allo standard",
     "customSourceLanguagePlaceholder": "es. Norreno antico, Latino medievale",
     "customTargetLanguagePlaceholder": "es. Italiano moderno, Inglese contemporaneo",
@@ -597,11 +524,9 @@
     "workBriefLabel": "Contesto di traduzione",
     "workBriefHint": "Lingue, varietà, obiettivo e registro. Lo ricevono traduzione, revisione, audit e coerenza; non può restare vuoto.",
     "workBriefPlaceholder": "Es. Traduci dal veneto del Seicento all’italiano contemporaneo, conservando il tono e spiegando i termini storici nelle note.",
-    "completePrompt": "Prompt completo",
     "auditPreviewLabel": "Audit",
     "coherencePreviewLabel": "Coerenza",
     "phaseNotUsed": "Non usata in questa modalità",
-    "promptConstruction": "Costruzione",
     "modeShort": {
       "standard": "Semplice",
       "editorial": "Editoriale",
@@ -613,7 +538,118 @@
       "default": "Predefinito",
       "custom": "Personalizzato"
     },
-    "promptRequired": "il testo non può essere vuoto"
+    "promptRequired": "il testo non può essere vuoto",
+    "promptParts": {
+      "systemMessage": "Messaggio di sistema",
+      "systemMessageHint": "Istruzioni, regole e risorse: uguale per tutti i frammenti, il fornitore lo tiene in cache e costa meno.",
+      "userMessage": "Messaggio utente",
+      "userMessageHint": "Il frammento da lavorare e la consegna finale: cambia a ogni frammento.",
+      "kind": {
+        "fixed": "Fisso nel programma",
+        "yours": "Testo tuo",
+        "data": "Dati",
+        "auto": "Automatico",
+        "fixedAt": "Fisso · {{place}}",
+        "yoursAt": "Testo tuo · {{place}}",
+        "dataAt": "Dati · {{place}}",
+        "autoAt": "Automatico · {{place}}"
+      },
+      "place": {
+        "general": "Generale",
+        "stages": "Fasi",
+        "quality": "Controllo qualità",
+        "glossary": "Glossario",
+        "memory": "Memoria"
+      },
+      "reason": {
+        "noGlossary": "nessun dizionario assegnato",
+        "notMarkdown": "solo per documenti importati come Markdown",
+        "noExamples": "nessun esempio inserito",
+        "onlyRefineLoop": "solo quando il ciclo di raffinamento rivede dopo un audit",
+        "whenGrouped": "compare solo quando il documento è diviso in gruppi di frammenti",
+        "notInThisRequest": "non presente in questa richiesta"
+      },
+      "role": {
+        "title": "Ruolo",
+        "hint": "Dice al modello che cosa è in questa fase."
+      },
+      "translation-context": {
+        "title": "Contesto di traduzione",
+        "hint": "Lingue, varietà, obiettivo e registro, scritti in Generale."
+      },
+      "structural-rules": {
+        "title": "Regole strutturali",
+        "hint": "Conservare paragrafi, a capo, spazi, elenchi e note."
+      },
+      "glossary-rules": {
+        "title": "Regole del glossario",
+        "hint": "Termini obbligatori e tabella del dizionario assegnato; senza dizionario resta una frase che lo dice."
+      },
+      "glossary-table": {
+        "title": "Glossario",
+        "hint": "Tabella del dizionario assegnato, per verificare la terminologia."
+      },
+      "markdown-rules": {
+        "title": "Regole Markdown",
+        "hint": "Non rovinare asterischi, note e titoli del Markdown."
+      },
+      "examples": {
+        "title": "Esempi di traduzione",
+        "hint": "Le coppie di esempio inserite nella scheda Memoria."
+      },
+      "neighbour-chunks": {
+        "title": "Frammenti vicini",
+        "hint": "Testo dei frammenti attorno, solo come riferimento; la quantità si regola in Fasi."
+      },
+      "stage-prompt": {
+        "title": "Prompt",
+        "hint": "Il prompt della fase; per traduzione e Refine, con la memoria attiva, in fondo si aggiungono le frasi spuntate."
+      },
+      "output-contract": {
+        "title": "Consegna del risultato",
+        "hint": "Che cosa deve restituire il modello."
+      },
+      "review-method": {
+        "title": "Metodo di controllo",
+        "hint": "Come deve condurre la verifica."
+      },
+      "response-format": {
+        "title": "Formato della risposta",
+        "hint": "La struttura che l’app legge: cambiarla male fa fallire la verifica."
+      },
+      "chunk-id": {
+        "title": "Identificativo del frammento",
+        "hint": "Indica quale dei frammenti vicini è quello da lavorare."
+      },
+      "chunk-text": {
+        "title": "Testo del frammento",
+        "hint": "L’originale del frammento corrente."
+      },
+      "previous-result": {
+        "title": "Traduzione precedente",
+        "hint": "Il risultato della fase prima, da rivedere."
+      },
+      "translation": {
+        "title": "Traduzione da controllare",
+        "hint": "La traduzione attuale del frammento."
+      },
+      "task": {
+        "title": "Consegna",
+        "hint": "La richiesta finale per questo frammento."
+      },
+      "audit-findings": {
+        "title": "Rilievi dell’audit",
+        "hint": "I problemi trovati dall’audit, da correggere."
+      },
+      "deepl-request": {
+        "title": "Richiesta DeepL",
+        "hint": "Il corpo della richiesta inviata a DeepL: nessun prompt, solo parametri."
+      }
+    },
+    "promptPreviewMode": "Che cosa mostrare",
+    "promptPreviewStructure": "Struttura",
+    "promptPreviewChunk": "Frammento aperto",
+    "promptPreviewNoChunk": "Nessun frammento aperto: apri o importa un documento nello Studio."
   },
   "audit": {
     "title": "Log Audit",
@@ -2335,23 +2371,12 @@
     "watchdogCancel": "Annulla e riprova",
     "insightsTabMemory": "Memoria",
     "insightsTabReferences": "Riferimenti",
-    "insightsTabPromptPreview": "Anteprima",
     "viewOptions": "Opzioni vista",
     "chunkTabLockedForAudit": "Disponibile dopo la traduzione del frammento"
   },
   "promptPreview": {
-    "title": "Anteprima messaggio",
-    "stageLabel": "Fase da vedere in anteprima",
-    "buildButton": "Costruisci anteprima",
-    "building": "Costruzione in corso…",
-    "systemLabel": "Istruzioni di sistema",
-    "userLabel": "Messaggio utente",
-    "copyBlock": "Copia questo blocco",
     "copiedToClipboard": "Copiato negli appunti",
-    "emptyNoChunk": "Seleziona un chunk per costruire l'anteprima.",
-    "emptyBeforeBuild": "Premi \"Costruisci anteprima\" per vedere il messaggio completo di questa fase.",
-    "deeplNotice": "Questa fase usa DeepL: non genera un messaggio testuale per un modello linguistico.",
-    "buildFailed": "Non sono riuscito a costruire l'anteprima.",
+    "copyBlock": "Copia questo blocco",
     "translationRequired": "manca la traduzione del frammento"
   },
   "help": {
@@ -2465,7 +2490,7 @@
               "In Generale scegli la modalità e modifica il Contesto di traduzione con la matita: lingue, varietà storiche, destinatari e registro. Conferma con la spunta o annulla con la X. Non è mai vuoto: parte da un testo predefinito (dall’inglese all’italiano) che puoi riscrivere o sostituire con un template salvato; la freccia circolare lo ripristina. Lo ricevono traduzione, revisione, audit e coerenza; le lingue non vengono aggiunte automaticamente ai prompt LLM. La coppia DeepL resta visibile, ma si attiva solo in modalità DeepL. Le fasi non usate restano visibili e disabilitate; cambiando modalità conservi i prompt configurati.",
               "In Fasi e Controllo qualità scegli servizio, modello e istruzioni di ogni fase. Con traduzioni già fatte il modello è chiuso dal lucchetto: aprirlo lascia i frammenti già tradotti con il modello precedente. Le spiegazioni compaiono passando sopra i titoli e le voci.",
               "In Memoria regola la memoria delle frasi e gli esempi di traduzione (la modalità DeepL non li usa); in Glossario assegna il dizionario e salvane i termini con il dischetto.",
-              "Anteprima prompt mostra inizialmente la richiesta completa; per le fasi LLM puoi passare alla costruzione per blocchi. Audit e Coerenza mostrano i messaggi completi, DeepL il corpo della richiesta API. Espandi un testo con l’occhio e copialo integralmente con gli appunti. I segnaposto rappresentano dati del frammento e contesto opzionale. Il backend costruisce le richieste come nell’esecuzione, senza contattare servizi. Le fasi non usate sono disabilitate; audit e coerenza restano disponibili anche con DeepL.",
+              "Anteprima prompt mostra la richiesta di ogni fase pezzo per pezzo, con per ciascuno se è fisso, tuo, dati o automatico e dove si modifica; i pezzi assenti restano spenti con il motivo. Audit e Coerenza mostrano i messaggi completi, DeepL il corpo della richiesta API. Espandi un testo con l’occhio e copialo integralmente con gli appunti. I segnaposto rappresentano dati del frammento e contesto opzionale. Il backend costruisce le richieste come nell’esecuzione, senza contattare servizi. Le fasi non usate sono disabilitate; audit e coerenza restano disponibili anche con DeepL.",
               "Nella fase DeepL scegli la coppia indipendente della traduzione standard. Puoi rilevare automaticamente la sorgente, ma un glossario richiede una sorgente esplicita. Il Contesto DeepL è distinto dal Contesto di traduzione. Le anteprime e i log mostrano il corpo API; nelle opzioni il testo del frammento è un segnaposto."
             ]
           },
@@ -2475,7 +2500,7 @@
               "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
               "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
               "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato. Durante l’esecuzione non puoi cambiare pipeline o crearne una nuova. Memoria, Revisione e Documento ricordano la sottoscheda scelta quando passi a un’altra scheda.",
-              "La linguetta Anteprima dello Studio costruisce il messaggio della fase scelta per il frammento aperto, senza chiamare il modello. Nel selettore ci sono anche Audit e Coerenza, che usano la traduzione attuale del frammento: senza traduzione restano spente. Se dopo un’interruzione cambi modelli, prompt, Contesto di traduzione o opzioni DeepL, la ripresa te lo segnala.",
+              "Per vedere la richiesta vera di un frammento, aprilo nello Studio e scegli «Frammento aperto» in Anteprima prompt: gli stessi pezzi si riempiono con il suo testo, i frammenti vicini, le frasi della memoria spuntate e la traduzione precedente; Audit e Coerenza usano la traduzione attuale e senza traduzione lo dicono. Se dopo un’interruzione cambi modelli, prompt, Contesto di traduzione o opzioni DeepL, la ripresa te lo segnala.",
               "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi.",
               "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente."
             ]
@@ -2524,7 +2549,7 @@
             "paragraphs": [
               "Sopra il documento una finestra di sette cerchi: il frammento aperto sta fermo al centro. Le frecce singole passano al frammento vicino, le doppie saltano di sette; la rotella sopra i cerchi li scorre, un clic ne apre uno. A destra le spie delle fasi del frammento aperto e la lente per cercare in tutto il documento. Il segno centrale indica se il frammento è da tradurre, in elaborazione, completato o in errore.",
               "Gli indicatori agli angoli segnalano problemi dell’audit, note, traduzione verificata (verde) e originale modificato dopo la traduzione (ocra). Il triangolo identifica il frammento corrente. Il suggerimento fornisce il riepilogo completo.",
-              "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria, Anteprima e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti.",
+              "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti.",
               "Durante una traduzione in corso non puoi lasciare lo Studio: aspetta la fine o interrompi l’elaborazione. In caso di salvataggio fallito usa «Riprova»; i dettagli tecnici dell’errore sono nel log. Le schede disattivate restano raggiungibili col tabulatore per leggerne il motivo, ma non si aprono."
             ]
           },
@@ -2688,7 +2713,7 @@
           {
             "title": "Controllare cosa viene inviato",
             "paragraphs": [
-              "Nella scheda Anteprima del frammento scegli una fase e costruisci il messaggio. Puoi leggerne le istruzioni e il testo senza chiamare il modello o generare costi di traduzione.",
+              "Nelle opzioni della pipeline, Anteprima prompt in modo «Frammento aperto» mostra il messaggio di ogni fase per il frammento aperto nello Studio. Puoi leggerne istruzioni e testo senza chiamare il modello né generare costi.",
               "La revisione riceve originale e bozza. La formattazione riceve solo il testo tradotto. La verifica di coerenza confronta invece i passaggi tradotti."
             ]
           },

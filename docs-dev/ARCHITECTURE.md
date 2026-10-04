@@ -29,9 +29,17 @@ una riga sola non svuota più l’intero elenco. I tre template `persona` del
 database di sviluppo sono stati riclassificati a mano in `brief` (correzione
 dati una tantum, nessuna migrazione).
 
+Regole per fase: le frasi della memoria si aggiungono solo a traduzione e Refine (`receivesMemory` in `engine.ts`, stessa regola nell’anteprima); il glossario sta una volta nelle regole del blocco statico, senza promemoria nelle istruzioni; intestazione del contesto `Translation context:`. La prova di equivalenza confronta con una copia della composizione precedente aggiornata con gli stessi cambi di testo voluti. Composizione a pezzi (`src-tauri/src/llm/composition.rs`): `compose_stage_prompts`,
+`compose_judge_prompts`, `compose_coherence_prompts` producono blocchi di `PromptPart`
+con id stabile; `into_structured()` li concatena (la richiesta vera), `preview_parts()`
+li restituisce all’anteprima nei comandi `preview_*_prompt` (campo `parts`). Anteprima e
+invio coincidono per costruzione; prova di equivalenza byte per byte con la copia della
+composizione precedente (`legacy_prompts_test.rs`). L’anteprima delle opzioni
+(`PromptPreviewTab` + catalogo `promptParts.ts`) mostra per fase tutti i pezzi possibili
+in ordine, con tipo (fisso/tuo/dati/automatico), luogo di modifica e motivo di assenza.
 L’impronta di ripresa (`pipelineFingerprint`) include modelli, prompt
 delle fasi LLM attive, prompt dell’audit, descrizione e parametri DeepL.
-L’anteprima del frammento (`useChunkPromptPreview`) offre anche `preview-audit` e
+La linguetta Anteprima dello Studio è stata rimossa: il modo «Frammento aperto» di `PromptPreviewTab` usa `useChunkPromptPreview` sul frammento selezionato (o il primo). L’hook offre anche `preview-audit` e
 `preview-coherence`: stessi input dell’esecuzione manuale (traduzione attuale; per la
 coerenza blocco dei frammenti vicini tradotti) tramite `preview_judge_prompt` e
 `preview_coherence_prompt`; voci spente senza traduzione.

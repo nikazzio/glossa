@@ -259,7 +259,7 @@ solo**.
 ### ChoiceDots
 
 Scelta esclusiva fra poche opzioni a cerchietti da 24 px con icona o lettera
-(immagine inviata all'OCR, livello di ragionamento, modalità della pipeline).
+(immagine inviata all'OCR, livello di ragionamento, modalità della pipeline, modo Struttura / Frammento aperto dell'anteprima prompt).
 Un'opzione può essere `disabled` (la modalità DeepL senza chiave): resta
 visibile, il motivo è nell'etichetta, le frecce la saltano; `role="radiogroup"`,
 frecce/Home/End spostano scelta e fuoco, suggerimento per opzione, la scelta in
@@ -571,8 +571,7 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
 Le anteprime dei prompt della pipeline, nelle opzioni e nel frammento, usano
 la stessa superficie `surface-resource` delle risorse linguistiche e il
 contrasto `linguistic-resource`: un fondo per messaggio/blocco, testo aperto
-senza fondo annidato. Accento verde sul bordo sinistro richiesto esplicitamente dall’utente. Gli editor aprono una bozza con conferma/annullamento a icona; rifinitura e applicazione modelli non salvano prima della conferma. Statico/runtime è un’icona con Hint,
-non un badge colorato. Le anteprime LLM aprono sulla richiesta completa; una sotto-linguetta seleziona la costruzione per blocchi. Ogni testo si espande e si copia integralmente. Le fasi non usate restano visibili ma disabilitate; audit/coerenza restano disponibili in DeepL.
+senza fondo annidato. Accento verde sul bordo sinistro richiesto esplicitamente dall’utente. Gli editor aprono una bozza con conferma/annullamento a icona; rifinitura e applicazione modelli non salvano prima della conferma. L’anteprima delle opzioni è una vista sola: per fase, due gruppi `SectionLabel` (messaggio di sistema / utente) e una carta per pezzo, con il tipo (fisso, tuo, dati, automatico · luogo) in testo muted accanto al titolo, non un badge colorato; i pezzi assenti sono una riga muted con filetto sinistro neutro, titolo in corsivo con `Hint` e motivo. Ogni testo si espande e si copia integralmente. Le fasi non usate restano visibili ma disabilitate; audit/coerenza restano disponibili in DeepL.
 Gli editor prompt/descrizione usano `FIELD_MONO_CLASSNAME` nella bozza; un solo fondo tenue per la carta.
 
 Le Risorse linguistiche usano `TabStrip` nella fila della finestra e ricerca

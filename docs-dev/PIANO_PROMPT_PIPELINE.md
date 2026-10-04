@@ -213,3 +213,13 @@ Ogni passo è piccolo, si prova dal vivo e si salva prima del successivo.
    la scelta si salva nella pipeline e la ripresa di un lavoro interrotto la
    considera.
 5. **Documentazione** nei tre posti a ogni passo; test solo alla fine.
+
+## 10. Avanzamento
+
+- Passo 1 fatto: composizione a pezzi nel backend, anteprima unica con modi
+  Struttura / Frammento aperto; tolta la linguetta Anteprima dello Studio.
+- Passo 2 fatto: la memoria va solo a traduzione e Refine (non più a Format e
+  DeepL); il promemoria del glossario è tolto, le regole restano una volta sola;
+  l'intestazione «Work brief:» diventa «Translation context:» e i ruoli citano
+  il «translation context», come il nome nell'interfaccia. Format riceveva già
+  senza Contesto.

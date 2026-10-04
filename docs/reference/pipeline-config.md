@@ -29,7 +29,7 @@ restano bloccate durante l’elaborazione.
 | Controllo qualità | Ciclo di raffinamento, modello del giudizio, prompt di giudizio e coerenza |
 | Memoria | Memoria delle frasi ed esempi di traduzione (spenta in modalità DeepL) |
 | Glossario | Dizionario assegnato e suoi termini |
-| Anteprima prompt | Costruzione delle fasi, messaggi completi, richieste DeepL, audit e coerenza |
+| Anteprima prompt | Ogni richiesta pezzo per pezzo: fasi, audit, coerenza, richiesta DeepL |
 
 Mentre la pipeline lavora la finestra resta aperta e leggibile, ma un velo ne
 blocca i comandi. In fondo, l’icona rossa **Azzera tutte le traduzioni** cancella
@@ -74,13 +74,20 @@ le fasi. In DeepL restano attive revisione LLM, audit e coerenza.
 Le lingue generali usate dalle memorie sono ancora metadati distinti: la loro
 configurazione sarà consolidata nel lavoro sulle risorse linguistiche.
 
-In **Anteprima prompt** scegli una fase, Audit o Coerenza. Per le fasi LLM
-la vista iniziale è **Prompt completo**; passa a **Costruzione** per leggere i blocchi. Espandi il testo con l’occhio e copialo integralmente con gli appunti; audit e
-coerenza mostrano direttamente messaggio di sistema e messaggio utente completi,
-compresi i contratti JSON. I testi provengono dalle stesse funzioni backend
-dell’esecuzione, senza chiamare servizi. I segnaposto rappresentano i dati
-del frammento e il contesto opzionale: l’anteprima nelle opzioni è una costruzione
-con la configurazione attuale, non la richiesta storica di un’esecuzione.
+In **Anteprima prompt** scegli una fase, Audit o Coerenza: vedi la richiesta
+pezzo per pezzo, nell’ordine in cui parte, divisa in **messaggio di sistema**
+(istruzioni, regole e risorse, uguale per tutti i frammenti) e **messaggio
+utente** (il frammento e la consegna finale). I pezzi vengono dal backend, gli
+stessi che compongono la richiesta vera: anteprima e invio coincidono. Ogni
+pezzo dice se è **fisso nel programma**, **testo tuo**, **dati** o
+**automatico**, e dove si modifica; il titolo spiega a cosa serve. I pezzi che
+in questa pipeline non ci sono restano visibili, spenti, con il motivo (per
+esempio «solo per documenti importati come Markdown»). I segnaposto tra doppie
+graffe indicano dove entrano i dati del frammento: è una costruzione con la
+configurazione attuale, non la richiesta storica di un’esecuzione. Il modo
+**Frammento aperto** riempie gli stessi pezzi con i dati veri del frammento
+aperto nello Studio, comprese le frasi della memoria spuntate. DeepL
+mostra il corpo della richiesta.
 
 I prompt possono essere salvati come modelli riutilizzabili, separati per
 contesto: durante la modifica il segnalibro salva il prompt con un nome e il

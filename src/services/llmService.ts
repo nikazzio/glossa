@@ -156,14 +156,14 @@ export const llmService = {
     previousResult: string | undefined,
     auditContext?: string,
   ): Promise<PromptInfo> {
-    const result = await invoke<{ systemPrompt: string; userPrompt: string }>('preview_stage_prompt', {
+    const result = await invoke<PromptInfo>('preview_stage_prompt', {
       text,
       stage,
       config,
       previousResult: previousResult || null,
       auditContext: auditContext || null,
     });
-    return { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt };
+    return { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt, parts: result.parts };
   },
 
   /**

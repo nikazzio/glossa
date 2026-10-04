@@ -288,7 +288,7 @@ fn stage_prompt_without_previous() {
     let prompt = build_stage_prompts("Hello world", &stage, &config, None, None);
     let system = prompt.flatten_system();
 
-    assert!(system.contains("Work brief:\nLiterary translation from English to Italian."));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(system.contains("Translate accurately."));
     assert!(system.contains("| API | API |"));
     assert!(prompt.user.contains("Hello world"));
@@ -306,7 +306,7 @@ fn stage_prompt_with_blob_context() {
     let prompt = build_stage_prompts("Hello world", &stage, &config, None, None);
     let system = prompt.flatten_system();
 
-    assert!(system.contains("Work brief:\nLiterary translation from English to Italian."));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(prompt.user.contains("Hello world"));
     assert!(prompt.user.contains("Current chunk id: chunk-1"));
     assert!(system.contains("Reference document block"));
@@ -315,7 +315,7 @@ fn stage_prompt_with_blob_context() {
     assert!(prompt.system[0].cacheable);
     assert!(prompt.system[1].cacheable);
     assert!(!prompt.system[2].cacheable);
-    assert!(prompt.system[0].text.contains("Work brief:"));
+    assert!(prompt.system[0].text.contains("Translation context:"));
     assert!(prompt.system[1].text.contains("Reference document block"));
     assert!(prompt.system[2].text.contains("Core Instructions"));
 }
@@ -331,7 +331,7 @@ fn stage_prompt_refine_includes_previous_iteration() {
     let prompt = build_stage_prompts("Hello world", &stage, &config, prev.as_deref(), None);
     let system = prompt.flatten_system();
 
-    assert!(system.contains("Work brief:\nLiterary translation from English to Italian."));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(prompt.user.contains("Hello world"));
     assert!(prompt.user.contains("Ciao mondo"));
     assert!(prompt.user.contains("Previous Iteration"));
@@ -371,8 +371,7 @@ fn stage_prompt_multiple_glossary_entries() {
     assert!(system.contains("| API | API | tech |"));
     assert!(system.contains("| bug | errore |"));
     assert!(system.contains("Treat every glossary entry as mandatory terminology"));
-    assert!(system.contains("Glossary Reminder"));
-    assert!(system.contains("Apply the glossary entries specified above"));
+    assert!(!system.contains("Glossary Reminder"));
 }
 
 #[test]
@@ -392,7 +391,7 @@ fn format_stage_prompt_omits_glossary_persona_and_source_context() {
     assert!(system.contains("Output only the formatted text"));
     assert!(!system.contains("Glossary Constraints"));
     assert!(!system.contains("| API | API |"));
-    assert!(!system.contains("Work brief"));
+    assert!(!system.contains("Translation context"));
     assert!(!system.contains("Reference document block"));
     assert!(!system.contains("Output only the translated text"));
     assert!(prompt.user.contains("Text to format"));
@@ -425,7 +424,7 @@ fn judge_prompt_includes_work_brief_and_texts() {
     let system = prompt.flatten_system();
 
     // Source/target text now live in the user turn for cacheability
-    assert!(system.contains("Work brief:\nLiterary translation from English to Italian."));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(!system.contains("Hello"));
     assert!(!system.contains("Ciao"));
     assert!(prompt.user.contains("Hello"));

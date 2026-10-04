@@ -139,12 +139,11 @@ nuovo in frammenti diversi.
 
 ## Anteprima delle richieste
 
-La configurazione mostra la struttura dei prompt. La scheda **Anteprima** del
-frammento costruisce invece la richiesta della fase scelta per il testo corrente.
-Oltre alle fasi, il selettore offre **Audit** e **Coerenza**: mostrano il
-messaggio che riceverebbero con la traduzione attuale del frammento (la
-coerenza anche con i frammenti vicini). Su un frammento non ancora tradotto le
-due voci sono spente, con il motivo accanto al nome.
+L’**Anteprima prompt** nelle opzioni della pipeline ha due modi. **Struttura**
+mostra i pezzi di ogni richiesta con i segnaposto dove entrano i dati.
+**Frammento aperto** li riempie con il frammento aperto nello Studio: testo,
+frammenti vicini, frasi della memoria spuntate, traduzione precedente. Audit e
+Coerenza usano la traduzione attuale del frammento; senza traduzione lo dicono.
 Questa operazione non chiama il modello e non produce una traduzione.
 
 ## Esportazione

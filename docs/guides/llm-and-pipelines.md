@@ -29,8 +29,9 @@ nella richiesta.
 | Judge | Sorgente, traduzione e criteri di valutazione | Valutazione e problemi strutturati |
 | Coherence | Traduzioni e contesto dei frammenti vicini | Segnalazioni di incoerenza tra frammenti |
 
-La fase Format usa un prompt separato: non riceve il Contesto di traduzione, il glossario o contesto
-sorgente della traduzione. Le istruzioni ne limitano il compito alle correzioni
+La fase Format usa un prompt separato: non riceve il Contesto di traduzione, il glossario, le frasi
+della memoria né il contesto sorgente della traduzione. Il glossario compare una
+sola volta, nelle regole all’inizio delle istruzioni di traduzione e Refine. Le istruzioni ne limitano il compito alle correzioni
 di formattazione, ma il risultato deve comunque essere controllato.
 
 In DeepL Hybrid, la prima fase usa l’API DeepL e i relativi parametri di lingua,

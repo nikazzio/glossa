@@ -27,7 +27,7 @@ pair in the bar. Pipeline operations stay blocked while processing.
 | Quality control | Refinement loop, assessment model, assessment and consistency prompts |
 | Memory | Phrase memory and translation examples (off in DeepL mode) |
 | Glossary | Assigned dictionary and its terms |
-| Prompt preview | Stage construction, complete messages, DeepL requests, audit and coherence |
+| Prompt preview | Every request piece by piece: stages, audit, coherence, DeepL request |
 
 While the pipeline runs the window stays open and readable, but a veil locks
 its controls. At the bottom, the red **Reset all translations** icon deletes
@@ -69,12 +69,18 @@ Switching modes preserves all stage configurations. DeepL retains LLM
 refinement, audit and coherence. General language metadata is still used by
 phrase memory; its configuration will be consolidated with linguistic resources.
 
-In **Prompt preview**, choose a stage, Audit or Coherence. For LLM stages,
-the initial view is **Complete prompt**; switch to **Construction** for the blocks. Expand text with the eye and copy it in full with the clipboard. Audit and coherence
-show full system and user messages, including JSON contracts. Text comes from
-the same backend functions as execution, without contacting services.
-Placeholders represent chunk data and optional context: the configuration
-preview is a construction using current settings, not a historical request.
+In **Prompt preview**, choose a stage, Audit or Coherence: you see the request
+piece by piece in sending order, split into the **system message**
+(instructions, rules and resources, identical for every chunk) and the **user
+message** (the chunk and the final request). The pieces come from the backend,
+the same ones that compose the real request: preview and sending match. Each
+piece says whether it is **fixed in the program**, **your text**, **data** or
+**automatic**, and where it is changed; its title explains its purpose. Pieces
+absent from this pipeline stay visible, disabled, with the reason (for example
+“only for documents imported as Markdown”). Placeholders in double braces show
+where chunk data goes: it is built from the current settings, not a historical
+request. **Open chunk** mode fills the same pieces with the real data of the
+chunk open in the Studio, including checked memory phrases. DeepL shows the request body.
 
 Prompts can be saved as reusable templates, organised by context: while
 editing, the bookmark saves the prompt under a name and the book opens the

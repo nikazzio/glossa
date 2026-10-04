@@ -579,9 +579,19 @@ export interface TokenUsage {
   cacheMissInputTokens?: number;
 }
 
+/** One named piece of a request, as composed by the backend. */
+export interface PromptPart {
+  id: string;
+  message: 'system' | 'user';
+  cacheable: boolean;
+  text: string;
+}
+
 export interface PromptInfo {
   systemPrompt: string;
   userPrompt: string;
+  /** The same request split into named parts, in sending order (previews only). */
+  parts?: PromptPart[];
 }
 
 export interface ResponseInfo {

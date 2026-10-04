@@ -94,7 +94,8 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
         ...(blobContext ? { blobContext, blobCurrentChunkId: chunk.id } : {}),
       };
 
-      const memoryEntry = config.usePhraseMemory
+      // Come in esecuzione: la memoria va a traduzione e Refine, non a Format.
+      const memoryEntry = config.usePhraseMemory && !isFormatStage
         ? usePhraseMemoryStore.getState().matchesByChunk.get(chunk.id)
         : undefined;
       const memoryBlock = memoryEntry
