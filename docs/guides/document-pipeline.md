@@ -64,7 +64,7 @@ principale a sinistra resta in vista e porta a qualunque area, chiudendo la
 traduzione. Mentre la pipeline lavora le sue voci sono spente, come il ritorno
 al catalogo.
 
-In cima, la barra mostra opera / pipeline e il tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano; il suggerimento mostra il nome completo. Il nome dell’opera si rinomina con un clic. Nome e freccia della pipeline aprono il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. La coppia linguistica compare solo con DeepL. A destra stanno importa, esporta, risorse linguistiche ed eliminazione.
+In cima, la barra mostra opera / pipeline e il tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano; il suggerimento mostra il nome completo. Il nome dell’opera si rinomina con un clic. Il nome della pipeline, con la piccola freccia accanto, apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. La coppia linguistica compare solo con DeepL. A destra stanno importa, esporta, risorse linguistiche ed eliminazione.
 
 Al centro i due fogli affiancano originale e traduzione. Sopra di loro, a
 sinistra, il numero del frammento aperto; al centro una finestra di sette

@@ -16,7 +16,7 @@ non sono scritte sotto i campi: compaiono passando sopra il titolo di una
 sezione o il nome di una voce.
 
 La barra affianca **opera / pipeline**, con i nomi lunghi troncati e il nome
-completo nel suggerimento. Nome e freccia della pipeline aprono lo stesso menu
+completo nel suggerimento. Il nome della pipeline, con la piccola freccia accanto, apre il menu
 per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni.
 Il tipo **Semplice, Editoriale o DeepL** è sempre visibile con un’icona. La
 coppia compare nella barra soltanto per DeepL. Le operazioni sulla pipeline

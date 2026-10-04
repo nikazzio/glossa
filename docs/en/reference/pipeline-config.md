@@ -15,7 +15,7 @@ top row, not here. Explanations are not written under the fields: they appear
 when you hover a section title or a row name.
 
 The bar places **work / pipeline** together, truncating long names and showing
-the full name on hover. The pipeline name and arrow open the same menu to
+the full name on hover. The pipeline name, with its small arrow, opens the menu to
 select, create, rename or delete; the gear opens options. **Simple, Editorial
 or DeepL** mode is always visible with an icon. Only DeepL displays a language
 pair in the bar. Pipeline operations stay blocked while processing.

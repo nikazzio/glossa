@@ -252,7 +252,7 @@ solo**.
   `INSPECTOR_WIDTH` (Biblioteca e Studio uguali).
 - `PageHeader`: la riga `h-14` in cima a una pagina di dettaglio — ritorno,
   segno dell'area nel suo inchiostro, identità, comandi a destra. `center`
-  resta per gruppi centrati. `titleAccessory` affianca opera / pipeline: nomi troncati, menu e opzioni, tipo con icona; coppia soltanto in DeepL. Nessuna pillola o pannello aggiuntivo nella barra.
+  resta per gruppi centrati. `titleAccessory` affianca opera / pipeline: nomi troncati, menu e opzioni, tipo con icona; coppia soltanto in DeepL. Il nome della pipeline è l’unico ingresso al menu (piccola freccia muted dentro lo stesso comando, nessun pulsante separato); nel menu i comandi Rinomina/Nuova stanno in un solo gruppo sotto un solo filetto. Nessuna pillola o pannello aggiuntivo nella barra.
 - `ResizeHandle`: l'unico divisore trascinabile fra colonne, con nome per chi
   legge con la voce; `layer="shell"` fra colonne dell'applicazione.
 

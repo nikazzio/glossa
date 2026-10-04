@@ -2488,7 +2488,7 @@
             "title": "Lo Studio di traduzione",
             "paragraphs": [
               "La barra principale resta a sinistra: da lì passi a un’altra area, e la traduzione si chiude. Mentre la pipeline lavora le voci sono spente.",
-              "La riga in cima riporta al catalogo e mostra il nome della traduzione e la pipeline aperta con le sue lingue: un clic su un nome lo rinomina, ⇄ cambia pipeline, l’ingranaggio ne apre le opzioni. A destra trovi importa, esporta, risorse linguistiche del workspace, configurazione ed elimina.",
+              "La riga in cima riporta al catalogo e mostra il nome della traduzione e la pipeline aperta con le sue lingue: un clic sul nome dell’opera lo rinomina, il nome della pipeline apre il menu per sceglierla, rinominarla, crearne o eliminarne una, l’ingranaggio ne apre le opzioni. A destra trovi importa, esporta, risorse linguistiche del workspace, configurazione ed elimina.",
               "La colonna Strumenti a destra tiene in cima traduci, Blocchi multipli con il numero di frammenti e i costi. Sotto trovi Glossario, Memoria (frasi simili ed estrazione), Anteprima, Revisione (Audit, Note, Note del testo e Storico) e Documento (Indice, Statistiche e Coerenza). Chiusa, lascia in vista il solo pulsante traduci."
             ]
           },

@@ -137,7 +137,6 @@ describe('TranslationStudio', () => {
     fireEvent.keyDown(field, { key: 'Enter' });
 
     expect(renamePipeline).toHaveBeenCalledWith('pl1', 'Revisione stilistica');
-    expect(screen.getByRole('button', { name: 'pipeline.changePipeline' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'pipeline.configurePipeline' })).toBeInTheDocument();
   });
 });

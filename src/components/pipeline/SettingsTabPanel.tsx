@@ -131,7 +131,7 @@ export function SettingsTabPanel({
         value={config.workBrief ?? ''} placeholder={t('pipeline.workBriefPlaceholder')}
         templates={briefTemplates} templateContext="brief" saveTemplate={saveTemplate}
         onConfirm={(workBrief) => setConfig((prev) => ({ ...prev, workBrief }))}
-        defaultValue="" disabledReason={isProcessing ? t('document.operationsRunning') : undefined}
+        disabledReason={isProcessing ? t('document.operationsRunning') : undefined}
         provider={briefRefineProvider} model={briefRefineModel} canRefine={canRefineBrief}
         refineLabel={briefRefineLabel} refineDisabledReason={t('pipeline.reasonMissingKey', { provider: briefRefineProvider })}
       />

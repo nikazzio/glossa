@@ -1,11 +1,11 @@
-import { Cpu } from 'lucide-react';
+import { Cpu, RefreshCw } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { PanelSection, ToggleRow } from '../ui';
+import { PanelSection, SECTION_SETTING_LIST_CLASSNAME, ToggleRow } from '../ui';
 import { PipelinePromptEditor } from './PipelinePromptEditor';
 import { ModelSection } from './ModelSection';
 import { NumberSettingRow } from './NumberSettingRow';
@@ -58,32 +58,34 @@ export function AuditTabPanel({
 
   return (
     <div id="pconfig-panel-audit" role="tabpanel" aria-labelledby="pconfig-tab-audit" className="space-y-8">
-      <div className="divide-y divide-rule border-y border-rule">
-        <div className="py-2.5">
-          <ToggleRow
-            icon={null}
-            label={t('pipeline.judgeRefineLoopSectionLabel')}
-            checked={refineLoop}
-            disabled={isProcessing}
-            onChange={() => setConfig((prev) => ({ ...prev, judgeRefineLoop: !(prev.judgeRefineLoop ?? false) }))}
-          />
+      <PanelSection icon={RefreshCw} label={t('pipeline.judgeRefineLoopSectionLabel')}>
+        <div className={SECTION_SETTING_LIST_CLASSNAME}>
+          <div className="py-2.5">
+            <ToggleRow
+              icon={null}
+              label={t('pipeline.judgeRefineLoop')}
+              checked={refineLoop}
+              disabled={isProcessing}
+              onChange={() => setConfig((prev) => ({ ...prev, judgeRefineLoop: !(prev.judgeRefineLoop ?? false) }))}
+            />
+          </div>
+          {refineLoop && (
+            <NumberSettingRow
+              label={t('pipeline.judgeRefineLoopMaxIter')}
+              value={config.judgeRefineLoopMaxIter ?? REFINE_LOOP_DEFAULT}
+              min={REFINE_LOOP_MIN}
+              max={REFINE_LOOP_MAX}
+              disabled={isProcessing}
+              onChange={(raw) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  judgeRefineLoopMaxIter: Math.max(REFINE_LOOP_MIN, Math.min(REFINE_LOOP_MAX, parseInt(raw, 10) || REFINE_LOOP_MIN)),
+                }))
+              }
+            />
+          )}
         </div>
-        {refineLoop && (
-          <NumberSettingRow
-            label={t('pipeline.judgeRefineLoopMaxIter')}
-            value={config.judgeRefineLoopMaxIter ?? REFINE_LOOP_DEFAULT}
-            min={REFINE_LOOP_MIN}
-            max={REFINE_LOOP_MAX}
-            disabled={isProcessing}
-            onChange={(raw) =>
-              setConfig((prev) => ({
-                ...prev,
-                judgeRefineLoopMaxIter: Math.max(REFINE_LOOP_MIN, Math.min(REFINE_LOOP_MAX, parseInt(raw, 10) || REFINE_LOOP_MIN)),
-              }))
-            }
-          />
-        )}
-      </div>
+      </PanelSection>
 
       <PanelSection icon={Cpu} label={t('pipeline.auditModelLabel')}>
         <ModelSection

@@ -63,7 +63,7 @@ the left stays visible and leads to any area, closing the translation. While
 the pipeline is running its entries are off, like the way back to the
 catalogue.
 
-At the top, the bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover reveals the full name. Click the work name to rename it. The pipeline name and arrow open the menu to select, create, rename or delete; the gear opens options. Only DeepL displays a language pair. Import, export, language resources and deletion are on the right.
+At the top, the bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover reveals the full name. Click the work name to rename it. The pipeline name, with its small arrow, opens the menu to select, create, rename or delete; the gear opens options. Only DeepL displays a language pair. Import, export, language resources and deletion are on the right.
 
 In the middle the two sheets place source and translation side by side. Above
 them, on the left, the number of the open segment; in the middle a window of

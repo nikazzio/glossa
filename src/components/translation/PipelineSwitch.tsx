@@ -68,89 +68,79 @@ export function PipelineSwitch() {
           className="w-48"
         />
       ) : (
-        <Tooltip label={`${activeName} — ${t('pipeline.changePipeline')}`} side="bottom" className="min-w-0">
-          <button
-            type="button"
-            onClick={() => setPopoverOpen((open) => !open)}
-            disabled={!activePipelineId || isRunning}
-            aria-haspopup="dialog"
-            aria-expanded={popoverOpen}
-            className="max-w-[min(18vw,14rem)] truncate font-display text-base italic text-editorial-ink transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed"
-          >
-            {activeName}
-          </button>
-        </Tooltip>
-      )}
-      {pipelines.length > 0 && (
-        <ClickPopover
-          open={popoverOpen}
-          onOpenChange={setPopoverOpen}
+        // Il nome è l'unico ingresso al menu: scegliere, rinominare, creare, eliminare.
+        <Tooltip
+          label={`${activeName} — ${isRunning ? `${t('pipeline.changePipeline')} — ${t('document.reasonRunning')}` : t('pipeline.changePipeline')}`}
           side="bottom"
-          align="start"
-          trigger={
-            <IconButton
-              size="sm"
-              tone={popoverOpen ? 'accent' : 'default'}
-              disabled={isRunning}
-              title={isRunning ? `${t('pipeline.changePipeline')} — ${t('document.reasonRunning')}` : t('pipeline.changePipeline')}
-              ariaPressed={popoverOpen}
-              tooltipSide="bottom"
-              className="shrink-0"
-            >
-              <ChevronDown size={12} />
-            </IconButton>
-          }
+          className="min-w-0"
         >
-          {pipelines.map((pipeline) => {
-            const isActive = pipeline.id === activePipelineId;
-            const canDelete = pipelines.length > 1 && !(isActive && isRunning);
-            return (
-              <div key={pipeline.id} className="flex items-center gap-1 pl-2 pr-1">
-                {/* La pipeline aperta porta il pallino della scelta. */}
-                <span
-                  aria-hidden="true"
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${isActive ? 'bg-editorial-accent' : 'bg-editorial-border'}`}
-                />
-                <PopoverItem
-                  label={pipeline.name}
-                  disabled={isRunning}
-                  onSelect={() => {
-                    void switchPipeline(pipeline.id).catch(reportError);
-                    setPopoverOpen(false);
-                  }}
-                />
-                {canDelete && (
-                  <IconButton
-                    size="sm"
-                    tone="muted"
-                    onClick={() => void handleDeletePipeline(pipeline.id, pipeline.name).catch(reportError)}
-                    title={t('pipeline.deletePipeline')}
-                    className="shrink-0"
-                  >
-                    <Trash2 size={12} />
-                  </IconButton>
+          <ClickPopover
+            open={popoverOpen}
+            onOpenChange={setPopoverOpen}
+            side="bottom"
+            align="start"
+            trigger={
+              <button
+                type="button"
+                disabled={!activePipelineId || isRunning || pipelines.length === 0}
+                className="flex min-w-0 items-center gap-1 font-display text-base italic text-editorial-ink transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed"
+              >
+                <span className="max-w-[min(18vw,14rem)] truncate">{activeName}</span>
+                <ChevronDown size={12} aria-hidden="true" className="shrink-0 text-editorial-muted" />
+              </button>
+            }
+          >
+            {pipelines.map((pipeline) => {
+              const isActive = pipeline.id === activePipelineId;
+              const canDelete = pipelines.length > 1 && !(isActive && isRunning);
+              return (
+                <div key={pipeline.id} className="flex items-center gap-1 pl-2 pr-1">
+                  {/* La pipeline aperta porta il pallino della scelta. */}
+                  <span
+                    aria-hidden="true"
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${isActive ? 'bg-editorial-accent' : 'bg-editorial-border'}`}
+                  />
+                  <PopoverItem
+                    label={pipeline.name}
+                    disabled={isRunning}
+                    onSelect={() => {
+                      void switchPipeline(pipeline.id).catch(reportError);
+                      setPopoverOpen(false);
+                    }}
+                  />
+                  {canDelete && (
+                    <IconButton
+                      size="sm"
+                      tone="muted"
+                      onClick={() => void handleDeletePipeline(pipeline.id, pipeline.name).catch(reportError)}
+                      title={t('pipeline.deletePipeline')}
+                      className="shrink-0"
+                    >
+                      <Trash2 size={12} />
+                    </IconButton>
+                  )}
+                </div>
+              );
+            })}
+            {/* Comandi sulla pipeline: un solo gruppo, sotto un solo filetto. */}
+            {!isRunning && (activePipelineId || (hasProject && pipelines.length < maxPipelines)) && (
+              <div className="mt-1 border-t border-rule pt-1">
+                {activePipelineId && <MenuActionRow icon={<Pencil size={12} />} label={t('pipeline.renamePipeline')}
+                  onClick={() => { setPopoverOpen(false); setEditing(true); }} />}
+                {hasProject && pipelines.length < maxPipelines && (
+                  <MenuActionRow
+                    icon={<Plus size={12} />}
+                    label={t('pipeline.newPipeline')}
+                    onClick={() => {
+                      void createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 })).catch(reportError);
+                      setPopoverOpen(false);
+                    }}
+                  />
                 )}
               </div>
-            );
-          })}
-          {/* Comandi sulla pipeline: un solo gruppo, sotto un solo filetto. */}
-          {!isRunning && (activePipelineId || (hasProject && pipelines.length < maxPipelines)) && (
-            <div className="mt-1 border-t border-rule pt-1">
-              {activePipelineId && <MenuActionRow icon={<Pencil size={12} />} label={t('pipeline.renamePipeline')}
-                onClick={() => { setPopoverOpen(false); setEditing(true); }} />}
-              {hasProject && pipelines.length < maxPipelines && (
-                <MenuActionRow
-                  icon={<Plus size={12} />}
-                  label={t('pipeline.newPipeline')}
-                  onClick={() => {
-                    void createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 })).catch(reportError);
-                    setPopoverOpen(false);
-                  }}
-                />
-              )}
-            </div>
-          )}
-        </ClickPopover>
+            )}
+          </ClickPopover>
+        </Tooltip>
       )}
       <IconButton
         size="sm"

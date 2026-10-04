@@ -2488,7 +2488,7 @@
             "title": "The translation studio",
             "paragraphs": [
               "The main bar stays on the left: from there you move to another area, and the translation closes. While the pipeline is running its entries are off.",
-              "The top row leads back to the catalogue and shows the translation name and the open pipeline with its languages: click a name to rename it, ⇄ switches pipeline, the gear opens its options. On the right are import, export, the workspace language resources, configuration and delete.",
+              "The top row leads back to the catalogue and shows the translation name and the open pipeline with its languages: click the work name to rename it, the pipeline name opens the menu to select, rename, create or delete one, the gear opens its options. On the right are import, export, the workspace language resources, configuration and delete.",
               "The Tools column on the right starts with translate, Multiple chunks with the number of segments and the costs. Below are Glossary, Memory (similar phrases and extraction), Preview, Review (Audit, Notes, Source notes and History) and Document (Index, Statistics and Coherence). Collapsed, it keeps only the translate button visible."
             ]
           },
