@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PromptMessage } from '../../pipeline/PromptCard';
 import { usePipelineStore } from '../../../stores/pipelineStore';
-import { useChunkPromptPreview } from '../../../hooks/useChunkPromptPreview';
+import { AUDIT_PREVIEW_ID, COHERENCE_PREVIEW_ID, useChunkPromptPreview } from '../../../hooks/useChunkPromptPreview';
 import { EmptyState, IconButton, PANEL_BODY_CLASSNAME, PanelSection, Select, Spinner } from '../../ui';
 import type { TranslationChunk } from '../../../types';
 
@@ -20,11 +20,23 @@ export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: Chu
   const [selectedStageId, setSelectedStageId] = useState(enabledStages[0]?.id ?? '');
   const { preview, isBuilding, error, isDeeplStage, build, reset } = useChunkPromptPreview(currentChunk);
 
+  // Le verifiche giudicano la traduzione attuale: senza, non c'è nulla da mostrare.
+  const reviewBlocked = !currentChunk?.translationProcessingText?.trim();
+  const reviewLabel = (key: string) => reviewBlocked
+    ? t('transcription.commandBlocked', { command: t(key), reason: t('promptPreview.translationRequired') })
+    : t(key);
+  const options = [
+    ...enabledStages.map((stage) => ({ value: stage.id, label: stage.name || stage.id })),
+    { value: AUDIT_PREVIEW_ID, label: reviewLabel('pipeline.auditPreviewLabel'), disabled: reviewBlocked },
+    { value: COHERENCE_PREVIEW_ID, label: reviewLabel('pipeline.coherencePreviewLabel'), disabled: reviewBlocked },
+  ];
+  const isReviewSelected = selectedStageId === AUDIT_PREVIEW_ID || selectedStageId === COHERENCE_PREVIEW_ID;
+
   useEffect(() => {
-    if (!enabledStages.some((stage) => stage.id === selectedStageId)) {
+    if (isReviewSelected ? reviewBlocked : !enabledStages.some((stage) => stage.id === selectedStageId)) {
       setSelectedStageId(enabledStages[0]?.id ?? '');
     }
-  }, [enabledStages, selectedStageId]);
+  }, [enabledStages, selectedStageId, isReviewSelected, reviewBlocked]);
 
   useEffect(() => {
     reset();
@@ -39,7 +51,7 @@ export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: Chu
             id="prompt-preview-stage"
             value={selectedStageId}
             onChange={setSelectedStageId}
-            options={enabledStages.map((stage) => ({ value: stage.id, label: stage.name || stage.id }))}
+            options={options}
             ariaLabel={t('promptPreview.stageLabel')}
             className="flex-1"
           />

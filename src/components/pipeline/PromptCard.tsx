@@ -4,17 +4,22 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Hint, IconButton } from '../ui';
 
-export function PromptCard({ label, hint, actions, children }: {
+export function PromptCard({ label, hint, meta, actions, children }: {
   label: string;
   hint?: string;
+  /** Riga breve accanto al titolo, per esempio da dove viene il testo. */
+  meta?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
 }) {
   return <article className="linguistic-resource space-y-3 rounded-md border-l-2 border-editorial-accent bg-surface-resource p-4">
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-1.5">
-        <h3 className="break-words font-display text-lg italic text-editorial-ink">{label}</h3>
-        {hint && <Hint label={hint} />}
+        {/* La spiegazione la porta il titolo stesso, come in SectionLabel: niente «i» a parte. */}
+        <h3 className="break-words font-display text-lg italic text-editorial-ink">
+          {hint ? <Hint label={`${label} — ${hint}`}>{label}</Hint> : label}
+        </h3>
+        {meta}
       </div>
       <div className="flex shrink-0 items-center gap-1">{actions}</div>
     </div>

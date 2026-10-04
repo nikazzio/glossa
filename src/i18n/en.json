@@ -354,9 +354,9 @@
     "prompt": "Prompt",
     "auditModelLabel": "Audit Model",
     "auditModelHint": "This provider and model are shared by both local quality evaluation and the coherence audit.",
-    "judgePromptLabel": "Judge Prompt",
+    "judgePromptLabel": "Audit prompt",
     "judgePromptHint": "Instructions for local quality, accuracy, and terminology evaluation.",
-    "coherencePromptLabel": "Coherence Prompt",
+    "coherencePromptLabel": "Coherence prompt",
     "coherencePromptHint": "Instructions for the cross-segment audit across the full translated document.",
     "coherencePromptPlaceholder": "Coherence audit instructions...",
     "judgeRefineLoopSectionLabel": "Refine Loop",
@@ -438,7 +438,7 @@
     "promptPreviewBlocks": {
       "system-opener": {
         "title": "System opener",
-        "hint": "Cached: defines the model role and source/target language pair. Identical for every chunk — stays warm in the provider cache across all stages."
+        "hint": "Fixed in the code: tells the model it is a translator and must follow the Translation context and the stage instructions. It contains no languages. Cacheable, identical for every chunk."
       },
       "structural-rules": {
         "title": "Structural preservation rules",
@@ -489,12 +489,12 @@
         "hint": "Cached: hard constraints for the format stage. Prevents retranslation or wording changes — only minimal formatting repairs are allowed."
       },
       "work-brief": {
-        "title": "Work brief",
+        "title": "Translation context",
         "hint": "Shared context in the cacheable prefix, before stage instructions."
       },
       "deepl-request": {
         "title": "DeepL request",
-        "hint": "API body assembled by the backend as for execution. Chunk text is a placeholder; DeepL does not receive the shared brief."
+        "hint": "API body assembled by the backend as for execution. Chunk text is a placeholder; DeepL does not receive the Translation context."
       },
       "system-message": {
         "title": "System",
@@ -587,15 +587,15 @@
       "glossaryNeedsSource": "Choose a source language in the DeepL stage to upload the glossary.",
       "requestBody": "DeepL request",
       "languagePair": "DeepL · languages",
-      "languagePairHint": "Only for the DeepL request; LLMs follow the work brief and prompts.",
+      "languagePairHint": "Only for the DeepL request; LLMs follow the Translation context and prompts.",
       "onlyInDeeplMode": "Enabled only in DeepL mode",
       "chooseTarget": "Choose the target language",
       "swapUnavailable": "Choose two compatible languages; automatic detection cannot be swapped",
       "autoShort": "Auto"
     },
     "configSections": "Configuration sections",
-    "workBriefLabel": "Work brief",
-    "workBriefHint": "Shared LLM context: languages, varieties, goal and register. Stage-specific instructions stay in their prompts.",
+    "workBriefLabel": "Translation context",
+    "workBriefHint": "Languages, varieties, goal and register. Translation, refinement, audit and coherence receive it; it cannot be empty.",
     "workBriefPlaceholder": "E.g. Translate seventeenth-century Venetian into contemporary Italian, preserving the tone and explaining historical terms in notes.",
     "completePrompt": "Complete prompt",
     "auditPreviewLabel": "Audit",
@@ -607,7 +607,13 @@
       "editorial": "Editorial",
       "deepl-hybrid": "DeepL"
     },
-    "operationFailed": "Pipeline operation failed"
+    "operationFailed": "Pipeline operation failed",
+    "promptSource": {
+      "template": "Template “{{name}}”",
+      "default": "Default",
+      "custom": "Custom"
+    },
+    "promptRequired": "the text cannot be empty"
   },
   "audit": {
     "title": "Audit Logs",
@@ -1205,7 +1211,7 @@
       "noModelConfigured": "Choose a provider and a model that can read images.",
       "loading": "Loading…",
       "documentModel": "Model",
-      "documentPrompt": "Prompt",
+      "documentPrompt": "Document OCR prompt",
       "readThisPage": "Read page {{page}}",
       "inheritWorkspace": "Inherit from workspace",
       "saveFailed": "Could not save OCR settings",
@@ -2345,7 +2351,8 @@
     "emptyNoChunk": "Select a chunk to build the preview.",
     "emptyBeforeBuild": "Press \"Build preview\" to see the full message for this stage.",
     "deeplNotice": "This stage uses DeepL: it doesn't generate a text message for a language model.",
-    "buildFailed": "Couldn't build the preview."
+    "buildFailed": "Couldn't build the preview.",
+    "translationRequired": "the chunk has no translation yet"
   },
   "help": {
     "title": "User guide",
@@ -2450,15 +2457,16 @@
             "title": "Configuring stages",
             "paragraphs": [
               "The Studio bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover shows the full name. The pipeline name opens the menu to select, create, rename or delete; the gear opens options. The language pair appears only for DeepL. Pipeline operations are blocked while processing.",
-              "The red icon at the bottom of the window resets all translations and their audits, after a confirmation. It is off, with the reason, while the pipeline runs or when there is nothing to reset."
+              "The red icon at the bottom of the window resets all translations and their audits, after a confirmation. It is off, with the reason, while the pipeline runs or when there is nothing to reset.",
+              "Next to each prompt title you see where its text comes from: Default, Custom or the name of the saved template in use."
             ],
             "steps": [
               "Open the configuration with the gear in the Studio's top row, or with Ctrl + comma. The title is the pipeline name; the tabs are General, Stages, Quality control, Memory, Glossary and Prompt preview.",
-              "In General choose the mode and edit the work brief with the pencil: languages, historical varieties, audience and register. Confirm with the checkmark or discard with X. It replaces Persona and is shared by translation, refinement, audit and coherence. Languages are never added automatically to LLM prompts, even when the brief is empty. The DeepL pair stays visible and is enabled only in DeepL mode. Unused stages are disabled; switching modes preserves their configuration.",
+              "In General choose the mode and edit the Translation context with the pencil: languages, historical varieties, audience and register. Confirm with the checkmark or discard with X. It is never empty: it starts from a default text (English into Italian) that you can rewrite or replace with a saved template; the circular arrow restores it. Translation, refinement, audit and coherence receive it; languages are never added automatically to LLM prompts. The DeepL pair stays visible and is enabled only in DeepL mode. Unused stages are disabled; switching modes preserves their configuration.",
               "In Stages and Quality control choose service, model and instructions for each stage. Once translations exist the model is closed by the lock: opening it leaves already translated chunks on the previous model. Explanations appear when you hover titles and rows.",
               "In Memory set phrase memory and translation examples (DeepL mode does not use them); in Glossary assign the dictionary and save its terms with the disk icon.",
               "Prompt preview opens on the complete request; for LLM stages you can switch to construction blocks. Audit and Coherence show complete messages, DeepL the API request body. Expand text with the eye and copy it in full with the clipboard. Placeholders represent chunk data and optional context. The backend builds requests as for execution, without contacting services. Unused stages are disabled; audit and coherence remain available with DeepL.",
-              "Choose a separate language pair for standard translation in the DeepL stage. Automatic source detection is available, but a glossary requires an explicit source. DeepL Context is separate from the shared brief. Previews and logs show the API body; the configuration preview uses a chunk-text placeholder."
+              "Choose a separate language pair for standard translation in the DeepL stage. Automatic source detection is available, but a glossary requires an explicit source. DeepL Context is separate from the Translation context. Previews and logs show the API body; the configuration preview uses a chunk-text placeholder."
             ]
           },
           {
@@ -2467,6 +2475,7 @@
               "Use Test on a representative segment to inspect the result while keeping configuration editable. Then switch to production and choose whether to process one segment or several.",
               "The estimate beside the controls applies to the selected action. It is approximate: usage depends on the submitted text and response. Statistics show available usage data after processing.",
               "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unverified segments can replace their results. During execution you cannot switch pipelines or create a new one. Memory, Review and Document remember the selected subtab when you visit another tab.",
+              "The Studio’s Preview tab builds the selected stage’s message for the open segment, without calling the model. The selector also offers Audit and Coherence, which use the segment’s current translation: without one they stay disabled. If models, prompts, the Translation context or DeepL options change after an interruption, resuming tells you.",
               "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free.",
               "In the Studio's Memory tab, References shows similar phrases already in memory, with where they come from; the circled check decides which to use in the translation. Memory opens once the translation is verified: saved pairs are removed with the bin, new ones are checked and added with the disk, which never deletes anything."
             ]
@@ -2474,7 +2483,7 @@
           {
             "title": "Reusing instructions",
             "paragraphs": [
-              "Save a prompt as a template to reuse it in other work: while editing, the bookmark asks for a name (Enter saves, Esc cancels) and the book opens the list of saved templates, with search; a click applies the one you pick. Templates are organised by context, such as stage instructions, assessment or the shared work brief, and are deleted from the language resources.",
+              "Save a prompt as a template to reuse it in other work: while editing, the bookmark asks for a name (Enter saves, Esc cancels) and the book opens the list of saved templates, with search; a click applies the one you pick. Templates are organised by context, such as stage instructions, assessment or the Translation context, and are deleted from the language resources.",
               "The wand control rewrites the prompt through the configured service. Review the proposed text before using it: it is model-generated and may change your instructions."
             ]
           }
@@ -2561,7 +2570,7 @@
           {
             "title": "Managing prompt templates",
             "paragraphs": [
-              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Work brief, Memory or OCR. If a saved template has a scope the app no longer recognises, it is left out of the list and a notice names it; the other templates stay available.",
+              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Translation context, Memory or OCR. If a saved template has a scope the app no longer recognises, it is left out of the list and a notice names it; the other templates stay available.",
               "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
               "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
             ]

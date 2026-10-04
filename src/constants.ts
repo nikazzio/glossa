@@ -57,6 +57,10 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
     .map((e) => [`${e.provider}/${e.id}`, e.pricing!]),
 );
 
+/** Contesto di traduzione di partenza: sostituisce la vecchia coppia predefinita
+ *  inglese → italiano, così il campo non è mai vuoto. */
+export const DEFAULT_WORK_BRIEF = 'Translate the text from English into Italian, faithfully and fluently, preserving meaning, tone and register.';
+
 export const WORK_BRIEF_PERSONA = 'You are an expert translator and linguist. Follow the work brief and the instructions for the current stage.';
 
 export const DEFAULT_DEEPL_STAGE_OPTIONS = {

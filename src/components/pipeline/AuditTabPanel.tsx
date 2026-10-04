@@ -134,7 +134,8 @@ export function AuditTabPanel({
       <PipelinePromptEditor
         label={t('pipeline.coherencePromptLabel')}
         hint={t('pipeline.coherencePromptHint')}
-        value={config.coherencePrompt ?? ''}
+        // Senza un testo proprio la coerenza usa il predefinito: si mostra quello.
+        value={config.coherencePrompt ?? DEFAULT_COHERENCE_PROMPT}
         placeholder={t('pipeline.coherencePromptPlaceholder')}
         templates={auditTemplates}
         templateContext="audit"

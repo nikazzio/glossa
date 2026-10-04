@@ -27,7 +27,7 @@ e revisione. I dettagli su formati, limiti e note importate sono nel
 ## Configurazione
 
 Apri la configurazione della pipeline (l’ingranaggio nella riga in cima allo
-Studio) e imposta descrizione del lavoro, modalità, provider, modelli e istruzioni; scegli le lingue soltanto per DeepL: le
+Studio) e imposta Contesto di traduzione, modalità, provider, modelli e istruzioni; scegli le lingue soltanto per DeepL: le
 linguette sono descritte nella [configurazione della pipeline](../reference/pipeline-config). Le modalità definiscono questa sequenza:
 
 | Modalità | Elaborazione |
@@ -51,6 +51,9 @@ L’elaborazione procede per frammenti e ne aggiorna lo stato. L’annullamento
 interrompe il lavoro corrente senza eliminare i risultati già completati.
 La ripresa e la rielaborazione hanno scopi diversi: la prima completa il lavoro
 restante, la seconda ricalcola i frammenti non verificati selezionati dall’azione.
+Se dopo l’interruzione cambi modelli, prompt delle fasi o dell’audit, la
+Contesto di traduzione o le opzioni DeepL, la ripresa avvisa che la configurazione non è
+più quella con cui il lavoro era cominciato.
 
 Mentre un frammento si traduce, il testo della sua traduzione è coperto da un
 velo oro, «Traduzione in corso…», e non si modifica: il testo non compare man
@@ -138,6 +141,10 @@ nuovo in frammenti diversi.
 
 La configurazione mostra la struttura dei prompt. La scheda **Anteprima** del
 frammento costruisce invece la richiesta della fase scelta per il testo corrente.
+Oltre alle fasi, il selettore offre **Audit** e **Coerenza**: mostrano il
+messaggio che riceverebbero con la traduzione attuale del frammento (la
+coerenza anche con i frammenti vicini). Su un frammento non ancora tradotto le
+due voci sono spente, con il motivo accanto al nome.
 Questa operazione non chiama il modello e non produce una traduzione.
 
 ## Esportazione

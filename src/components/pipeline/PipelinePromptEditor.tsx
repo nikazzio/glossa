@@ -1,5 +1,5 @@
 import { Check, Eye, Loader2, Minimize2, Pencil, RotateCcw, Wand2, X } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PromptTemplate, PromptTemplateContext } from '../../types';
@@ -8,6 +8,8 @@ import { llmService } from '../../services/llmService';
 import { FIELD_MONO_CLASSNAME, IconButton } from '../ui';
 import { PromptCard } from './PromptCard';
 import { PromptTemplateMenus } from './PromptTemplateMenus';
+import { PromptSourceLabel } from './PromptSourceLabel';
+import { describePromptSource } from './promptSource';
 
 interface PipelinePromptEditorProps {
   label: string;
@@ -25,11 +27,15 @@ interface PipelinePromptEditorProps {
   canRefine: boolean;
   refineLabel: string;
   refineDisabledReason: string;
+  /** Sotto il testo, dentro la stessa carta: impostazioni che riguardano solo questo prompt. */
+  footer?: ReactNode;
+  /** Il testo non può essere confermato vuoto. */
+  required?: boolean;
 }
 
 export function PipelinePromptEditor({ label, hint, value, placeholder, templates, templateContext,
   saveTemplate, onConfirm, defaultValue, disabledReason, provider, model, canRefine, refineLabel,
-  refineDisabledReason }: PipelinePromptEditorProps) {
+  refineDisabledReason, footer, required = false }: PipelinePromptEditorProps) {
   const { t } = useTranslation();
   const id = useId();
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -45,8 +51,9 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
   const commandLabel = (command: string) => disabledReason
     ? t('transcription.commandBlocked', { command, reason: disabledReason }) : command;
   const cancel = () => { setDraft(null); setTemplate(undefined); };
+  const emptyDraft = required && draft !== null && !draft.trim();
   const confirm = () => {
-    if (draft === null || blocked) return;
+    if (draft === null || blocked || emptyDraft) return;
     onConfirm(draft, template);
     cancel();
   };
@@ -62,7 +69,9 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
   };
   const refineCommand = t('pipeline.refinePromptWithModel', { model: refineLabel });
 
-  return <PromptCard label={label} hint={hint} actions={editing ? <>
+  const source = describePromptSource(draft ?? value, templates, defaultValue);
+
+  return <PromptCard label={label} hint={hint} meta={<PromptSourceLabel source={source} />} actions={editing ? <>
     <fieldset disabled={blocked} className="flex items-center gap-1">
       <IconButton size="sm" title={canRefine ? refineCommand : `${refineCommand} — ${refineDisabledReason}`}
         disabled={!canRefine || !draft.trim() || !model} onClick={() => void refine()}>
@@ -73,7 +82,9 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
         onApplyTemplate={(selected) => { setDraft(selected.prompt); setTemplate(selected); editorRef.current?.focus(); }} />
       {defaultValue !== undefined && <IconButton size="sm" title={t('pipeline.promptReset')}
         onClick={() => { setDraft(defaultValue); setTemplate(undefined); }}><RotateCcw size={14} /></IconButton>}
-      <IconButton size="sm" title={commandLabel(t('common.confirm'))} onClick={confirm}><Check size={14} /></IconButton>
+      <IconButton size="sm" disabled={emptyDraft}
+        title={emptyDraft ? t('transcription.commandBlocked', { command: t('common.confirm'), reason: t('pipeline.promptRequired') }) : commandLabel(t('common.confirm'))}
+        onClick={confirm}><Check size={14} /></IconButton>
     </fieldset>
     <IconButton size="sm" title={t('common.cancel')} disabled={refining} onClick={cancel}><X size={14} /></IconButton>
   </> : <>
@@ -84,14 +95,15 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
     <IconButton size="sm" title={commandLabel(t('common.edit'))} disabled={Boolean(disabledReason)}
       onClick={() => { setDraft(value); setTemplate(undefined); }}><Pencil size={14} /></IconButton>
   </>}>
-    {editing ? <textarea id={id} ref={editorRef} aria-label={label} value={draft} rows={6}
+    {editing ? <textarea id={id} ref={editorRef} aria-label={label} value={draft} rows={16}
       placeholder={placeholder} disabled={blocked} className={`${FIELD_MONO_CLASSNAME} resize-y`}
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !refining) { event.preventDefault(); event.stopPropagation(); cancel(); }
         if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.stopPropagation(); confirm(); }
-      }} /> : <p id={id} className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${isEmpty ? 'italic text-editorial-muted' : disabledReason ? 'text-editorial-muted' : 'text-editorial-ink'} ${expanded ? '' : 'line-clamp-3'}`}>
+      }} /> : <p id={id} className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${isEmpty ? 'italic text-editorial-muted' : disabledReason ? 'text-editorial-muted' : 'text-editorial-ink'} ${expanded ? '' : 'line-clamp-12'}`}>
       {value || placeholder}
     </p>}
+    {footer}
   </PromptCard>;
 }

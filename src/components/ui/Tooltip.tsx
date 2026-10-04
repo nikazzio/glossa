@@ -50,7 +50,7 @@ export function Tooltip({
           <span className={`inline-flex ${className}`.trim()}>{children}</span>
         </RadixTooltip.Trigger>
         <RadixTooltip.Portal>
-          <RadixTooltip.Content side={side} sideOffset={offset} collisionPadding={12} className={box}>
+          <RadixTooltip.Content data-glossa-tooltip="" side={side} sideOffset={offset} collisionPadding={12} className={box}>
             {label}
           </RadixTooltip.Content>
         </RadixTooltip.Portal>

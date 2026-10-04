@@ -22,7 +22,7 @@ pair in the bar. Pipeline operations stay blocked while processing.
 
 | Tab | Parameters |
 | --- | --- |
-| General | Mode, DeepL languages, work brief |
+| General | Mode, DeepL languages, Translation context |
 | Stages | Service, model, prompt and options for each stage; context memory |
 | Quality control | Refinement loop, assessment model, assessment and consistency prompts |
 | Memory | Phrase memory and translation examples (off in DeepL mode) |
@@ -41,17 +41,26 @@ model, but chunks already translated keep the previous one.
 Standard, Editorial and DeepL Hybrid modes are described in the
 [translation workflow](../guides/document-pipeline).
 
-## Work brief and DeepL languages
+## Translation context and DeepL languages
 
-The **Work brief** is the sole shared LLM context: languages, historical
-varieties, audience, register and goal. It replaces Persona. Translation,
-refinement, audit and coherence receive it alongside their own instructions;
-formatting remains limited to syntax. No language pair is added automatically,
-even when the brief is empty. Specify languages in the brief or stage prompts.
+The **Translation context** replaces the language pair for LLMs: languages,
+historical varieties, audience, register and goal. It is required and never
+empty: a new pipeline starts from a default text (English into Italian) that
+you can rewrite or replace with a saved template; the circular arrow restores
+it and confirming an empty text is disabled. Translation, refinement, audit and
+coherence receive it alongside their own instructions; formatting remains
+limited to syntax. No language pair is added automatically to prompts: the
+languages live in the context.
+
+Next to each prompt title is where its text comes from:
+**Default**, **Custom** or **Template “name”** when it matches a saved
+template of the same category. Recognition compares the text: a template
+edited after it was applied is no longer recognised, because the pipeline
+keeps the applied copy.
 
 The pencil opens a draft; the checkmark confirms and X discards it. Model-based
 refinement also changes only the draft. Prompts use a subdued surface with a
-green accent, icon commands and expandable previews. The brief is saved with
+green accent, icon commands and expandable previews. The context is saved with
 the pipeline and copied when duplicated.
 
 The **DeepL · languages** pair remains visible in General, disabled in LLM
@@ -106,7 +115,7 @@ resolved with that service before the sequence can complete.
 Choose the DeepL pair in General, using the service's language lists.
 Automatic source detection is available; a glossary requires an explicit source.
 Changing either language unlinks the remote glossary, and changing the target
-resets formality to its default. The shared brief is not sent to DeepL; its
+resets formality to its default. The Translation context is not sent to DeepL; its
 Context field is separate.
 
 The target must be selected explicitly; requests without a target are blocked before contacting DeepL. Both the configuration preview and the chunk preview display the API

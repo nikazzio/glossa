@@ -379,6 +379,14 @@ mark.hl-annot {
   position: relative;
 }
 
+/* Un suggerimento Radix non intercetta mai il puntatore: il contenitore che
+   Radix crea attorno al contenuto riceverebbe i clic anche con il contenuto in
+   pointer-events-none, e un suggerimento comparso sopra un menu aperto ne
+   bloccava le voci (nome della pipeline sopra il suo menu). */
+[data-radix-popper-content-wrapper]:has(> [data-glossa-tooltip]) {
+  pointer-events: none;
+}
+
 [data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;

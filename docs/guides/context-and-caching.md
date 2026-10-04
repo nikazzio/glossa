@@ -24,7 +24,7 @@ costruisce il contesto dalle traduzioni, anziché dal testo originale.
 
 Per traduzione e revisione, il messaggio di sistema mantiene questo ordine:
 
-1. Istruzioni statiche: ruolo e descrizione comune, regole strutturali, glossario ed esempi.
+1. Istruzioni statiche: ruolo e Contesto di traduzione, regole strutturali, glossario ed esempi.
 2. Contesto documentale condiviso.
 3. Istruzioni specifiche della fase, con gli eventuali riferimenti di memoria selezionati.
 

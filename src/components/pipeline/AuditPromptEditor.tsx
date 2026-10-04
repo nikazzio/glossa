@@ -1,6 +1,8 @@
 import { FileText, Loader2, Pencil, RotateCcw, Wand2, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PromptSourceLabel } from './PromptSourceLabel';
+import { describePromptSource } from './promptSource';
 import type { PromptTemplate, PromptTemplateContext, PromptTemplateWorkflow } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { IconButton, FieldLabel, SectionLabel } from '../ui';
@@ -36,19 +38,15 @@ export interface AuditPromptEditorProps {
   editDisabledReason?: string;
   /** Perché la rifinitura non si può usare (chiave del fornitore mancante). */
   refineDisabledReason?: string;
-  /** Il segno «Personalizzato» accordato al nome (la persona è femminile). */
-  customLabel?: string;
 }
 
 const VARIANT_STYLES = {
   audit: {
     card: 'border-l-editorial-warning/45',
-    badge: 'border-l-2 border-l-editorial-accent bg-editorial-accent/10',
     editing: 'border-editorial-warning/25',
   },
   stage: {
     card: 'border-l-editorial-accent/40',
-    badge: 'rounded-full bg-editorial-accent/15',
     editing: 'border-editorial-accent/25',
   },
 } as const;
@@ -76,13 +74,13 @@ export function AuditPromptEditor({
   variant = 'audit',
   editDisabledReason,
   refineDisabledReason,
-  customLabel,
 }: AuditPromptEditorProps) {
   const styles = VARIANT_STYLES[variant];
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
 
   const isCustomPrompt = !!defaultValue && value.trim() !== defaultValue.trim();
+  const source = describePromptSource(value, templates, defaultValue);
   const blocked = (command: string, reason: string | undefined) =>
     reason ? t('transcription.commandBlocked', { command, reason }) : command;
   const refineCommand = t('pipeline.refinePromptWithModel', { model: refineLabel });
@@ -101,11 +99,7 @@ export function AuditPromptEditor({
                 {label}
               </FieldLabel>
             )}
-            {isCustomPrompt && !(variant === 'stage' && isEditing) && (
-              <span className={`${styles.badge} px-1.5 py-0.5 text-caption font-bold uppercase tracking-section text-editorial-accent`}>
-                {customLabel ?? t('pipeline.promptCustomBadge')}
-              </span>
-            )}
+            <PromptSourceLabel source={source} />
           </div>
           <div className="flex items-center gap-1.5">
             {isEditing ? (
@@ -167,7 +161,7 @@ export function AuditPromptEditor({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={!isEditing || Boolean(editDisabledReason)}
-        rows={isEditing ? 12 : 4}
+        rows={isEditing ? 16 : 4}
         className={`w-full rounded-md border-2 p-4 text-xs font-mono outline-none leading-6 resize-y min-h-[12rem] ${
           isEditing
             ? `bg-editorial-paper ${styles.editing} focus-visible:ring-2 focus-visible:ring-editorial-accent`

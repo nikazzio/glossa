@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import type { PipelineConfig, PipelineMode, PromptTemplate, ModelProvider } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
-import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../../constants';
+import { DEFAULT_DEEPL_STAGE_OPTIONS, DEFAULT_WORK_BRIEF } from '../../constants';
 import { ChoiceDots, Hint, PanelSection, type ChoiceDotsOption } from '../ui';
 import { PipelinePromptEditor } from './PipelinePromptEditor';
 import { DeeplLanguagePair } from './DeeplLanguagePair';
@@ -131,6 +131,7 @@ export function SettingsTabPanel({
         value={config.workBrief ?? ''} placeholder={t('pipeline.workBriefPlaceholder')}
         templates={briefTemplates} templateContext="brief" saveTemplate={saveTemplate}
         onConfirm={(workBrief) => setConfig((prev) => ({ ...prev, workBrief }))}
+        defaultValue={DEFAULT_WORK_BRIEF} required
         disabledReason={isProcessing ? t('document.operationsRunning') : undefined}
         provider={briefRefineProvider} model={briefRefineModel} canRefine={canRefineBrief}
         refineLabel={briefRefineLabel} refineDisabledReason={t('pipeline.reasonMissingKey', { provider: briefRefineProvider })}

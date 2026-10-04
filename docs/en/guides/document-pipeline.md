@@ -26,7 +26,7 @@ for formats, size limits and imported footnotes.
 ## Configuration
 
 Open the pipeline configuration (the gear in the Studio's top row) and set the
-work brief, mode, providers, models and instructions; choose languages only for DeepL: its tabs are described in
+Translation context, mode, providers, models and instructions; choose languages only for DeepL: its tabs are described in
 [pipeline configuration](../reference/pipeline-config). Pipeline modes define these sequences:
 
 | Mode | Processing |
@@ -50,6 +50,9 @@ Processing advances through the segments and updates their states. Cancelling
 stops the current work without removing completed results. Resuming and rerunning
 serve different purposes: resuming processes outstanding work, while rerunning
 recalculates the unverified segments covered by the selected action.
+If models, stage or audit prompts, the Translation context or DeepL options change after the
+interruption, resuming warns that the configuration is no longer the one the
+work started with.
 
 While a segment is being translated, its translation text is covered by a gold
 veil, “Translation in progress…”, and cannot be edited: the text does not
@@ -132,6 +135,10 @@ the document is split again into different segments.
 
 Pipeline configuration shows the structure of the prompts. The segment’s
 **Preview** tab builds the selected stage’s request for the current text.
+Besides the stages, the selector offers **Audit** and **Coherence**: they show
+the message each would receive with the segment’s current translation
+(coherence also with the neighbouring segments). On a segment without a
+translation both entries are disabled, with the reason next to the name.
 This action does not call a model or generate a translation.
 
 ## Export

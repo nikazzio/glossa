@@ -7,6 +7,8 @@ import { makeTranslationChunk } from '../../../test/chunkFactory';
 
 vi.mock('../../../hooks/useChunkPromptPreview', () => ({
   useChunkPromptPreview: vi.fn(),
+  AUDIT_PREVIEW_ID: 'preview-audit',
+  COHERENCE_PREVIEW_ID: 'preview-coherence',
 }));
 vi.mock('../../../stores/pipelineStore', () => ({
   usePipelineStore: (selector: (s: unknown) => unknown) =>
@@ -53,6 +55,25 @@ describe('ChunkPromptPreviewTab', () => {
     render(<ChunkPromptPreviewTab panelId="p" labelledBy="l" currentChunk={chunk} />);
     expect(screen.getByText('pipeline.deepl.requestBody')).toBeInTheDocument();
     expect(screen.queryByText('promptPreview.systemLabel')).not.toBeInTheDocument();
+  });
+
+  it('offre audit e coerenza per un frammento tradotto e li costruisce con l\'id della verifica', async () => {
+    const build = vi.fn();
+    mockUsePreview.mockReturnValue({ ...basePreviewState(), build });
+    const chunk = makeTranslationChunk({ id: 'c1', translationProcessingText: 'Ciao' });
+    render(<ChunkPromptPreviewTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    await userEvent.selectOptions(screen.getByLabelText('promptPreview.stageLabel'), 'preview-coherence');
+    await userEvent.click(screen.getByRole('button', { name: 'promptPreview.buildButton' }));
+    expect(build).toHaveBeenCalledWith('preview-coherence');
+  });
+
+  it('spegne audit e coerenza quando il frammento non è ancora tradotto', () => {
+    mockUsePreview.mockReturnValue(basePreviewState());
+    const chunk = makeTranslationChunk({ id: 'c1', translationProcessingText: '' });
+    render(<ChunkPromptPreviewTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    const select = screen.getByLabelText('promptPreview.stageLabel') as HTMLSelectElement;
+    const review = Array.from(select.options).filter((option) => option.value.startsWith('preview-'));
+    expect(review.map((option) => option.disabled)).toEqual([true, true]);
   });
 
   it('mostra i blocchi sistema e utente quando l\'anteprima è pronta', () => {

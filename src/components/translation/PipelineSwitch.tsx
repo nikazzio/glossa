@@ -73,6 +73,8 @@ export function PipelineSwitch() {
           label={`${activeName} — ${isRunning ? `${t('pipeline.changePipeline')} — ${t('document.reasonRunning')}` : t('pipeline.changePipeline')}`}
           side="bottom"
           className="min-w-0"
+          // A menu aperto il suggerimento resta chiuso: starebbe sopra le voci.
+          open={popoverOpen ? false : undefined}
         >
           <ClickPopover
             open={popoverOpen}

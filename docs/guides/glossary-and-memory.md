@@ -86,7 +86,7 @@ una correzione o una variante motivata nelle note del glossario.
 ## Modelli di prompt
 
 La scheda **Modelli Prompt** delle Risorse linguistiche cerca nel nome e nel
-testo e filtra per Fasi, Controllo qualità, Descrizione del lavoro, Memoria oppure OCR.
+testo e filtra per Fasi, Controllo qualità, Contesto di traduzione, Memoria oppure OCR.
 I modelli sono comuni all’applicazione, senza appartenenza a un workspace.
 Usa **+** per crearne uno o la matita sulla sua riga per modificarlo.
 

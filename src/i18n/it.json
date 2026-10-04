@@ -354,9 +354,9 @@
     "prompt": "Prompt",
     "auditModelLabel": "Modello Audit",
     "auditModelHint": "Questo provider e modello vengono usati sia per la valutazione locale sia per l'audit di coerenza.",
-    "judgePromptLabel": "Prompt Giudice",
+    "judgePromptLabel": "Prompt dell'audit",
     "judgePromptHint": "Istruzioni per la valutazione locale di qualita, accuratezza e terminologia.",
-    "coherencePromptLabel": "Prompt Coerenza",
+    "coherencePromptLabel": "Prompt della coerenza",
     "coherencePromptHint": "Istruzioni per l'audit cross-segmento dell'intero documento tradotto.",
     "coherencePromptPlaceholder": "Istruzioni per l'audit di coerenza...",
     "judgeRefineLoopSectionLabel": "Loop di raffinamento",
@@ -438,7 +438,7 @@
     "promptPreviewBlocks": {
       "system-opener": {
         "title": "Apertura di sistema",
-        "hint": "Cacheabile: definisce il ruolo del modello e la coppia di lingue. Identico per ogni chunk — rimane in cache tra tutti gli stage."
+        "hint": "Fisso nel codice: dice al modello che è un traduttore e che deve seguire il Contesto di traduzione e le istruzioni della fase. Non contiene lingue. Cacheabile, identico per ogni frammento."
       },
       "structural-rules": {
         "title": "Regole strutturali",
@@ -489,12 +489,12 @@
         "hint": "Cacheabile: vincoli rigidi per lo stage di formattazione. Impedisce al modello di ritradurre o modificare il testo — sono ammessi solo interventi minimi di correzione della formattazione."
       },
       "work-brief": {
-        "title": "Descrizione del lavoro",
+        "title": "Contesto di traduzione",
         "hint": "Contesto comune nel prefisso cacheabile, prima delle istruzioni della fase."
       },
       "deepl-request": {
         "title": "Richiesta DeepL",
-        "hint": "Corpo API costruito dal backend come in esecuzione. Il testo del frammento è un segnaposto; DeepL non riceve la descrizione comune."
+        "hint": "Corpo API costruito dal backend come in esecuzione. Il testo del frammento è un segnaposto; DeepL non riceve il Contesto di traduzione."
       },
       "system-message": {
         "title": "Sistema",
@@ -587,15 +587,15 @@
       "glossaryNeedsSource": "Scegli una lingua sorgente nella fase DeepL per caricare il glossario.",
       "requestBody": "Richiesta DeepL",
       "languagePair": "DeepL · lingue",
-      "languagePairHint": "Solo per la richiesta DeepL; gli LLM seguono la Descrizione e i prompt.",
+      "languagePairHint": "Solo per la richiesta DeepL; gli LLM seguono il Contesto di traduzione e i prompt.",
       "onlyInDeeplMode": "Attive solo in modalità DeepL",
       "chooseTarget": "Scegli la destinazione",
       "swapUnavailable": "Scegli due lingue compatibili; il rilevamento automatico non si può invertire",
       "autoShort": "Auto"
     },
     "configSections": "Sezioni della configurazione",
-    "workBriefLabel": "Descrizione del lavoro",
-    "workBriefHint": "Contesto comune agli LLM: lingue, varietà, obiettivo e registro. Le istruzioni specifiche restano nei prompt delle fasi.",
+    "workBriefLabel": "Contesto di traduzione",
+    "workBriefHint": "Lingue, varietà, obiettivo e registro. Lo ricevono traduzione, revisione, audit e coerenza; non può restare vuoto.",
     "workBriefPlaceholder": "Es. Traduci dal veneto del Seicento all’italiano contemporaneo, conservando il tono e spiegando i termini storici nelle note.",
     "completePrompt": "Prompt completo",
     "auditPreviewLabel": "Audit",
@@ -607,7 +607,13 @@
       "editorial": "Editoriale",
       "deepl-hybrid": "DeepL"
     },
-    "operationFailed": "Operazione sulla pipeline non riuscita"
+    "operationFailed": "Operazione sulla pipeline non riuscita",
+    "promptSource": {
+      "template": "Template «{{name}}»",
+      "default": "Predefinito",
+      "custom": "Personalizzato"
+    },
+    "promptRequired": "il testo non può essere vuoto"
   },
   "audit": {
     "title": "Log Audit",
@@ -1205,7 +1211,7 @@
       "noModelConfigured": "Scegli un fornitore e un modello che leggano le immagini.",
       "loading": "Caricamento…",
       "documentModel": "Modello",
-      "documentPrompt": "Prompt",
+      "documentPrompt": "Prompt OCR del documento",
       "readThisPage": "Leggi la pagina {{page}}",
       "inheritWorkspace": "Eredita dal workspace",
       "saveFailed": "Salvataggio impostazioni OCR non riuscito",
@@ -2345,7 +2351,8 @@
     "emptyNoChunk": "Seleziona un chunk per costruire l'anteprima.",
     "emptyBeforeBuild": "Premi \"Costruisci anteprima\" per vedere il messaggio completo di questa fase.",
     "deeplNotice": "Questa fase usa DeepL: non genera un messaggio testuale per un modello linguistico.",
-    "buildFailed": "Non sono riuscito a costruire l'anteprima."
+    "buildFailed": "Non sono riuscito a costruire l'anteprima.",
+    "translationRequired": "manca la traduzione del frammento"
   },
   "help": {
     "title": "Guida utente",
@@ -2450,15 +2457,16 @@
             "title": "Configurare le fasi",
             "paragraphs": [
               "La barra dello Studio mostra opera / pipeline e tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano e il suggerimento mostra il nome completo. Il nome della pipeline apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. La coppia compare solo in DeepL. Durante l’elaborazione le operazioni sulla pipeline sono bloccate.",
-              "L’icona rossa in fondo alla finestra azzera tutte le traduzioni e i loro audit, dopo una conferma. È spenta, con il motivo, mentre la pipeline lavora o quando non c’è niente da azzerare."
+              "L’icona rossa in fondo alla finestra azzera tutte le traduzioni e i loro audit, dopo una conferma. È spenta, con il motivo, mentre la pipeline lavora o quando non c’è niente da azzerare.",
+              "Accanto al titolo di ogni prompt vedi da dove viene il testo: Predefinito, Personalizzato o il nome del template salvato che stai usando."
             ],
             "steps": [
               "Apri la configurazione con l’ingranaggio nella riga in cima allo Studio, o con Ctrl + virgola. Il titolo è il nome della pipeline; le linguette sono Generale, Fasi, Controllo qualità, Memoria, Glossario e Anteprima prompt.",
-              "In Generale scegli la modalità e modifica la Descrizione del lavoro con la matita: lingue, varietà storiche, destinatari e registro. Conferma con la spunta o annulla con la X. È l’unico contesto comune a traduzione, revisione, audit e coerenza; le lingue non vengono aggiunte automaticamente ai prompt LLM. La coppia DeepL resta visibile, ma si attiva solo in modalità DeepL. Le fasi non usate restano visibili e disabilitate; cambiando modalità conservi i prompt configurati.",
+              "In Generale scegli la modalità e modifica il Contesto di traduzione con la matita: lingue, varietà storiche, destinatari e registro. Conferma con la spunta o annulla con la X. Non è mai vuoto: parte da un testo predefinito (dall’inglese all’italiano) che puoi riscrivere o sostituire con un template salvato; la freccia circolare lo ripristina. Lo ricevono traduzione, revisione, audit e coerenza; le lingue non vengono aggiunte automaticamente ai prompt LLM. La coppia DeepL resta visibile, ma si attiva solo in modalità DeepL. Le fasi non usate restano visibili e disabilitate; cambiando modalità conservi i prompt configurati.",
               "In Fasi e Controllo qualità scegli servizio, modello e istruzioni di ogni fase. Con traduzioni già fatte il modello è chiuso dal lucchetto: aprirlo lascia i frammenti già tradotti con il modello precedente. Le spiegazioni compaiono passando sopra i titoli e le voci.",
               "In Memoria regola la memoria delle frasi e gli esempi di traduzione (la modalità DeepL non li usa); in Glossario assegna il dizionario e salvane i termini con il dischetto.",
               "Anteprima prompt mostra inizialmente la richiesta completa; per le fasi LLM puoi passare alla costruzione per blocchi. Audit e Coerenza mostrano i messaggi completi, DeepL il corpo della richiesta API. Espandi un testo con l’occhio e copialo integralmente con gli appunti. I segnaposto rappresentano dati del frammento e contesto opzionale. Il backend costruisce le richieste come nell’esecuzione, senza contattare servizi. Le fasi non usate sono disabilitate; audit e coerenza restano disponibili anche con DeepL.",
-              "Nella fase DeepL scegli la coppia indipendente della traduzione standard. Puoi rilevare automaticamente la sorgente, ma un glossario richiede una sorgente esplicita. Il Contesto DeepL è distinto dalla descrizione comune. Le anteprime e i log mostrano il corpo API; nelle opzioni il testo del frammento è un segnaposto."
+              "Nella fase DeepL scegli la coppia indipendente della traduzione standard. Puoi rilevare automaticamente la sorgente, ma un glossario richiede una sorgente esplicita. Il Contesto DeepL è distinto dal Contesto di traduzione. Le anteprime e i log mostrano il corpo API; nelle opzioni il testo del frammento è un segnaposto."
             ]
           },
           {
@@ -2467,6 +2475,7 @@
               "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
               "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
               "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato. Durante l’esecuzione non puoi cambiare pipeline o crearne una nuova. Memoria, Revisione e Documento ricordano la sottoscheda scelta quando passi a un’altra scheda.",
+              "La linguetta Anteprima dello Studio costruisce il messaggio della fase scelta per il frammento aperto, senza chiamare il modello. Nel selettore ci sono anche Audit e Coerenza, che usano la traduzione attuale del frammento: senza traduzione restano spente. Se dopo un’interruzione cambi modelli, prompt, Contesto di traduzione o opzioni DeepL, la ripresa te lo segnala.",
               "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi.",
               "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente."
             ]
@@ -2474,7 +2483,7 @@
           {
             "title": "Riutilizzare le istruzioni",
             "paragraphs": [
-              "Salva un prompt come modello per riutilizzarlo in altri lavori: mentre lo modifichi, il segnalibro chiede il nome (Invio salva, Esc annulla) e il libro apre l’elenco dei modelli salvati, con la ricerca; un clic applica quello scelto. I modelli sono distinti per contesto, per esempio istruzioni della fase, valutazione o descrizione comune, e si eliminano dalle risorse linguistiche.",
+              "Salva un prompt come modello per riutilizzarlo in altri lavori: mentre lo modifichi, il segnalibro chiede il nome (Invio salva, Esc annulla) e il libro apre l’elenco dei modelli salvati, con la ricerca; un clic applica quello scelto. I modelli sono distinti per contesto, per esempio istruzioni della fase, valutazione o Contesto di traduzione, e si eliminano dalle risorse linguistiche.",
               "Il comando con la bacchetta riscrive il prompt tramite il servizio configurato. Rileggi il testo proposto prima di usarlo: è un’elaborazione del modello e può modificare le tue istruzioni."
             ]
           }
@@ -2561,7 +2570,7 @@
           {
             "title": "Gestire i modelli di prompt",
             "paragraphs": [
-              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Descrizione del lavoro, Memoria oppure OCR. Se un modello salvato ha un ambito che l’app non riconosce più, non compare nell’elenco e un avviso ne indica il nome: gli altri modelli restano disponibili.",
+              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Contesto di traduzione, Memoria oppure OCR. Se un modello salvato ha un ambito che l’app non riconosce più, non compare nell’elenco e un avviso ne indica il nome: gli altri modelli restano disponibili.",
               "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
               "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
             ]

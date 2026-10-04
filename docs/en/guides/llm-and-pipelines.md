@@ -28,7 +28,7 @@ context, terminology, examples and references must be included in the request.
 | Judge | Source, translation and assessment criteria | Assessment and structured findings |
 | Coherence | Translations and neighbouring translated segments | Findings about consistency across segments |
 
-Format uses a separate prompt. It does not receive the shared work brief,
+Format uses a separate prompt. It does not receive the Translation context,
 glossary or source context. Its instructions limit it to formatting repairs,
 but the output still requires review.
 

@@ -90,7 +90,7 @@ export function PromptTemplateForm({ template, busy, onSave, onCancel, onRefinin
       </div>
       <div className="space-y-1.5">
         <FieldLabel block htmlFor="template-prompt">{t('pipeline.prompt')}</FieldLabel>
-        <textarea id="template-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={6} className={`${FIELD_MONO_CLASSNAME} resize-y`} />
+        <textarea id="template-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={16} className={`${FIELD_MONO_CLASSNAME} resize-y`} />
       </div>
       <div className="flex justify-end gap-1">
         <IconButton onClick={() => void handleRefine()} disabled={disabled || !!refineReason}

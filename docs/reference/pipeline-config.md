@@ -24,7 +24,7 @@ restano bloccate durante l’elaborazione.
 
 | Linguetta | Parametri |
 | --- | --- |
-| Generale | Modalità, lingue DeepL, descrizione del lavoro |
+| Generale | Modalità, lingue DeepL, Contesto di traduzione |
 | Fasi | Servizio, modello, prompt e opzioni di ogni fase; memoria di contesto |
 | Controllo qualità | Ciclo di raffinamento, modello del giudizio, prompt di giudizio e coerenza |
 | Memoria | Memoria delle frasi ed esempi di traduzione (spenta in modalità DeepL) |
@@ -44,19 +44,28 @@ precedente.
 Le modalità Standard, Editoriale e DeepL Hybrid sono descritte nel
 [flusso di traduzione](../guides/document-pipeline).
 
-## Descrizione del lavoro e lingue DeepL
+## Contesto di traduzione e lingue DeepL
 
-La **Descrizione del lavoro** è l’unico contesto comune agli LLM: lingue e
-varietà storiche, destinatari, registro e obiettivo. Sostituisce la Persona.
-Traduzione, revisione, audit e coerenza la ricevono insieme alle proprie
-istruzioni; la formattazione resta limitata alla sintassi. Nessuna coppia
-linguistica viene aggiunta automaticamente ai prompt, anche con descrizione
-vuota: scrivi le lingue nella descrizione o nelle istruzioni della fase.
+Il **Contesto di traduzione** prende il posto della coppia di lingue per gli
+LLM: lingue e varietà storiche, destinatari, registro e obiettivo. È
+obbligatorio e non è mai vuoto: una pipeline nuova parte da un testo
+predefinito (dall’inglese all’italiano), che puoi riscrivere o sostituire con
+un template salvato; la freccia circolare lo ripristina e la conferma di un
+testo vuoto è spenta. Traduzione, revisione, audit e coerenza lo ricevono
+insieme alle proprie istruzioni; la formattazione resta limitata alla
+sintassi. Nessuna coppia linguistica viene aggiunta automaticamente ai prompt:
+le lingue stanno nel Contesto.
+
+Accanto al titolo di ogni prompt compare da dove viene il testo:
+**Predefinito**, **Personalizzato** oppure **Template «nome»** quando coincide
+con un template salvato della stessa categoria. Il riconoscimento confronta il
+testo: un template modificato dopo l’applicazione non è più riconosciuto,
+perché la pipeline conserva la copia applicata.
 
 La matita apre una bozza; la spunta conferma, la X annulla. Anche la rifinitura
 con un modello modifica solo la bozza. I prompt usano una carta tenue con
-accento verde, comandi a icona e anteprima espandibile. La descrizione viene
-salvata con la pipeline e copiata nella duplicazione.
+accento verde, comandi a icona e anteprima espandibile. Il Contesto viene
+salvato con la pipeline e copiato nella duplicazione.
 
 La coppia **DeepL · lingue** resta visibile in Generale, disabilitata nelle
 modalità LLM e attiva in DeepL. Le fasi non usate restano visibili come
@@ -112,8 +121,8 @@ DeepL deve essere risolto su quel servizio prima di completare la sequenza.
 La coppia DeepL si sceglie in Generale, dagli elenchi del servizio. La sorgente
 può essere rilevata automaticamente; per usare o caricare un glossario serve
 una sorgente esplicita. Cambiare coppia scollega il glossario remoto e cambiare
-destinazione ripristina il registro predefinito. La destinazione va scelta esplicitamente: una richiesta senza destinazione viene bloccata prima di contattare DeepL. La descrizione comune non viene
-inviata a DeepL: il suo campo Contesto è distinto.
+destinazione ripristina il registro predefinito. La destinazione va scelta esplicitamente: una richiesta senza destinazione viene bloccata prima di contattare DeepL. Il Contesto di traduzione non viene
+inviato a DeepL: il suo campo Contesto è distinto.
 
 Anteprima prompt nelle opzioni e anteprima del
 frammento mostrano il corpo API, costruito dal backend come durante l’esecuzione;

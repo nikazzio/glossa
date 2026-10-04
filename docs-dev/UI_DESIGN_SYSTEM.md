@@ -641,7 +641,7 @@ spiegazione fisso: il perché sta nei suggerimenti dei titoli, delle righe e dei
 comandi, e un comando spento dice il motivo («Modifica prompt — esistono già
 traduzioni», «Rifinisci… — manca la chiave di X»). Le icone di categoria della
 taratura (ragionamento, temperatura) sono muted dentro un `Hint`, mai in ocra.
-La pipeline usa `PipelinePromptEditor`; OCR mantiene `AuditPromptEditor`. I modelli salvati stanno in
+La pipeline usa `PipelinePromptEditor`; OCR mantiene `AuditPromptEditor`. La spiegazione la porta il titolo della carta (`Hint` con `children`, come `SectionLabel`), nessuna «i» separata; vista di lettura fino a 12 righe. Accanto al titolo `PromptSourceLabel`: Predefinito / Personalizzato / Template «nome», riconosciuto confrontando il testo (`describePromptSource`); niente pillola «Personalizzato». Campi di modifica dei prompt alti 16 righe. Un suggerimento Radix non intercetta mai il puntatore (regola CSS sul contenitore) e quello sul nome della pipeline resta chiuso a menu aperto. I modelli salvati stanno in
 due `ClickPopover` (`PromptTemplateMenus`), il libro con `CatalogSearchField` e
 `PopoverItem`, il segnalibro con `RenameField`; niente eliminazione lì, si
 elimina nelle risorse linguistiche. La conferma applica testo ed eventuali impostazioni del modello insieme; annullare scarta entrambi.

@@ -1,5 +1,6 @@
 import { select, execute } from './dbService';
 import { logger } from '../utils/logger';
+import { DEFAULT_WORK_BRIEF } from '../constants';
 import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { generateId, normalizeQualityRating, qualityDefault } from '../utils';
 import type {
@@ -99,7 +100,8 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     useChunking: row.use_chunking === 1,
     wordsPerChunk: row.words_per_chunk ?? 0,
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
-    workBrief: row.work_brief?.trim() || undefined,
+    // Mai vuoto: una pipeline senza testo proprio parte dal contesto predefinito.
+    workBrief: row.work_brief?.trim() || DEFAULT_WORK_BRIEF,
     blobBudgetTokens: row.blob_budget_tokens ?? undefined,
     blobOverlap: row.blob_overlap ?? undefined,
     coherencePrompt: row.coherence_prompt?.trim() || undefined,

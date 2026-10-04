@@ -12,9 +12,9 @@ export function buildPipelineFingerprint(config: PipelineConfig): string {
       .map((s) => ({
         provider: s.provider,
         model: s.model,
-        ...(s.provider === 'deepl' ? { deepl: s.providerOptions?.deepl } : {}),
+        ...(s.provider === 'deepl' ? { deepl: s.providerOptions?.deepl } : { prompt: s.prompt }),
       })),
-    judge: { provider: config.judgeProvider, model: config.judgeModel },
+    judge: { provider: config.judgeProvider, model: config.judgeModel, prompt: config.judgePrompt },
     ...(config.workBrief?.trim() ? { workBrief: config.workBrief.trim() } : {}),
   });
 }

@@ -6,7 +6,7 @@ import type {
   PipelineStageConfig,
   ModelProvider,
 } from '../types';
-import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
+import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT, DEFAULT_WORK_BRIEF } from '../constants';
 import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { getGlossaryEntries } from '../services/glossaryService';
 import { useWorkspaceStore } from './workspaceStore';
@@ -61,6 +61,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   markdownAware: false,
   experimentalImport: null,
   coherencePrompt: DEFAULT_COHERENCE_PROMPT,
+  workBrief: DEFAULT_WORK_BRIEF,
   reviewProviderOptions: undefined,
   usePhraseMemory: false,
   autoSearchPhraseMemory: true,
