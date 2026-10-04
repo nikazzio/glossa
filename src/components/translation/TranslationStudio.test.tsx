@@ -121,7 +121,7 @@ describe('TranslationStudio', () => {
     expect(screen.getByRole('button', { name: /pipeline\.(executeAll|translateChunk)/ })).toBeInTheDocument();
   });
 
-  it('keeps the open pipeline, its options and its languages together in the header, renamable on click', () => {
+  it('keeps the open pipeline, its options and its languages together in the header, renamable from its menu', () => {
     const renamePipeline = vi.fn().mockResolvedValue(undefined);
     useProjectStore.setState({
       pipelines: [{ id: 'pl1', name: 'Editoriale' } as never],
@@ -131,6 +131,7 @@ describe('TranslationStudio', () => {
     renderStudio();
 
     fireEvent.click(screen.getByRole('button', { name: 'Editoriale' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pipeline.renamePipeline' }));
     const field = screen.getByRole('textbox', { name: 'pipeline.pipelineNameLabel' });
     fireEvent.change(field, { target: { value: 'Revisione stilistica' } });
     fireEvent.keyDown(field, { key: 'Enter' });

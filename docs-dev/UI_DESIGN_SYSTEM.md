@@ -277,7 +277,9 @@ testo nel suggerimento e per chi legge con la voce.
 ### SettingRow e campi
 
 - Ogni impostazione usa `SettingRow` dentro una lista con `divide-y` e
-  `border-y`.
+  `border-y`. Subito sotto il titolo di una `PanelSection` la lista usa
+  `SECTION_SETTING_LIST_CLASSNAME` (solo `border-b`): il filetto del titolo fa
+  già da bordo superiore e un secondo bordo lo raddoppierebbe.
 - Riga `py-2.5`, label `text-sm`, una sola icona nel comando a destra.
 - L'etichetta prende lo spazio disponibile, il comando non lo ruba: `SettingRow`
   incapsula i figli in un contenitore che non si allarga. Un campo a larghezza

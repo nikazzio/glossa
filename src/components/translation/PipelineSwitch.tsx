@@ -10,9 +10,9 @@ import { useUiStore } from '../../stores/uiStore';
 import { ClickPopover, IconButton, MenuActionRow, PopoverItem, RenameField, Tooltip } from '../ui';
 
 /**
- * La pipeline aperta, nella riga in cima allo Studio: il nome (un clic lo
- * rinomina), il comando che ne sceglie un'altra, ne crea una o ne elimina una,
- * e le sue opzioni. Un progetto può avere più pipeline, e quella aperta decide
+ * La pipeline aperta, nella riga in cima allo Studio: il nome apre il menu
+ * che ne sceglie un'altra, la rinomina, ne crea una o ne elimina una; accanto
+ * le sue opzioni. Un progetto può avere più pipeline, e quella aperta decide
  * cosa succede premendo «traduci».
  */
 export function PipelineSwitch() {
@@ -133,20 +133,21 @@ export function PipelineSwitch() {
               </div>
             );
           })}
-          {activePipelineId && !isRunning && <div className="mt-1 border-t border-rule pt-1">
-            <MenuActionRow icon={<Pencil size={12} />} label={t('pipeline.renamePipeline')}
-              onClick={() => { setPopoverOpen(false); setEditing(true); }} />
-          </div>}
-          {hasProject && !isRunning && pipelines.length < maxPipelines && (
+          {/* Comandi sulla pipeline: un solo gruppo, sotto un solo filetto. */}
+          {!isRunning && (activePipelineId || (hasProject && pipelines.length < maxPipelines)) && (
             <div className="mt-1 border-t border-rule pt-1">
-              <MenuActionRow
-                icon={<Plus size={12} />}
-                label={t('pipeline.newPipeline')}
-                onClick={() => {
-                  void createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 })).catch(reportError);
-                  setPopoverOpen(false);
-                }}
-              />
+              {activePipelineId && <MenuActionRow icon={<Pencil size={12} />} label={t('pipeline.renamePipeline')}
+                onClick={() => { setPopoverOpen(false); setEditing(true); }} />}
+              {hasProject && pipelines.length < maxPipelines && (
+                <MenuActionRow
+                  icon={<Plus size={12} />}
+                  label={t('pipeline.newPipeline')}
+                  onClick={() => {
+                    void createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 })).catch(reportError);
+                    setPopoverOpen(false);
+                  }}
+                />
+              )}
             </div>
           )}
         </ClickPopover>

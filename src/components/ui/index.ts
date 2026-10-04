@@ -39,6 +39,6 @@ export { RenameField } from './RenameField';
 export { AreaHeading, AREA_INK_CLASSNAME, AREA_PAPER_CLASSNAME, type InkedArea } from './AreaHeading';
 export { ResizeHandle } from './ResizeHandle';
 export { PanelSection } from './PanelSection';
-export { PANEL_BODY_CLASSNAME, STAT_LIST_CLASSNAME, INSPECTOR_WIDTH, clampInspectorWidth } from './panelStyles';
+export { PANEL_BODY_CLASSNAME, STAT_LIST_CLASSNAME, SECTION_SETTING_LIST_CLASSNAME, INSPECTOR_WIDTH, clampInspectorWidth } from './panelStyles';
 export { PageHeader } from './PageHeader';
 export { ChoiceDots, type ChoiceDotsOption } from './ChoiceDots';

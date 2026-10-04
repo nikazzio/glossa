@@ -22,7 +22,12 @@ lingua globali, senza conversioni semantiche o percorsi legacy. La coppia base
 resta metadato per memorie/catalogo, da consolidare nel lavoro successivo.
 Lettura, salvataggio e duplicazione includono la descrizione. Backup usa righe
 e colonne dello schema corrente. Template descrizione nel contesto `brief`;
-contesti obsoleti non vengono riclassificati silenziosamente.
+contesti obsoleti non vengono riclassificati silenziosamente: la lettura
+(`getPromptTemplates`) esclude le righe con contesto sconosciuto, le registra
+nel log e ne restituisce i nomi in `skipped`, che lo store mostra in un avviso;
+una riga sola non svuota più l’intero elenco. I tre template `persona` del
+database di sviluppo sono stati riclassificati a mano in `brief` (correzione
+dati una tantum, nessuna migrazione).
 
 Traduzione/refine, audit e coerenza ricevono ruolo neutro, descrizione opzionale
 e istruzioni proprie; nessuna coppia implicita anche con descrizione vuota.

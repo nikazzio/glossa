@@ -1,5 +1,5 @@
 import { Check, Eye, Loader2, Minimize2, Pencil, RotateCcw, Wand2, X } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PromptTemplate, PromptTemplateContext } from '../../types';
@@ -38,6 +38,9 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
   const [expanded, setExpanded] = useState(false);
   const [refining, setRefining] = useState(false);
   const editing = draft !== null;
+  // Senza testo il segnaposto non deve leggersi come contenuto già scritto.
+  const isEmpty = !value.trim();
+  useEffect(() => { if (editing) editorRef.current?.focus(); }, [editing]);
   const blocked = Boolean(disabledReason) || refining;
   const commandLabel = (command: string) => disabledReason
     ? t('transcription.commandBlocked', { command, reason: disabledReason }) : command;
@@ -74,20 +77,20 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
     </fieldset>
     <IconButton size="sm" title={t('common.cancel')} disabled={refining} onClick={cancel}><X size={14} /></IconButton>
   </> : <>
-    <IconButton size="sm" title={t(expanded ? 'library.collapsePrompt' : 'library.expandPrompt')}
+    {!isEmpty && <IconButton size="sm" title={t(expanded ? 'library.collapsePrompt' : 'library.expandPrompt')}
       aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded((open) => !open)}>
       {expanded ? <Minimize2 size={14} /> : <Eye size={14} />}
-    </IconButton>
+    </IconButton>}
     <IconButton size="sm" title={commandLabel(t('common.edit'))} disabled={Boolean(disabledReason)}
       onClick={() => { setDraft(value); setTemplate(undefined); }}><Pencil size={14} /></IconButton>
   </>}>
-    {editing ? <textarea id={id} ref={editorRef} autoFocus aria-label={label} value={draft} rows={6}
+    {editing ? <textarea id={id} ref={editorRef} aria-label={label} value={draft} rows={6}
       placeholder={placeholder} disabled={blocked} className={`${FIELD_MONO_CLASSNAME} resize-y`}
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !refining) { event.preventDefault(); event.stopPropagation(); cancel(); }
         if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.stopPropagation(); confirm(); }
-      }} /> : <p id={id} className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${disabledReason ? 'text-editorial-muted' : 'text-editorial-ink'} ${expanded ? '' : 'line-clamp-3'}`}>
+      }} /> : <p id={id} className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${isEmpty ? 'italic text-editorial-muted' : disabledReason ? 'text-editorial-muted' : 'text-editorial-ink'} ${expanded ? '' : 'line-clamp-3'}`}>
       {value || placeholder}
     </p>}
   </PromptCard>;

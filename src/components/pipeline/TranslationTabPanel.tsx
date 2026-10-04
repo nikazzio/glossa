@@ -1,15 +1,14 @@
-import { FileText, Languages, Network, RotateCcw, ShieldCheck, Wand2 } from 'lucide-react';
+import { AlertTriangle, FileText, Languages, Network, RotateCcw, Wand2 } from 'lucide-react';
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, PipelineStageConfig, PromptTemplate } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { calculateBlobBudget } from '../../models/catalog';
-import { IconButton, PanelSection, TabStrip, ToggleRow } from '../ui';
+import { IconButton, PanelSection, SECTION_SETTING_LIST_CLASSNAME, TabStrip, ToggleRow } from '../ui';
 import { NumberSettingRow } from './NumberSettingRow';
 import { StageCard } from './StageCard';
 
-const SETTING_LIST_CLASSNAME = 'divide-y divide-rule border-y border-rule';
 const DEFAULT_BLOB_OVERLAP = 1;
 
 interface TranslationTabPanelProps {
@@ -73,7 +72,7 @@ export function TranslationTabPanel({
         </IconButton>
       ) : undefined}
     >
-      <div className={SETTING_LIST_CLASSNAME}>
+      <div className={SECTION_SETTING_LIST_CLASSNAME}>
         <div className="py-2.5">
           <ToggleRow
             icon={null}
@@ -125,7 +124,7 @@ export function TranslationTabPanel({
           frammenti decisa all'importazione non torna più con i modelli scelti. */}
       {contextWindowChanged && (
         <div className="flex items-center gap-2 text-xs text-editorial-warning">
-          <ShieldCheck size={12} className="shrink-0" />
+          <AlertTriangle size={12} className="shrink-0" />
           <span>{t('pipeline.modelContextWindowChangedHint')}</span>
         </div>
       )}

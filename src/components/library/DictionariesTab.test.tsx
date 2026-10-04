@@ -34,8 +34,8 @@ describe('Dictionary resources', () => {
   });
   it('shows that global editing changes the shared original and permits editing', async () => {
     render(<DictionariesTab />);
-    expect(await screen.findByText('library.sharedOriginal')).toBeInTheDocument();
-    expect(screen.getByText('library.linkedWorkspaces')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^library\.sharedOriginal/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'common.edit: arma' }));
     await userEvent.type(screen.getByLabelText('pipeline.target 1'), ' changed');
     await userEvent.click(screen.getByRole('button', { name: 'common.save' }));
     await waitFor(() => expect(saveGlossaryEntries).toHaveBeenCalledWith('dictionary', null));
@@ -43,8 +43,8 @@ describe('Dictionary resources', () => {
   it('shows that a guest workspace edits local corrections and protects existing source terms', async () => {
     useLibraryStore.setState({ libraryScope: 'workspace' });
     render(<DictionariesTab />);
-    expect(await screen.findByText('library.localCorrections')).toBeInTheDocument();
-    expect(screen.getByText('Archivio')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^library\.localCorrections/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'common.edit: arma' }));
     expect(screen.getByLabelText('pipeline.source 1')).toHaveAttribute('readonly');
     await userEvent.type(screen.getByLabelText('pipeline.target 1'), ' changed');
     await userEvent.click(screen.getByRole('button', { name: 'common.save' }));
@@ -52,7 +52,7 @@ describe('Dictionary resources', () => {
   });
   it('filters global dictionaries by workspace links while continuing to load original entries', async () => {
     render(<DictionariesTab />);
-    await screen.findByText('library.sharedOriginal');
+    await screen.findByRole('button', { name: /^library\.sharedOriginal/ });
     await userEvent.selectOptions(screen.getByLabelText('library.workspaceFilter'), 'guest');
     await waitFor(() => expect(loadGlossaries).toHaveBeenLastCalledWith('guest'));
     await userEvent.click(screen.getByRole('button', { name: 'Termini' }));

@@ -430,6 +430,7 @@
     "tabGlossary": "Glossary",
     "tabPreview": "Prompt preview",
     "promptPreviewTitle": "Prompt Preview",
+    "promptViewLabel": "Prompt view",
     "promptPreviewHint": "How the prompt is built from the current configuration; placeholders mark where the chunk text and the context go.",
     "promptPreviewEmpty": "No translation stages are enabled yet.",
     "promptPreviewStatic": "Static",
@@ -521,7 +522,9 @@
       "saved": "Template saved",
       "deleted": "Template deleted",
       "saveFailed": "Failed to save template",
-      "loadFailed": "Failed to load templates"
+      "loadFailed": "Failed to load templates",
+      "skipped_one": "Prompt template skipped: unknown category",
+      "skipped_other": "{{count}} prompt templates skipped: unknown category"
     },
     "editPrompt": "Edit prompt",
     "promptCustomBadge": "Custom",
@@ -556,6 +559,7 @@
     "deepl": {
       "confirmDeleteGlossaryTitle": "Delete the DeepL glossary?",
       "confirmDeleteGlossaryMessage": "The glossary “{{name}}” will be permanently deleted from DeepL. This cannot be undone.",
+      "deleteGlossaryFailed": "Could not delete the DeepL glossary",
       "preserveFormatting": "Keep formatting",
       "showBilledCharacters": "Show billed characters",
       "modelType": "Translation mode",
@@ -2557,7 +2561,7 @@
           {
             "title": "Managing prompt templates",
             "paragraphs": [
-              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Work brief, Memory or OCR.",
+              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Work brief, Memory or OCR. If a saved template has a scope the app no longer recognises, it is left out of the list and a notice names it; the other templates stay available.",
               "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
               "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
             ]

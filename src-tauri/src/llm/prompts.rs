@@ -273,7 +273,8 @@ pub(crate) fn build_judge_prompts(
     config: &PipelineConfig,
 ) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
-    let opener = "You are a translation quality judge. Evaluate the translation against the work brief.";
+    let opener =
+        "You are a translation quality judge. Evaluate the translation against the work brief.";
     let work_context = work_brief_block(config);
     let ui_lang = config
         .ui_language
@@ -345,7 +346,8 @@ pub(crate) fn build_coherence_prompts(
     config: &PipelineConfig,
 ) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
-    let opener = "You are a translation coherence auditor. Evaluate consistency against the work brief.";
+    let opener =
+        "You are a translation coherence auditor. Evaluate consistency against the work brief.";
     let work_context = work_brief_block(config);
     let ui_lang = config
         .ui_language
@@ -500,6 +502,7 @@ mod tests {
         PipelineConfig {
             source_language: "English".to_string(),
             target_language: "Italian".to_string(),
+            work_brief: Some("Literary translation from English to Italian.".to_string()),
             ..Default::default()
         }
     }
@@ -555,9 +558,11 @@ mod tests {
     // ── system block ──────────────────────────────────────────────────
 
     #[test]
-    fn system_includes_source_and_target_languages() {
+    fn system_includes_work_brief() {
         let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
-        assert!(prompt.system[0].text.contains("English→Italian"));
+        assert!(prompt.system[0]
+            .text
+            .contains("Work brief:\nLiterary translation from English to Italian."));
     }
 
     #[test]

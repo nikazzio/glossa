@@ -1,4 +1,4 @@
-import { Braces, Eye, FileText, Languages, Network, ShieldCheck, Wand2 } from 'lucide-react';
+import { Braces, Eye, FileText, Languages, Link2, Network, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, PipelineStageConfig, PromptInfo, StageRole } from '../../types';
@@ -128,7 +128,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
   });
   stageTabs.push(
     { id: 'preview-audit', label: t('pipeline.auditPreviewLabel'), icon: <ShieldCheck size={14} /> },
-    { id: 'preview-coherence', label: t('pipeline.coherencePreviewLabel'), icon: <Network size={14} /> },
+    { id: 'preview-coherence', label: t('pipeline.coherencePreviewLabel'), icon: <Link2 size={14} /> },
   );
 
   return (
@@ -159,7 +159,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
               <TabStrip tabs={[
                 { id: 'complete', label: t('pipeline.completePrompt'), icon: <Eye size={14} /> },
                 { id: 'construction', label: t('pipeline.promptConstruction'), icon: <Braces size={14} /> },
-              ]} activeId={view} onChange={setView} ariaLabel={t('pipeline.promptPreviewTitle')} idPrefix="prompt-view" />
+              ]} activeId={view} onChange={setView} ariaLabel={t('pipeline.promptViewLabel')} idPrefix="prompt-view" />
               <span className="font-display italic text-editorial-ink">{t(view === 'complete' ? 'pipeline.completePrompt' : 'pipeline.promptConstruction')}</span>
             </div>}
             {reviewKind ? <AssembledPromptPreview key={reviewKind} config={config} kind={reviewKind} />

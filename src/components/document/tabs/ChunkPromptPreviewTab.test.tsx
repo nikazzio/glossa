@@ -43,11 +43,16 @@ describe('ChunkPromptPreviewTab', () => {
     expect(screen.getByText('promptPreview.emptyNoChunk')).toBeInTheDocument();
   });
 
-  it('avvisa che la fase DeepL non genera un messaggio testuale', () => {
-    mockUsePreview.mockReturnValue({ ...basePreviewState(), isDeeplStage: true });
+  it('mostra per la fase DeepL solo il corpo della richiesta, senza messaggio di sistema', () => {
+    mockUsePreview.mockReturnValue({
+      ...basePreviewState(),
+      isDeeplStage: true,
+      preview: { systemPrompt: '', userPrompt: '{"text":["Hello"]}' },
+    });
     const chunk = makeTranslationChunk({ id: 'c1' });
     render(<ChunkPromptPreviewTab panelId="p" labelledBy="l" currentChunk={chunk} />);
-    expect(screen.getByText('promptPreview.deeplNotice')).toBeInTheDocument();
+    expect(screen.getByText('pipeline.deepl.requestBody')).toBeInTheDocument();
+    expect(screen.queryByText('promptPreview.systemLabel')).not.toBeInTheDocument();
   });
 
   it('mostra i blocchi sistema e utente quando l\'anteprima è pronta', () => {

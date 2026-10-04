@@ -430,6 +430,7 @@
     "tabGlossary": "Glossario",
     "tabPreview": "Anteprima prompt",
     "promptPreviewTitle": "Anteprima Prompt",
+    "promptViewLabel": "Vista del prompt",
     "promptPreviewHint": "Com'è costruito il prompt con la configurazione attuale; i segnaposto indicano dove entrano il testo del frammento e il contesto.",
     "promptPreviewEmpty": "Non ci sono ancora fasi di traduzione abilitate.",
     "promptPreviewStatic": "Statico",
@@ -521,7 +522,9 @@
       "saved": "Template salvato",
       "deleted": "Template eliminato",
       "saveFailed": "Salvataggio template fallito",
-      "loadFailed": "Caricamento template fallito"
+      "loadFailed": "Caricamento template fallito",
+      "skipped_one": "Modello di prompt escluso: categoria non riconosciuta",
+      "skipped_other": "{{count}} modelli di prompt esclusi: categoria non riconosciuta"
     },
     "editPrompt": "Modifica prompt",
     "promptCustomBadge": "Personalizzato",
@@ -556,6 +559,7 @@
     "deepl": {
       "confirmDeleteGlossaryTitle": "Eliminare il glossario DeepL?",
       "confirmDeleteGlossaryMessage": "Il glossario «{{name}}» verrà eliminato definitivamente da DeepL. L'azione non è reversibile.",
+      "deleteGlossaryFailed": "Eliminazione del glossario DeepL non riuscita",
       "preserveFormatting": "Mantieni la formattazione",
       "showBilledCharacters": "Mostra i caratteri fatturati",
       "modelType": "Modalità di traduzione",
@@ -2557,7 +2561,7 @@
           {
             "title": "Gestire i modelli di prompt",
             "paragraphs": [
-              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Descrizione del lavoro, Memoria oppure OCR.",
+              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Descrizione del lavoro, Memoria oppure OCR. Se un modello salvato ha un ambito che l’app non riconosce più, non compare nell’elenco e un avviso ne indica il nome: gli altri modelli restano disponibili.",
               "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
               "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
             ]

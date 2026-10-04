@@ -70,7 +70,8 @@ preview is a construction using current settings, not a historical request.
 Prompts can be saved as reusable templates, organised by context: while
 editing, the bookmark saves the prompt under a name and the book opens the
 list of saved templates, with search. Templates are deleted from the language
-resources. Prompt
+resources. A template whose scope is no longer recognised is left out of the
+list and named in a notice, without hiding the others. Prompt
 refinement sends the current text to a configured model and places a revised
 version in the field. It requires a connection and any credentials needed
 by the selected provider: without a key the command is off and its tooltip

@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { PipelineConfig } from '../../types';
 import { buildPromptPreviewStages } from './promptPreview';
@@ -24,7 +24,7 @@ describe('buildPromptPreviewStages', () => {
     const config = createConfig({
       sourceLanguage: 'Latin',
       targetLanguage: 'Italian',
-      persona: 'You are a careful Latinist.',
+      workBrief: 'You are a careful Latinist.',
       markdownAware: true,
       glossary: [
         { term: 'amor', translation: 'amore', notes: 'Use the emotional sense.' },
@@ -47,6 +47,7 @@ describe('buildPromptPreviewStages', () => {
     expect(stage?.role).toBe('translation');
     expect(stage?.blocks.map((block) => block.id)).toEqual([
       'system-opener',
+      'work-brief',
       'structural-rules',
       'glossary-constraints',
       'markdown-rules',
@@ -57,17 +58,17 @@ describe('buildPromptPreviewStages', () => {
       'runtime-task',
       'output-contract',
     ]);
-    expect(stage?.blocks[0]?.body).toContain('careful Latinist');
-    expect(stage?.blocks[2]?.body).toContain('Glossary Constraints:');
-    expect(stage?.blocks[2]?.body).toContain('Treat every glossary entry as mandatory terminology');
-    expect(stage?.blocks[2]?.body).toContain('| Source | Target | Notes |');
-    expect(stage?.blocks[3]?.body).toContain('Preserve every Markdown marker exactly as needed');
-    expect(stage?.blocks[4]?.body).toBe('{{BLOB_CONTEXT}}');
-    expect(stage?.blocks[5]?.body).toContain('Glossary Reminder');
-    expect(stage?.blocks[6]?.body).toBe('Current chunk id: {{CURRENT_CHUNK_ID}}');
-    expect(stage?.blocks[7]?.body).toBe('Text to translate from the current chunk:\n{{SOURCE_CHUNK_TEXT}}');
-    expect(stage?.blocks[8]?.body).toBe('Translate only the current chunk.');
-    expect(stage?.blocks[9]?.body).toBe('Output only the translated text.');
+    expect(stage?.blocks[1]?.body).toBe('Work brief:\nYou are a careful Latinist.');
+    expect(stage?.blocks[3]?.body).toContain('Glossary Constraints:');
+    expect(stage?.blocks[3]?.body).toContain('Treat every glossary entry as mandatory terminology');
+    expect(stage?.blocks[3]?.body).toContain('| Source | Target | Notes |');
+    expect(stage?.blocks[4]?.body).toContain('Preserve every Markdown marker exactly as needed');
+    expect(stage?.blocks[5]?.body).toBe('{{BLOB_CONTEXT}}');
+    expect(stage?.blocks[6]?.body).toContain('Glossary Reminder');
+    expect(stage?.blocks[7]?.body).toBe('Current chunk id: {{CURRENT_CHUNK_ID}}');
+    expect(stage?.blocks[8]?.body).toBe('Text to translate from the current chunk:\n{{SOURCE_CHUNK_TEXT}}');
+    expect(stage?.blocks[9]?.body).toBe('Translate only the current chunk.');
+    expect(stage?.blocks[10]?.body).toBe('Output only the translated text.');
   });
 
   it('renders refine blocks with original source and previous iteration placeholders', () => {
@@ -317,7 +318,8 @@ describe('PromptPreviewTab accessibility', () => {
 
     expect(screen.getByRole('tablist', { name: 'pipeline.promptPreviewTitle' })).toBeInTheDocument();
 
-    const selectedTab = screen.getByRole('tab', { selected: true });
+    const outerTabs = screen.getByRole('tablist', { name: 'pipeline.promptPreviewTitle' });
+    const selectedTab = within(outerTabs).getByRole('tab', { selected: true });
     const controls = selectedTab.getAttribute('aria-controls');
     expect(controls).toBeTruthy();
     expect(container.querySelectorAll('#pconfig-panel-preview')).toHaveLength(0);

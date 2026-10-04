@@ -76,7 +76,9 @@ con la configurazione attuale, non la richiesta storica di un’esecuzione.
 I prompt possono essere salvati come modelli riutilizzabili, separati per
 contesto: durante la modifica il segnalibro salva il prompt con un nome e il
 libro apre l’elenco dei modelli salvati, con la ricerca. I modelli si
-eliminano dalle risorse linguistiche. Il comando di rifinitura del prompt invia il testo a un modello
+eliminano dalle risorse linguistiche. Un modello con un ambito non più
+riconosciuto viene escluso dall’elenco e segnalato per nome, senza nascondere
+gli altri. Il comando di rifinitura del prompt invia il testo a un modello
 configurato e ne propone una riscrittura nel campo. Richiede la connessione
 e le eventuali credenziali del provider scelto: senza chiave il comando è
 spento e il suggerimento dice quale manca.

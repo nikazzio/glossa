@@ -1,7 +1,7 @@
 import { BookMarked, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { FewShotExample } from '../../types';
-import { FIELD_CLASSNAME, FIELD_INLINE_CLASSNAME, FieldLabel, IconButton, PanelSection } from '../ui';
+import { FIELD_CLASSNAME, FIELD_INLINE_CLASSNAME, FieldLabel, IconButton, PanelSection, SECTION_SETTING_LIST_CLASSNAME } from '../ui';
 
 interface FewShotExamplesConfigProps {
   examples: FewShotExample[];
@@ -22,7 +22,7 @@ export function FewShotExamplesConfig({ examples, onChange, disabled = false }: 
       {examples.length === 0 ? (
         <p className="text-xs text-editorial-muted">{t('settings.fewShotEmptyHint')}</p>
       ) : (
-        <div className="divide-y divide-rule border-y border-rule">
+        <div className={SECTION_SETTING_LIST_CLASSNAME}>
           {examples.map((example) => (
             <div key={example.id} className="space-y-2 py-3">
               <div className="flex items-center gap-2">

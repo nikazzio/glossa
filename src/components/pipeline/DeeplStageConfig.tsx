@@ -5,7 +5,7 @@ import { deeplService } from '../../services/deeplService';
 import type { DeeplConfig, DeeplLanguageInfo } from '../../types';
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
 import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../../constants';
-import { FIELD_CLASSNAME, FieldLabel, IconButton, Select, SettingRow, ToggleRow } from '../ui';
+import { FIELD_CLASSNAME, FieldLabel, IconButton, SECTION_SETTING_LIST_CLASSNAME, Select, SettingRow, ToggleRow } from '../ui';
 import { confirm } from '../../stores/confirmStore';
 
 interface DeeplStageConfigProps {
@@ -86,14 +86,14 @@ export function DeeplStageConfig({
       .deleteGlossary(config.glossaryId)
       .then(() => { update({ glossaryId: undefined }); reloadGlossaries(); })
       .catch((e: unknown) =>
-        setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'),
+        setGlossaryError(e instanceof Error ? e.message : t('pipeline.deepl.deleteGlossaryFailed')),
       );
   };
 
   return (
     <div className="space-y-4">
       {languageError && <p role="alert" className="text-xs text-editorial-danger">{languageError}</p>}
-      <div className="divide-y divide-rule border-y border-rule">
+      <div className={SECTION_SETTING_LIST_CLASSNAME}>
         <div className="py-2.5">
           <ToggleRow
             icon={null}

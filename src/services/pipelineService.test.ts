@@ -158,7 +158,7 @@ describe('pipelineService', () => {
       expect(result).toBeNull();
     });
 
-    it('returns empty stages array when the stored stages column is corrupted JSON', async () => {
+    it('rebuilds default stages when the stored stages column is corrupted JSON', async () => {
       dbMocks.select
         .mockResolvedValueOnce([{ ...basePipelineRow, stages: '{{not valid json}}' }])
         .mockResolvedValueOnce([])
@@ -167,7 +167,7 @@ describe('pipelineService', () => {
       const result = await getPipelineConfig('pipeline-1');
 
       expect(result).not.toBeNull();
-      expect(result?.config.stages).toEqual([]);
+      expect(result?.config.stages.map((stage) => stage.role)).toEqual(['translation', 'deepl-translation', 'refine', 'format']);
     });
 
     it('returns empty sourceFootnotes when the column is null', async () => {

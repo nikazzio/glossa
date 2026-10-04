@@ -1,6 +1,6 @@
 import { reportUiError } from '../../utils/reportUiError';
 import { useEffect, useState } from 'react';
-import { Brain, FileText, Eye, Languages, LayoutGrid, Minimize2, Pencil, Plus, Scale, ScanText, Trash2, Workflow } from 'lucide-react';
+import { Bot, Brain, FileText, Eye, Languages, LayoutGrid, Minimize2, Pencil, Plus, Scale, ScanText, Trash2, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
