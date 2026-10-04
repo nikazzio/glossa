@@ -14,10 +14,10 @@ interface TemplateRow {
 }
 
 function rowToTemplate(row: TemplateRow): PromptTemplate {
-  const ctx: PromptTemplateContext =
-    row.context === 'audit' || row.context === 'persona' || row.context === 'memory' || row.context === 'ocr'
-      ? row.context
-      : 'stage';
+  const ctx = row.context;
+  if (ctx !== 'stage' && ctx !== 'audit' && ctx !== 'brief' && ctx !== 'memory' && ctx !== 'ocr') {
+    throw new Error(`Unsupported prompt template context: ${ctx}`);
+  }
   const workflow: PromptTemplateWorkflow =
     row.workflow === 'transcription' ? 'transcription' : 'translation';
   return {

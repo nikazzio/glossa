@@ -44,7 +44,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   sourceLanguage: 'English',
   targetLanguage: 'Italian',
   mode: 'standard',
-  stages: DEFAULT_STAGES,
+  stages: buildStagesForMode('standard', DEFAULT_STAGES),
   judgePrompt: DEFAULT_JUDGE_PROMPT,
   judgeModel: 'gpt-5.6-terra',
   judgeProvider: 'openai',
@@ -75,7 +75,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   inputText: '',
   inputProcessingText: '',
   sourceFootnotes: [],
-  config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
+  config: { ...DEFAULT_PIPELINE_CONFIG, stages: buildStagesForMode('standard', DEFAULT_STAGES) },
 
   setInputText: (text) =>
     set((state) => {
@@ -131,7 +131,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
       inputText: '',
       inputProcessingText: '',
       sourceFootnotes: [],
-      config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
+      config: { ...DEFAULT_PIPELINE_CONFIG, stages: buildStagesForMode('standard', DEFAULT_STAGES) },
     }),
 
   assignGlossary: async (glossaryId) => {

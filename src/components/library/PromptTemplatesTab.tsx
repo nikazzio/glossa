@@ -1,6 +1,6 @@
 import { reportUiError } from '../../utils/reportUiError';
 import { useEffect, useState } from 'react';
-import { Brain, Bot, Eye, Languages, LayoutGrid, Minimize2, Pencil, Plus, Scale, ScanText, Trash2, Workflow } from 'lucide-react';
+import { Brain, FileText, Eye, Languages, LayoutGrid, Minimize2, Pencil, Plus, Scale, ScanText, Trash2, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
@@ -9,8 +9,8 @@ import type { PromptTemplate, PromptTemplateContext } from '../../types';
 import { CatalogSearchField, Hint, IconButton, TabStrip } from '../ui';
 import { PromptTemplateForm, templateContextLabel } from './PromptTemplateForm';
 
-const CONTEXTS = ['stage', 'audit', 'persona', 'memory', 'ocr'] as const;
-const ICONS = { stage: Languages, audit: Scale, persona: Bot, memory: Brain, ocr: ScanText };
+const CONTEXTS = ['stage', 'audit', 'brief', 'memory', 'ocr'] as const;
+const ICONS = { stage: Languages, audit: Scale, brief: FileText, memory: Brain, ocr: ScanText };
 
 export function PromptTemplatesTab({ onEditingChange, onBusyChange }: { onEditingChange?: (value: boolean) => void; onBusyChange?: (value: boolean) => void } = {}) {
   const { t } = useTranslation();

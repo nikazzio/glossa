@@ -26,14 +26,14 @@ for formats, size limits and imported footnotes.
 ## Configuration
 
 Open the pipeline configuration (the gear in the Studio's top row) and set the
-languages, mode, providers, models and instructions: its tabs are described in
+work brief, mode, providers, models and instructions; choose languages only for DeepL: its tabs are described in
 [pipeline configuration](../reference/pipeline-config). Pipeline modes define these sequences:
 
 | Mode | Processing |
 | --- | --- |
 | Standard | Translation and automated assessment |
 | Editorial | Translation, draft revision (*Refine*), formatting (*Format*) and assessment |
-| DeepL Hybrid | DeepL translation, optional LLM revision and LLM assessment |
+| DeepL Hybrid | DeepL translation, LLM refinement and LLM assessment |
 
 Each LLM stage has an independent provider and model selection. DeepL requires
 its own API key and does not act as the evaluator. The pipeline mode cannot
@@ -63,14 +63,7 @@ the left stays visible and leads to any area, closing the translation. While
 the pipeline is running its entries are off, like the way back to the
 catalogue.
 
-At the top, the header row leads back to the Translations catalogue and shows
-the translation name (one click renames it); in the middle of the row, the
-open pipeline: its name
-(also renamed with a click), ⇄ to pick another one, create or delete one, the
-gear with its options and its language pair. Languages belong to the pipeline:
-two pipelines of the same translation can differ. On the right of the same row
-are the whole-translation commands: import, export, the workspace language
-resources and deletion.
+At the top, the bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover reveals the full name. Click the work name to rename it. The pipeline name and arrow open the menu to select, create, rename or delete; the gear opens options. Only DeepL displays a language pair. Import, export, language resources and deletion are on the right.
 
 In the middle the two sheets place source and translation side by side. Above
 them, on the left, the number of the open segment; in the middle a window of

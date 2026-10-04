@@ -231,7 +231,8 @@
     },
     "modeDesc": {
       "standard": "One translation stage + quality audit.",
-      "editorial": "Three stages: translation → refine → format, then quality audit."
+      "editorial": "Three stages: translation → refine → format, then quality audit.",
+      "deepl-hybrid": "DeepL translation, LLM refinement and audit."
     },
     "stageRole": {
       "deepl-translation": "DeepL Translation",
@@ -256,7 +257,6 @@
     "blobOverlap": "Overlap",
     "blobOverlapHint": "How many chunks from the end of the previous block to prepend to the next, to avoid losing the thread at block boundaries.",
     "inheritDefault": "Inherit from project",
-    "personaActive": "System prompt (persona)",
     "stages": "Stages",
     "auditGuard": "Audit Guard",
     "auditPlaceholder": "Audit instructions...",
@@ -486,15 +486,24 @@
       "system-post-processor": {
         "title": "System post-processor",
         "hint": "Cached: hard constraints for the format stage. Prevents retranslation or wording changes — only minimal formatting repairs are allowed."
+      },
+      "work-brief": {
+        "title": "Work brief",
+        "hint": "Shared context in the cacheable prefix, before stage instructions."
+      },
+      "deepl-request": {
+        "title": "DeepL request",
+        "hint": "API body assembled by the backend as for execution. Chunk text is a placeholder; DeepL does not receive the shared brief."
+      },
+      "system-message": {
+        "title": "System",
+        "hint": "Backend composition: shared context, instructions, resources and response contract. Placeholders mark optional runtime data."
+      },
+      "user-message": {
+        "title": "User",
+        "hint": "Backend composition with placeholders for chunk text and results. This configuration preview uses current settings, not a historical request."
       }
     },
-    "tabPersona": "Persona",
-    "personaLabel": "Persona",
-    "personaCustomBadge": "Custom",
-    "personaReset": "Reset to automatic",
-    "languagePairLockedByPersona": "Language pair is locked when a custom persona is active — reset it to edit",
-    "customLanguageToggle": "Use custom language",
-    "customLanguageActive": "Custom language active",
     "customLanguageReset": "Reset to standard",
     "customSourceLanguagePlaceholder": "e.g. Old Norse, Medieval Latin",
     "customTargetLanguagePlaceholder": "e.g. Modern Italian, Contemporary English",
@@ -568,9 +577,33 @@
       "glossaryUploaded": "Glossary uploaded to DeepL",
       "glossaryUploadFailed": "Uploading the glossary to DeepL failed",
       "uploadGlossaryTooltip": "Upload the Glossa glossary to DeepL",
-      "keyRequired": "Needs the DeepL key, entered in Settings"
+      "keyRequired": "Needs the DeepL key, entered in Settings",
+      "detectSource": "Detect language",
+      "languagesUnavailable": "DeepL language lists are unavailable. The current selection is retained.",
+      "glossaryNeedsSource": "Choose a source language in the DeepL stage to upload the glossary.",
+      "requestBody": "DeepL request",
+      "languagePair": "DeepL · languages",
+      "languagePairHint": "Only for the DeepL request; LLMs follow the work brief and prompts.",
+      "onlyInDeeplMode": "Enabled only in DeepL mode",
+      "chooseTarget": "Choose the target language",
+      "swapUnavailable": "Choose two compatible languages; automatic detection cannot be swapped",
+      "autoShort": "Auto"
     },
-    "configSections": "Configuration sections"
+    "configSections": "Configuration sections",
+    "workBriefLabel": "Work brief",
+    "workBriefHint": "Shared LLM context: languages, varieties, goal and register. Stage-specific instructions stay in their prompts.",
+    "workBriefPlaceholder": "E.g. Translate seventeenth-century Venetian into contemporary Italian, preserving the tone and explaining historical terms in notes.",
+    "completePrompt": "Complete prompt",
+    "auditPreviewLabel": "Audit",
+    "coherencePreviewLabel": "Coherence",
+    "phaseNotUsed": "Not used in this mode",
+    "promptConstruction": "Construction",
+    "modeShort": {
+      "standard": "Simple",
+      "editorial": "Editorial",
+      "deepl-hybrid": "DeepL"
+    },
+    "operationFailed": "Pipeline operation failed"
   },
   "audit": {
     "title": "Audit Logs",
@@ -2405,21 +2438,23 @@
           {
             "title": "Choosing a mode",
             "paragraphs": [
-              "Standard runs translation and assessment. Editorial adds draft revision, called Refine, and formatting, called Format. DeepL Hybrid uses DeepL for the initial translation, with optional LLM revision and LLM assessment.",
+              "Standard runs translation and assessment. Editorial adds draft revision, called Refine, and formatting, called Format. DeepL Hybrid uses DeepL for the initial translation, followed by LLM refinement and assessment.",
               "Choose the mode before producing results. The control is locked when processing or existing translations prevent a change."
             ]
           },
           {
             "title": "Configuring stages",
             "paragraphs": [
+              "The Studio bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover shows the full name. The pipeline name opens the menu to select, create, rename or delete; the gear opens options. The language pair appears only for DeepL. Pipeline operations are blocked while processing.",
               "The red icon at the bottom of the window resets all translations and their audits, after a confirmation. It is off, with the reason, while the pipeline runs or when there is nothing to reset."
             ],
             "steps": [
               "Open the configuration with the gear in the Studio's top row, or with Ctrl + comma. The title is the pipeline name; the tabs are General, Stages, Quality control, Memory, Glossary and Prompt preview.",
-              "In General choose the mode and the languages. If you use a persona, describe the intended role, languages and register: this text replaces the default opening instructions, and while it is customised the languages stay fixed.",
+              "In General choose the mode and edit the work brief with the pencil: languages, historical varieties, audience and register. Confirm with the checkmark or discard with X. It replaces Persona and is shared by translation, refinement, audit and coherence. Languages are never added automatically to LLM prompts, even when the brief is empty. The DeepL pair stays visible and is enabled only in DeepL mode. Unused stages are disabled; switching modes preserves their configuration.",
               "In Stages and Quality control choose service, model and instructions for each stage. Once translations exist the model is closed by the lock: opening it leaves already translated chunks on the previous model. Explanations appear when you hover titles and rows.",
               "In Memory set phrase memory and translation examples (DeepL mode does not use them); in Glossary assign the dictionary and save its terms with the disk icon.",
-              "Inspect the prompt preview before running the pipeline. While the pipeline runs the window stays visible but locked."
+              "Prompt preview opens on the complete request; for LLM stages you can switch to construction blocks. Audit and Coherence show complete messages, DeepL the API request body. Expand text with the eye and copy it in full with the clipboard. Placeholders represent chunk data and optional context. The backend builds requests as for execution, without contacting services. Unused stages are disabled; audit and coherence remain available with DeepL.",
+              "Choose a separate language pair for standard translation in the DeepL stage. Automatic source detection is available, but a glossary requires an explicit source. DeepL Context is separate from the shared brief. Previews and logs show the API body; the configuration preview uses a chunk-text placeholder."
             ]
           },
           {
@@ -2435,7 +2470,7 @@
           {
             "title": "Reusing instructions",
             "paragraphs": [
-              "Save a prompt as a template to reuse it in other work: while editing, the bookmark asks for a name (Enter saves, Esc cancels) and the book opens the list of saved templates, with search; a click applies the one you pick. Templates are organised by context, such as translation, assessment or persona, and are deleted from the language resources.",
+              "Save a prompt as a template to reuse it in other work: while editing, the bookmark asks for a name (Enter saves, Esc cancels) and the book opens the list of saved templates, with search; a click applies the one you pick. Templates are organised by context, such as stage instructions, assessment or the shared work brief, and are deleted from the language resources.",
               "The wand control rewrites the prompt through the configured service. Review the proposed text before using it: it is model-generated and may change your instructions."
             ]
           }
@@ -2522,7 +2557,7 @@
           {
             "title": "Managing prompt templates",
             "paragraphs": [
-              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Persona, Memory or OCR.",
+              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Work brief, Memory or OCR.",
               "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
               "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
             ]
@@ -3158,7 +3193,6 @@
     "templatePromptPlaceholder": "Prompt text...",
     "templateStageHint": "Instructions for translation stages.",
     "templateAuditHint": "Instructions for quality and coherence checks.",
-    "templatePersonaHint": "Translator role and style.",
     "templateMemoryHint": "Instructions for extracting bilingual pairs.",
     "templateDeleteTitle": "Delete template",
     "templateDeleteMessage": "Delete template \"{{name}}\"?",

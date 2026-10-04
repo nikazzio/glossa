@@ -61,22 +61,6 @@ fn format_few_shot_block(examples: &[FewShotExample]) -> String {
     block
 }
 
-fn effective_source(config: &PipelineConfig) -> &str {
-    config
-        .custom_source_language
-        .as_deref()
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or(&config.source_language)
-}
-
-fn effective_target(config: &PipelineConfig) -> &str {
-    config
-        .custom_target_language
-        .as_deref()
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or(&config.target_language)
-}
-
 /// Persona, transcription rules and output contract for OCR/HTR (#220).
 /// Static across every page of every document — the whole reason it is its
 /// own cacheable block, separate from the resolved prompt (which varies by
@@ -116,6 +100,20 @@ pub(crate) fn build_ocr_prompt(resolved_prompt: &str, image: ImageAttachment) ->
     }
 }
 
+fn work_brief(config: &PipelineConfig) -> Option<&str> {
+    config
+        .work_brief
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+}
+
+fn work_brief_block(config: &PipelineConfig) -> String {
+    work_brief(config)
+        .map(|brief| format!("\n\nWork brief:\n{brief}"))
+        .unwrap_or_default()
+}
+
 pub(crate) fn build_stage_prompts(
     text: &str,
     stage: &StageConfig,
@@ -153,26 +151,17 @@ pub(crate) fn build_stage_prompts(
         )
     };
 
-    let src = effective_source(config);
-    let tgt = effective_target(config);
-
-    let default_opener = format!(
-        "You are an expert translator and linguist specialized in {src} to {tgt} translation.",
-    );
-    let opener = config
-        .persona
-        .as_deref()
-        .filter(|p| !p.trim().is_empty())
-        .unwrap_or(&default_opener);
+    let opener = "You are an expert translator and linguist. Follow the work brief and the instructions for the current stage.";
 
     let few_shot_block = format_few_shot_block(&config.few_shot_examples);
+    let work_context = work_brief_block(config);
 
-    // Block 1 (cacheable): static project-level context — persona, constraints, glossary,
+    // Block 1 (cacheable): static project-level context — role, work brief, constraints, glossary,
     // few-shot examples. Identical for every chunk in the run, so caches across the whole
     // document. Few-shot examples are folded into this same block (not a separate one) so
     // they consume no extra Anthropic cache breakpoint.
     let static_block = format!(
-        "{opener}\n\n\
+        "{opener}{work_context}\n\n\
          Structural Preservation Rules:\n\
          - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
          - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
@@ -284,13 +273,13 @@ pub(crate) fn build_judge_prompts(
     config: &PipelineConfig,
 ) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
-    let src = effective_source(config);
-    let tgt = effective_target(config);
+    let opener = "You are a translation quality judge. Evaluate the translation against the work brief.";
+    let work_context = work_brief_block(config);
     let ui_lang = config
         .ui_language
         .as_deref()
         .filter(|s| !s.is_empty())
-        .unwrap_or(tgt);
+        .unwrap_or("English");
 
     let glossary_section = if glossary_table.is_empty() {
         String::new()
@@ -309,7 +298,7 @@ pub(crate) fn build_judge_prompts(
     // The source text and translation are in the user turn so this block is constant for the
     // whole project run, enabling near-100% cache hit rate across all chunk judge calls.
     let system_block = format!(
-        "You are a translation quality judge for {src}→{tgt} translations.\n\n\
+        "{opener}{work_context}\n\n\
          Specific Audit Instructions:\n{instructions}\n\n\
          {glossary_section}\
          {markdown_rules}\
@@ -339,11 +328,7 @@ pub(crate) fn build_judge_prompts(
         instructions = config.judge_prompt,
     );
 
-    let user = format!(
-        "Source ({src}): {source_text}\n\
-         Target ({tgt}): {translation}\n\n\
-         Perform the audit now and return the JSON report."
-    );
+    let user = format!("Source: {source_text}\nTarget: {translation}\n\nPerform the audit now and return the JSON report.");
 
     StructuredPrompt {
         system: vec![PromptBlock {
@@ -360,13 +345,13 @@ pub(crate) fn build_coherence_prompts(
     config: &PipelineConfig,
 ) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
-    let src = effective_source(config);
-    let tgt = effective_target(config);
+    let opener = "You are a translation coherence auditor. Evaluate consistency against the work brief.";
+    let work_context = work_brief_block(config);
     let ui_lang = config
         .ui_language
         .as_deref()
         .filter(|s| !s.is_empty())
-        .unwrap_or(tgt);
+        .unwrap_or("English");
 
     let default_instructions = "Evaluate ONLY:\n\
          1. Terminology consistency — key terms translated differently than in adjacent segments\n\
@@ -392,7 +377,7 @@ pub(crate) fn build_coherence_prompts(
     // Block 1 (cacheable): static coherence context — role, instructions, glossary, format spec.
     // Constant for the whole project run.
     let system_block = format!(
-        "You are a translation coherence auditor for {src}→{tgt} translations.\n\
+        "{opener}{work_context}\n\
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
          {glossary_section}\

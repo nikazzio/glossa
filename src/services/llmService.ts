@@ -274,6 +274,17 @@ export const llmService = {
     }
   },
 
+  async previewJudgePrompt(sourceText: string, translation: string, config: PipelineConfig): Promise<PromptInfo> {
+    return invoke<PromptInfo>('preview_judge_prompt', { sourceText, translation, config: withUiLanguage(config) });
+  },
+
+  async previewCoherencePrompt(
+    input: { original: string; translation: string; blobContext?: string; currentChunkId?: string },
+    config: PipelineConfig,
+  ): Promise<PromptInfo> {
+    return invoke<PromptInfo>('preview_coherence_prompt', { input, config: withUiLanguage(config) });
+  },
+
   async runCoherenceForChunk(
     input: { original: string; translation: string; blobContext?: string; currentChunkId?: string },
     config: PipelineConfig,

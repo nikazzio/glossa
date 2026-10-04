@@ -231,7 +231,8 @@
     },
     "modeDesc": {
       "standard": "Uno stage di traduzione + audit qualità.",
-      "editorial": "Tre stage: traduzione → refine → format, poi audit qualità."
+      "editorial": "Tre stage: traduzione → refine → format, poi audit qualità.",
+      "deepl-hybrid": "Traduzione DeepL, revisione LLM e audit."
     },
     "stageRole": {
       "deepl-translation": "Traduzione DeepL",
@@ -256,7 +257,6 @@
     "blobOverlap": "Sovrapposizione",
     "blobOverlapHint": "Quanti chunk dalla coda del blocco precedente includere all'inizio del successivo, per non perdere il filo ai confini.",
     "inheritDefault": "Eredita dal progetto",
-    "personaActive": "System prompt (persona)",
     "stages": "Fasi",
     "auditGuard": "Controllo Qualità",
     "auditPlaceholder": "Istruzioni per l'audit...",
@@ -486,15 +486,24 @@
       "system-post-processor": {
         "title": "Post-processore di sistema",
         "hint": "Cacheabile: vincoli rigidi per lo stage di formattazione. Impedisce al modello di ritradurre o modificare il testo — sono ammessi solo interventi minimi di correzione della formattazione."
+      },
+      "work-brief": {
+        "title": "Descrizione del lavoro",
+        "hint": "Contesto comune nel prefisso cacheabile, prima delle istruzioni della fase."
+      },
+      "deepl-request": {
+        "title": "Richiesta DeepL",
+        "hint": "Corpo API costruito dal backend come in esecuzione. Il testo del frammento è un segnaposto; DeepL non riceve la descrizione comune."
+      },
+      "system-message": {
+        "title": "Sistema",
+        "hint": "Composizione backend: contesto comune, istruzioni, risorse e contratto di risposta. I segnaposto indicano i dati runtime opzionali."
+      },
+      "user-message": {
+        "title": "Utente",
+        "hint": "Composizione backend con segnaposto per testo e risultati del frammento. L’anteprima delle opzioni usa la configurazione attuale, non una richiesta storica."
       }
     },
-    "tabPersona": "Persona",
-    "personaLabel": "Persona",
-    "personaCustomBadge": "Personalizzata",
-    "personaReset": "Ripristina automatica",
-    "languagePairLockedByPersona": "La coppia linguistica è bloccata quando è attiva una persona personalizzata — resettala per modificarla",
-    "customLanguageToggle": "Usa lingua personalizzata",
-    "customLanguageActive": "Lingua personalizzata attiva",
     "customLanguageReset": "Torna allo standard",
     "customSourceLanguagePlaceholder": "es. Norreno antico, Latino medievale",
     "customTargetLanguagePlaceholder": "es. Italiano moderno, Inglese contemporaneo",
@@ -568,9 +577,33 @@
       "glossaryUploaded": "Glossario caricato su DeepL",
       "glossaryUploadFailed": "Caricamento del glossario su DeepL non riuscito",
       "uploadGlossaryTooltip": "Carica su DeepL il glossario di Glossa",
-      "keyRequired": "Richiede la chiave DeepL, da inserire in Impostazioni"
+      "keyRequired": "Richiede la chiave DeepL, da inserire in Impostazioni",
+      "detectSource": "Rileva lingua",
+      "languagesUnavailable": "Elenco lingue DeepL non disponibile. La selezione attuale è conservata.",
+      "glossaryNeedsSource": "Scegli una lingua sorgente nella fase DeepL per caricare il glossario.",
+      "requestBody": "Richiesta DeepL",
+      "languagePair": "DeepL · lingue",
+      "languagePairHint": "Solo per la richiesta DeepL; gli LLM seguono la Descrizione e i prompt.",
+      "onlyInDeeplMode": "Attive solo in modalità DeepL",
+      "chooseTarget": "Scegli la destinazione",
+      "swapUnavailable": "Scegli due lingue compatibili; il rilevamento automatico non si può invertire",
+      "autoShort": "Auto"
     },
-    "configSections": "Sezioni della configurazione"
+    "configSections": "Sezioni della configurazione",
+    "workBriefLabel": "Descrizione del lavoro",
+    "workBriefHint": "Contesto comune agli LLM: lingue, varietà, obiettivo e registro. Le istruzioni specifiche restano nei prompt delle fasi.",
+    "workBriefPlaceholder": "Es. Traduci dal veneto del Seicento all’italiano contemporaneo, conservando il tono e spiegando i termini storici nelle note.",
+    "completePrompt": "Prompt completo",
+    "auditPreviewLabel": "Audit",
+    "coherencePreviewLabel": "Coerenza",
+    "phaseNotUsed": "Non usata in questa modalità",
+    "promptConstruction": "Costruzione",
+    "modeShort": {
+      "standard": "Semplice",
+      "editorial": "Editoriale",
+      "deepl-hybrid": "DeepL"
+    },
+    "operationFailed": "Operazione sulla pipeline non riuscita"
   },
   "audit": {
     "title": "Log Audit",
@@ -2412,14 +2445,16 @@
           {
             "title": "Configurare le fasi",
             "paragraphs": [
+              "La barra dello Studio mostra opera / pipeline e tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano e il suggerimento mostra il nome completo. Il nome della pipeline apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. La coppia compare solo in DeepL. Durante l’elaborazione le operazioni sulla pipeline sono bloccate.",
               "L’icona rossa in fondo alla finestra azzera tutte le traduzioni e i loro audit, dopo una conferma. È spenta, con il motivo, mentre la pipeline lavora o quando non c’è niente da azzerare."
             ],
             "steps": [
               "Apri la configurazione con l’ingranaggio nella riga in cima allo Studio, o con Ctrl + virgola. Il titolo è il nome della pipeline; le linguette sono Generale, Fasi, Controllo qualità, Memoria, Glossario e Anteprima prompt.",
-              "In Generale scegli la modalità e le lingue. Se usi una persona, descrivi ruolo, lingue e registro desiderati: questo testo sostituisce l’introduzione predefinita delle istruzioni, e finché è personalizzata le lingue restano ferme.",
+              "In Generale scegli la modalità e modifica la Descrizione del lavoro con la matita: lingue, varietà storiche, destinatari e registro. Conferma con la spunta o annulla con la X. È l’unico contesto comune a traduzione, revisione, audit e coerenza; le lingue non vengono aggiunte automaticamente ai prompt LLM. La coppia DeepL resta visibile, ma si attiva solo in modalità DeepL. Le fasi non usate restano visibili e disabilitate; cambiando modalità conservi i prompt configurati.",
               "In Fasi e Controllo qualità scegli servizio, modello e istruzioni di ogni fase. Con traduzioni già fatte il modello è chiuso dal lucchetto: aprirlo lascia i frammenti già tradotti con il modello precedente. Le spiegazioni compaiono passando sopra i titoli e le voci.",
               "In Memoria regola la memoria delle frasi e gli esempi di traduzione (la modalità DeepL non li usa); in Glossario assegna il dizionario e salvane i termini con il dischetto.",
-              "Consulta l’anteprima del prompt per verificare le istruzioni prima dell’esecuzione. Mentre la pipeline lavora la finestra resta visibile ma bloccata."
+              "Anteprima prompt mostra inizialmente la richiesta completa; per le fasi LLM puoi passare alla costruzione per blocchi. Audit e Coerenza mostrano i messaggi completi, DeepL il corpo della richiesta API. Espandi un testo con l’occhio e copialo integralmente con gli appunti. I segnaposto rappresentano dati del frammento e contesto opzionale. Il backend costruisce le richieste come nell’esecuzione, senza contattare servizi. Le fasi non usate sono disabilitate; audit e coerenza restano disponibili anche con DeepL.",
+              "Nella fase DeepL scegli la coppia indipendente della traduzione standard. Puoi rilevare automaticamente la sorgente, ma un glossario richiede una sorgente esplicita. Il Contesto DeepL è distinto dalla descrizione comune. Le anteprime e i log mostrano il corpo API; nelle opzioni il testo del frammento è un segnaposto."
             ]
           },
           {
@@ -2435,7 +2470,7 @@
           {
             "title": "Riutilizzare le istruzioni",
             "paragraphs": [
-              "Salva un prompt come modello per riutilizzarlo in altri lavori: mentre lo modifichi, il segnalibro chiede il nome (Invio salva, Esc annulla) e il libro apre l’elenco dei modelli salvati, con la ricerca; un clic applica quello scelto. I modelli sono distinti per contesto, per esempio traduzione, valutazione o persona, e si eliminano dalle risorse linguistiche.",
+              "Salva un prompt come modello per riutilizzarlo in altri lavori: mentre lo modifichi, il segnalibro chiede il nome (Invio salva, Esc annulla) e il libro apre l’elenco dei modelli salvati, con la ricerca; un clic applica quello scelto. I modelli sono distinti per contesto, per esempio istruzioni della fase, valutazione o descrizione comune, e si eliminano dalle risorse linguistiche.",
               "Il comando con la bacchetta riscrive il prompt tramite il servizio configurato. Rileggi il testo proposto prima di usarlo: è un’elaborazione del modello e può modificare le tue istruzioni."
             ]
           }
@@ -2522,7 +2557,7 @@
           {
             "title": "Gestire i modelli di prompt",
             "paragraphs": [
-              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Persona, Memoria oppure OCR.",
+              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Descrizione del lavoro, Memoria oppure OCR.",
               "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
               "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
             ]
@@ -3158,7 +3193,6 @@
     "templatePromptPlaceholder": "Testo del prompt...",
     "templateStageHint": "Istruzioni delle fasi di traduzione.",
     "templateAuditHint": "Istruzioni per qualità e coerenza.",
-    "templatePersonaHint": "Ruolo e stile del traduttore.",
     "templateMemoryHint": "Istruzioni per estrarre coppie bilingui.",
     "templateDeleteTitle": "Elimina modello",
     "templateDeleteMessage": "Elimina il modello \"{{name}}\"?",

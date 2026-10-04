@@ -279,6 +279,32 @@ pub fn preview_stage_prompt(
     }
 }
 
+/// Review previews share prompt builders with execution and never contact a provider.
+#[tauri::command]
+pub fn preview_judge_prompt(
+    source_text: String,
+    translation: String,
+    config: PipelineConfig,
+) -> StagePromptPreview {
+    let structured = build_judge_prompts(&source_text, &translation, &config);
+    StagePromptPreview {
+        system_prompt: structured.flatten_system(),
+        user_prompt: structured.user,
+    }
+}
+
+#[tauri::command]
+pub fn preview_coherence_prompt(
+    input: CoherenceChunkInput,
+    config: PipelineConfig,
+) -> StagePromptPreview {
+    let structured = build_coherence_prompts(&input, &config);
+    StagePromptPreview {
+        system_prompt: structured.flatten_system(),
+        user_prompt: structured.user,
+    }
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn run_stage_stream(
@@ -493,7 +519,9 @@ pub async fn refine_prompt(
     prov.preflight(&model).await?;
     let api_key = get_api_key(&app, &provider)?;
     let client = prov.http_client()?;
-    let system_text = if context == "audit" {
+    let system_text = if context == "brief" {
+        "Rewrite the shared work brief clearly and concisely. Preserve all stated languages, historical varieties, goals, audience and register. Do not invent requirements or add stage-specific commands, evaluation criteria or output formats. Return only the rewritten work brief."
+    } else if context == "audit" {
         REFINE_AUDIT_SYSTEM_PROMPT
     } else {
         REFINE_STAGE_SYSTEM_PROMPT

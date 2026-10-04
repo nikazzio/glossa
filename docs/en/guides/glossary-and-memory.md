@@ -83,7 +83,7 @@ or a justified variant recorded in the glossary notes.
 ## Prompt templates
 
 The **Prompt Templates** tab searches names and prompt text and filters by
-Stages, Quality control, Persona, Memory, or OCR. Templates are shared across
+Stages, Quality control, Work brief, Memory, or OCR. Templates are shared across
 the application without belonging to a workspace. Use **+** to create a
 template or its pencil command to edit it.
 

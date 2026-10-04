@@ -33,3 +33,5 @@
 0002_workspace_memory_scope.sql c55dcc7e778fe168
 
 0003_text_corpus.sql a37f19b0640b0551
+0004_pipeline_work_brief.sql ef82af7e7b69dd3d
+0005_pipeline_shared_context.sql 5c739564ba240f04

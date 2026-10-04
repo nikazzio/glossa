@@ -252,8 +252,7 @@ solo**.
   `INSPECTOR_WIDTH` (Biblioteca e Studio uguali).
 - `PageHeader`: la riga `h-14` in cima a una pagina di dettaglio — ritorno,
   segno dell'area nel suo inchiostro, identità, comandi a destra. `center`
-  aggiunge un gruppo a sé centrato nella riga (la pipeline con le sue lingue
-  nello Studio di traduzione): griglia a tre colonne con le ali uguali.
+  resta per gruppi centrati. `titleAccessory` affianca opera / pipeline: nomi troncati, menu e opzioni, tipo con icona; coppia soltanto in DeepL. Nessuna pillola o pannello aggiuntivo nella barra.
 - `ResizeHandle`: l'unico divisore trascinabile fra colonne, con nome per chi
   legge con la voce; `layer="shell"` fra colonne dell'applicazione.
 
@@ -563,9 +562,16 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
   l'etichetta della linguetta attiva in `font-display italic`.
 - Salvataggio al cambio, salvo input intermedi che richiedono conferma
   esplicita. In quel caso mostrare stato non salvato e comando di ripristino.
-- Ordine generale: modalità di traduzione, coppia linguistica, persona.
+- Ordine generale: modalità, coppia DeepL sempre visibile (disabilitata fuori DeepL), Descrizione comune del lavoro.
 
 ### Elenchi di versioni e comandi per riga
+
+Le anteprime dei prompt della pipeline, nelle opzioni e nel frammento, usano
+la stessa superficie `surface-resource` delle risorse linguistiche e il
+contrasto `linguistic-resource`: un fondo per messaggio/blocco, testo aperto
+senza fondo annidato. Accento verde sul bordo sinistro richiesto esplicitamente dall’utente. Gli editor aprono una bozza con conferma/annullamento a icona; rifinitura e applicazione modelli non salvano prima della conferma. Statico/runtime è un’icona con Hint,
+non un badge colorato. Le anteprime LLM aprono sulla richiesta completa; una sotto-linguetta seleziona la costruzione per blocchi. Ogni testo si espande e si copia integralmente. Le fasi non usate restano visibili ma disabilitate; audit/coerenza restano disponibili in DeepL.
+Gli editor prompt/descrizione usano `FIELD_MONO_CLASSNAME` nella bozza; un solo fondo tenue per la carta.
 
 Le Risorse linguistiche usano `TabStrip` nella fila della finestra e ricerca
 `CatalogSearchField`. Ogni voce ha un unico fondo `surface-resource`, carta
@@ -627,18 +633,16 @@ Ogni pannello che configura una chiamata a un modello (fase di traduzione,
 giudizio, scheda OCR della trascrizione) ha la stessa forma: una `PanelSection`
 con il **Modello** (fornitore + modello + lucchetto su una riga, comandi di
 taratura sotto, opzioni del fornitore come righe con interruttore) e una sezione
-**Prompt** (bordo sinistro verde, pillola «Personalizzato», solo ripristino e
-modifica fuori dalla modifica). Nella configurazione della pipeline la sezione
+**Prompt** (carta tenue e bordo verde; espandi e modifica fuori dalla bozza, conferma/annulla nella bozza). Nella configurazione della pipeline la sezione
 Modello è una sola, `ModelSection`, per fasi e giudizio. Nessun testo di
 spiegazione fisso: il perché sta nei suggerimenti dei titoli, delle righe e dei
 comandi, e un comando spento dice il motivo («Modifica prompt — esistono già
 traduzioni», «Rifinisci… — manca la chiave di X»). Le icone di categoria della
 taratura (ragionamento, temperatura) sono muted dentro un `Hint`, mai in ocra.
-L'editor prompt è uno solo, `AuditPromptEditor`: i modelli salvati stanno in
+La pipeline usa `PipelinePromptEditor`; OCR mantiene `AuditPromptEditor`. I modelli salvati stanno in
 due `ClickPopover` (`PromptTemplateMenus`), il libro con `CatalogSearchField` e
 `PopoverItem`, il segnalibro con `RenameField`; niente eliminazione lì, si
-elimina nelle risorse linguistiche. `variant="stage"` dà
-questa resa; la variante predefinita resta quella del giudizio traduzione.
+elimina nelle risorse linguistiche. La conferma applica testo ed eventuali impostazioni del modello insieme; annullare scarta entrambi.
 Le scelte di taratura sotto il modello (livello di ragionamento, immagine
 inviata dall'OCR) sono cerchietti da 24 px con icona e suggerimento, preceduti
 da un'icona di categoria. Il comando principale di un pannello che si chiude

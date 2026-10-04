@@ -14,14 +14,20 @@ with Ctrl + comma. The title is the pipeline name: rename it from the Studio's
 top row, not here. Explanations are not written under the fields: they appear
 when you hover a section title or a row name.
 
+The bar places **work / pipeline** together, truncating long names and showing
+the full name on hover. The pipeline name and arrow open the same menu to
+select, create, rename or delete; the gear opens options. **Simple, Editorial
+or DeepL** mode is always visible with an icon. Only DeepL displays a language
+pair in the bar. Pipeline operations stay blocked while processing.
+
 | Tab | Parameters |
 | --- | --- |
-| General | Mode, languages, persona |
+| General | Mode, DeepL languages, work brief |
 | Stages | Service, model, prompt and options for each stage; context memory |
 | Quality control | Refinement loop, assessment model, assessment and consistency prompts |
 | Memory | Phrase memory and translation examples (off in DeepL mode) |
 | Glossary | Assigned dictionary and its terms |
-| Prompt preview | Request structure for active stages |
+| Prompt preview | Stage construction, complete messages, DeepL requests, audit and coherence |
 
 While the pipeline runs the window stays open and readable, but a veil locks
 its controls. At the bottom, the red **Reset all translations** icon deletes
@@ -35,12 +41,31 @@ model, but chunks already translated keep the previous one.
 Standard, Editorial and DeepL Hybrid modes are described in the
 [translation workflow](../guides/document-pipeline).
 
-## Languages and persona
+## Work brief and DeepL languages
 
-Set source and target languages. A persona is free text that replaces the
-default opening of the system message. It can specify role, subject area,
-languages and register. When customised, it should state the language pair
-accurately; the pair stays fixed until the persona is reset.
+The **Work brief** is the sole shared LLM context: languages, historical
+varieties, audience, register and goal. It replaces Persona. Translation,
+refinement, audit and coherence receive it alongside their own instructions;
+formatting remains limited to syntax. No language pair is added automatically,
+even when the brief is empty. Specify languages in the brief or stage prompts.
+
+The pencil opens a draft; the checkmark confirms and X discards it. Model-based
+refinement also changes only the draft. Prompts use a subdued surface with a
+green accent, icon commands and expandable previews. The brief is saved with
+the pipeline and copied when duplicated.
+
+The **DeepL · languages** pair remains visible in General, disabled in LLM
+modes and enabled in DeepL. Unused stages remain visible as disabled tabs.
+Switching modes preserves all stage configurations. DeepL retains LLM
+refinement, audit and coherence. General language metadata is still used by
+phrase memory; its configuration will be consolidated with linguistic resources.
+
+In **Prompt preview**, choose a stage, Audit or Coherence. For LLM stages,
+the initial view is **Complete prompt**; switch to **Construction** for the blocks. Expand text with the eye and copy it in full with the clipboard. Audit and coherence
+show full system and user messages, including JSON contracts. Text comes from
+the same backend functions as execution, without contacting services.
+Placeholders represent chunk data and optional context: the configuration
+preview is a construction using current settings, not a historical request.
 
 Prompts can be saved as reusable templates, organised by context: while
 editing, the bookmark saves the prompt under a name and the book opens the
@@ -76,6 +101,16 @@ The first stage uses DeepL settings: language, formality where supported,
 translation mode and remote glossary. Its API key is separate from the keys
 used by revision and assessment LLMs. DeepL quota or glossary errors must be
 resolved with that service before the sequence can complete.
+
+Choose the DeepL pair in General, using the service's language lists.
+Automatic source detection is available; a glossary requires an explicit source.
+Changing either language unlinks the remote glossary, and changing the target
+resets formality to its default. The shared brief is not sent to DeepL; its
+Context field is separate.
+
+The target must be selected explicitly; requests without a target are blocked before contacting DeepL. Both the configuration preview and the chunk preview display the API
+body, built by the backend as for execution; the configuration preview uses a
+placeholder for chunk text. Logs retain the actual request without credentials.
 
 ## Examples and context
 

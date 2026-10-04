@@ -1,7 +1,7 @@
-import { Check, Clipboard, Eye, Wand2 } from 'lucide-react';
+import { Eye, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
+import { PromptMessage } from '../../pipeline/PromptCard';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useChunkPromptPreview } from '../../../hooks/useChunkPromptPreview';
 import { EmptyState, IconButton, PANEL_BODY_CLASSNAME, PanelSection, Select, Spinner } from '../../ui';
@@ -11,36 +11,6 @@ interface ChunkPromptPreviewTabProps {
   panelId: string;
   labelledBy: string;
   currentChunk: TranslationChunk | null;
-}
-
-function PromptBlockView({ title, body }: { title: string; body: string }) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(body);
-      setCopied(true);
-      toast.success(t('promptPreview.copiedToClipboard'));
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error(t('errors.clipboardFailed'));
-    }
-  };
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <p className="caption-label">{title}</p>
-        <IconButton size="md" title={t('promptPreview.copyBlock')} onClick={() => void handleCopy()} tooltipSide="left">
-          {copied ? <Check size={13} className="text-editorial-success" /> : <Clipboard size={13} />}
-        </IconButton>
-      </div>
-      <pre className="whitespace-pre-wrap break-words rounded-md bg-editorial-textbox px-3 py-2 font-mono text-xs leading-relaxed text-editorial-ink">
-        {body}
-      </pre>
-    </div>
-  );
 }
 
 export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: ChunkPromptPreviewTabProps) {
@@ -88,14 +58,12 @@ export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: Chu
           <EmptyState icon={<Eye size={28} />} message={t('promptPreview.emptyNoChunk')} />
         ) : isBuilding ? (
           <Spinner label={t('promptPreview.building')} />
-        ) : isDeeplStage ? (
-          <EmptyState icon={<Eye size={28} />} message={t('promptPreview.deeplNotice')} />
         ) : error ? (
           <EmptyState icon={<Eye size={28} />} message={t('promptPreview.buildFailed')} hint={error} />
         ) : preview ? (
           <div className="space-y-4">
-            <PromptBlockView title={t('promptPreview.systemLabel')} body={preview.systemPrompt} />
-            <PromptBlockView title={t('promptPreview.userLabel')} body={preview.userPrompt} />
+            {!isDeeplStage && <PromptMessage label={t('promptPreview.systemLabel')} text={preview.systemPrompt} />}
+            <PromptMessage label={t(isDeeplStage ? 'pipeline.deepl.requestBody' : 'promptPreview.userLabel')} text={preview.userPrompt} />
           </div>
         ) : (
           <EmptyState icon={<Eye size={28} />} message={t('promptPreview.emptyBeforeBuild')} />

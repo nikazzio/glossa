@@ -14,6 +14,46 @@ nuova, idempotente sui database che l'hanno già superata.
 una migrazione dichiarata è cambiata o sparita, sia quando ne compare una non
 dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
 
+## Contesto e anteprime della pipeline (#489)
+
+`PipelineConfig.workBrief` / Rust `work_brief` è l’unico contesto comune degli
+LLM. Migrazione 0004 aggiunge la colonna; 0005 elimina Persona e override
+lingua globali, senza conversioni semantiche o percorsi legacy. La coppia base
+resta metadato per memorie/catalogo, da consolidare nel lavoro successivo.
+Lettura, salvataggio e duplicazione includono la descrizione. Backup usa righe
+e colonne dello schema corrente. Template descrizione nel contesto `brief`;
+contesti obsoleti non vengono riclassificati silenziosamente.
+
+Traduzione/refine, audit e coerenza ricevono ruolo neutro, descrizione opzionale
+e istruzioni proprie; nessuna coppia implicita anche con descrizione vuota.
+Format resta isolato. Ordine system cacheabile immutato: static → blob →
+istruzioni della fase. Lingua report dalla UI, fallback English. Fingerprint
+comprende descrizione normalizzata e opzioni DeepL. La rifinitura `brief`
+preserva il contesto senza aggiungere ordini specifici delle fasi.
+
+DeepL usa solo `providerOptions.deepl.sourceLang/targetLang`; sorgente vuota
+significa rilevamento automatico, destinazione obbligatoria. Input Tauri unico
+`{text, deeplConfig}`. `build_translate_request` valida e compone il corpo sia
+per HTTP sia per `preview_deepl_stage`, senza chiavi nella preview. Codici
+dalle liste API; nessuna conversione euristica dei nomi lingua. Cambio coppia
+scollega il glossario, cambio target azzera formality. Glossario richiede
+sorgente esplicita e target.
+
+`preview_stage_prompt`, `preview_judge_prompt`, `preview_coherence_prompt`
+riusano i costruttori dell’esecuzione. Opzioni: richiesta completa iniziale,
+costruzione per blocchi selezionabile per fasi LLM, messaggi audit/coerenza e
+corpo DeepL. Segnaposto espliciti per testo, blob, memoria e risultato
+precedente; non sono richieste storiche. Risposte superate ignorate.
+`PromptMessage` unifica carta tenue/verde, espansione e copia integrale nelle
+opzioni e nel frammento. Log mantengono le richieste effettive.
+Anteprima diretta audit/coerenza nel singolo frammento ancora da completare.
+
+Tutti i quattro ruoli restano nella configurazione; la modalità determina
+`enabled`. Cambio modalità conserva prompt/modello/opzioni/profilo custom.
+Sotto-tab inattive disabilitate. Editor pipeline con bozza locale e conferma;
+applicazione modelli e rifinitura non salvano implicitamente. Coppia DeepL
+sempre visibile in Generale, abilitata soltanto in DeepL.
+
 ## Ricerca federata e Dashboard
 
 Le due viste vivono nella Dashboard (`DashboardArea`): `overview` e ricerca
@@ -1034,8 +1074,7 @@ Configurazione della pipeline (`document/ConfigDrawer`, `Dialog` aperto da ⚙ i
 pipeline (la rinomina resta in `PipelineSwitch`), `TabStrip` (`idPrefix`
 `pconfig`) nella fila della finestra con il nome della linguetta accanto.
 Linguette (`ConfigSection`): `settings` Generale (`SettingsTabPanel`: modalità
-su `ChoiceDots` con la riga delle fasi della modalità scelta, lingue spente con
-persona personalizzata, persona sull'editor comune), `translation` Fasi
+su `ChoiceDots`, coppia DeepL sempre visibile e attiva solo in DeepL, Descrizione comune con bozza/conferma), `translation` Fasi
 (`TranslationTabPanel` → `StageCard` per fase + memoria di contesto in fondo),
 `audit` Controllo qualità (`AuditTabPanel`), `memory` Memoria (`MemoryTabPanel`,
 spenta con motivo in modalità DeepL; se era aperta si torna a Generale),
@@ -1047,8 +1086,8 @@ Trascrizioni) durante la pipeline, che rende inerti i comandi coperti. Fase e
 giudizio condividono `ModelSection` (fornitore, modello, lucchetto se
 esistono traduzioni, ricarica Ollama, ragionamento e temperatura, opzioni
 Ollama in `ProviderRuntimeEditor`, cache Anthropic); le regole di taratura
-sono funzioni pure in `pipeline/modelTuning.ts`. Ogni prompt (fasi, persona,
-giudizio, coerenza) usa `AuditPromptEditor` con `editDisabledReason` e
+sono funzioni pure in `pipeline/modelTuning.ts`. Ogni prompt pipeline (fasi, descrizione,
+giudizio, coerenza) usa `PipelinePromptEditor` con `disabledReason` e
 `refineDisabledReason`. I modelli di prompt salvati si applicano e si salvano da
 `PromptTemplateMenus` (anche nell'OCR); si eliminano solo dalle risorse
 linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hint` di
@@ -1056,9 +1095,7 @@ linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hi
 «Azzera tutte le traduzioni» (`resetAllChunks`, conferma), spento con motivo.
 
 Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
-`RenameField`, poi `PipelineSwitch` — nome della pipeline rinominabile
-(`renamePipeline`), ⇄ con `PopoverItem`/`MenuActionRow`, ⚙ della
-configurazione — e le lingue della pipeline; a destra importa, esporta,
+`RenameField`, accessorio `titleAccessory`: separatore /, `PipelineSwitch` con menu scelta/creazione/rinomina/eliminazione e ⚙, tipo Semplice/Editoriale/DeepL; coppia soltanto con DeepL; a destra importa, esporta,
 risorse linguistiche del workspace, elimina), al centro `DocumentView` invariato salvo la fila
 `ChunkStrip` («nn/nn», poi una finestra di 7 `ChunkDot` con il frammento
 aperto fisso al centro: la fila intera trasla di `SLOT_PX` per posto, i

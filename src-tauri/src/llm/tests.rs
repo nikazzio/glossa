@@ -176,10 +176,8 @@ fn make_config() -> PipelineConfig {
         markdown_aware: None,
         coherence_prompt: None,
         review_provider_options: None,
-        persona: None,
+        work_brief: None,
         ui_language: None,
-        custom_source_language: None,
-        custom_target_language: None,
         blob_context: None,
         blob_current_chunk_id: None,
     }

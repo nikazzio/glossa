@@ -1,5 +1,6 @@
 import { select, execute } from './dbService';
 import { logger } from '../utils/logger';
+import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { generateId, normalizeQualityRating, qualityDefault } from '../utils';
 import type {
   CoherenceResult,
@@ -38,9 +39,7 @@ interface DbPipeline {
   source_processing_text: string | null;
   source_footnotes: string | null;
   review_provider_options: string | null;
-  persona: string | null;
-  custom_source_language: string | null;
-  custom_target_language: string | null;
+  work_brief: string | null;
   blob_budget_tokens: number | null;
   blob_overlap: number | null;
   coherence_prompt: string | null;
@@ -93,16 +92,14 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
     mode: toPipelineMode(row.pipeline_mode),
-    stages: parseJson<PipelineStageConfig[]>(row.stages, []),
+    stages: buildStagesForMode(toPipelineMode(row.pipeline_mode), parseJson<PipelineStageConfig[]>(row.stages, [])),
     judgePrompt: row.judge_prompt,
     judgeModel: row.judge_model,
     judgeProvider: row.judge_provider as PipelineConfig['judgeProvider'],
     useChunking: row.use_chunking === 1,
     wordsPerChunk: row.words_per_chunk ?? 0,
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
-    persona: row.persona?.trim() || undefined,
-    customSourceLanguage: row.custom_source_language || undefined,
-    customTargetLanguage: row.custom_target_language || undefined,
+    workBrief: row.work_brief?.trim() || undefined,
     blobBudgetTokens: row.blob_budget_tokens ?? undefined,
     blobOverlap: row.blob_overlap ?? undefined,
     coherencePrompt: row.coherence_prompt?.trim() || undefined,
@@ -199,24 +196,25 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
        id, project_id, name, source_language, target_language, pipeline_mode,
        stages, judge_prompt, judge_model, judge_provider,
        use_chunking, words_per_chunk,
-       review_provider_options, persona, custom_source_language, custom_target_language,
+       review_provider_options,
        blob_budget_tokens, blob_overlap, few_shot_examples,
-       use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+       use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results,
+       work_brief
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
     [
       newId, source.project_id, newName,
       source.source_language, source.target_language,
       source.pipeline_mode ?? 'standard',
       source.stages, source.judge_prompt, source.judge_model, source.judge_provider,
       source.use_chunking, source.words_per_chunk,
-      source.review_provider_options, source.persona,
-      source.custom_source_language, source.custom_target_language,
+      source.review_provider_options,
       source.blob_budget_tokens ?? 0, source.blob_overlap ?? 1,
       source.few_shot_examples ?? '[]',
       source.use_phrase_memory ?? 0,
       source.auto_search_phrase_memory ?? 1,
       source.phrase_memory_similarity_threshold ?? 0.75,
       source.phrase_memory_max_results ?? 10,
+      source.work_brief ?? null,
     ],
   );
   return newId;
@@ -244,19 +242,17 @@ function buildPipelineConfigUpdate(
        use_chunking             = $8,
        words_per_chunk       = $9,
        review_provider_options  = $10,
-       persona                  = $11,
-       custom_source_language   = $12,
-       custom_target_language   = $13,
-       blob_budget_tokens       = $14,
-       blob_overlap             = $15,
-       coherence_prompt         = $16,
-       few_shot_examples        = $17,
-       use_phrase_memory        = $18,
-       auto_search_phrase_memory = $19,
-       phrase_memory_similarity_threshold = $20,
-       phrase_memory_max_results = $21,
+       blob_budget_tokens       = $11,
+       blob_overlap             = $12,
+       coherence_prompt         = $13,
+       few_shot_examples        = $14,
+       use_phrase_memory        = $15,
+       auto_search_phrase_memory = $16,
+       phrase_memory_similarity_threshold = $17,
+       phrase_memory_max_results = $18,
+       work_brief               = $19,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $22`,
+     WHERE id = $20`,
     params: [
       config.sourceLanguage,
       config.targetLanguage,
@@ -268,9 +264,6 @@ function buildPipelineConfigUpdate(
       config.useChunking !== false ? 1 : 0,
       config.wordsPerChunk ?? 0,
       config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
-      config.persona?.trim() || null,
-      config.customSourceLanguage || null,
-      config.customTargetLanguage || null,
       config.blobBudgetTokens ?? 0,
       config.blobOverlap ?? 1,
       config.coherencePrompt?.trim() || null,
@@ -279,6 +272,7 @@ function buildPipelineConfigUpdate(
       config.autoSearchPhraseMemory === false ? 0 : 1,
       config.phraseMemorySimilarityThreshold ?? 0.75,
       config.phraseMemoryMaxResults ?? 10,
+      config.workBrief?.trim() || null,
       pipelineId,
     ],
   };

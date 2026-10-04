@@ -27,14 +27,14 @@ e revisione. I dettagli su formati, limiti e note importate sono nel
 ## Configurazione
 
 Apri la configurazione della pipeline (l’ingranaggio nella riga in cima allo
-Studio) e imposta lingue, modalità, provider, modelli e istruzioni: le
+Studio) e imposta descrizione del lavoro, modalità, provider, modelli e istruzioni; scegli le lingue soltanto per DeepL: le
 linguette sono descritte nella [configurazione della pipeline](../reference/pipeline-config). Le modalità definiscono questa sequenza:
 
 | Modalità | Elaborazione |
 | --- | --- |
 | Standard | Traduzione e valutazione automatica |
 | Editoriale | Traduzione, revisione della bozza (*Refine*), formattazione (*Format*) e valutazione |
-| DeepL Hybrid | Traduzione DeepL, revisione LLM facoltativa e valutazione LLM |
+| DeepL Hybrid | Traduzione DeepL, revisione LLM e valutazione LLM |
 
 Provider e modelli delle fasi LLM sono indipendenti. DeepL richiede una propria
 chiave API e non svolge il ruolo di valutatore. La modalità della pipeline non
@@ -64,15 +64,7 @@ principale a sinistra resta in vista e porta a qualunque area, chiudendo la
 traduzione. Mentre la pipeline lavora le sue voci sono spente, come il ritorno
 al catalogo.
 
-In cima, la riga d’intestazione riporta al catalogo delle Traduzioni e mostra
-il nome della traduzione (un clic lo rinomina); al centro della riga, la
-pipeline aperta: il suo
-nome (anche questo si rinomina con un clic), ⇄ per sceglierne un’altra, crearne
-una o eliminarla, l’ingranaggio con le sue opzioni e la sua coppia di lingue.
-Le lingue appartengono alla pipeline: due pipeline della stessa traduzione
-possono averne di diverse. A destra della stessa riga stanno i comandi della
-traduzione intera: importa, esporta, risorse linguistiche del workspace ed
-eliminazione.
+In cima, la barra mostra opera / pipeline e il tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano; il suggerimento mostra il nome completo. Il nome dell’opera si rinomina con un clic. Nome e freccia della pipeline aprono il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. La coppia linguistica compare solo con DeepL. A destra stanno importa, esporta, risorse linguistiche ed eliminazione.
 
 Al centro i due fogli affiancano originale e traduzione. Sopra di loro, a
 sinistra, il numero del frammento aperto; al centro una finestra di sette

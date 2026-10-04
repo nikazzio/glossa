@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpenText, FileOutput, LibraryBig, Trash2, Upload } from 'lucide-react';
+import { BookOpenText, FileOutput, Languages, Layers, LibraryBig, Network, Trash2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { IconButton, PageHeader, RenameField, Tooltip } from '../ui';
@@ -9,7 +9,7 @@ import { useLibraryStore } from '../../stores/libraryStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useLanguageLabel } from '../projects/TranslationCatalogRow';
+import { resolveDeeplLanguages } from '../../pipeline/deeplConfig';
 import { PipelineSwitch } from './PipelineSwitch';
 
 interface TranslationStudioHeaderProps {
@@ -17,7 +17,7 @@ interface TranslationStudioHeaderProps {
   onImportDocument: () => void;
 }
 
-const SEPARATOR = <span className="h-1 w-1 shrink-0 rounded-full bg-editorial-border" aria-hidden="true" />;
+const MODE_ICONS = { standard: Languages, editorial: Layers, 'deepl-hybrid': Network };
 
 /** Nome della traduzione, rinominabile sul posto con un clic. */
 function TranslationName() {
@@ -48,7 +48,7 @@ function TranslationName() {
   }
 
   return (
-    <Tooltip label={t('areas.translations.catalog.rename')} side="bottom">
+    <Tooltip label={`${projectName} — ${t('areas.translations.catalog.rename')}`} side="bottom" className="min-w-0 max-w-full">
       <button
         type="button"
         onClick={() => setEditing(true)}
@@ -75,9 +75,10 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
     (s) => s.projects.find((project) => project.id === s.currentProjectId)?.name ?? '',
   );
   const removeProject = useProjectStore((s) => s.removeProject);
-  const languageLabel = useLanguageLabel();
-  const sourceLanguage = usePipelineStore((s) => s.config.sourceLanguage);
-  const targetLanguage = usePipelineStore((s) => s.config.targetLanguage);
+  const mode = usePipelineStore((s) => s.config.mode ?? 'standard');
+  const deeplStage = usePipelineStore((s) => s.config.stages.find((stage) => stage.enabled && stage.provider === 'deepl'));
+  const deeplLanguages = deeplStage ? resolveDeeplLanguages(deeplStage) : null;
+  const ModeIcon = MODE_ICONS[mode];
   const setShowExportDialog = useUiStore((s) => s.setShowExportDialog);
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
   const [removing, setRemoving] = useState(false);
@@ -118,14 +119,21 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
       backLabel={blockedTitle(t('sidebar.backToTranslations'), running)}
       backDisabled={isProcessing}
       title={<TranslationName />}
-      center={
+      titleAccessory={
         <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 font-display text-lg text-editorial-muted" aria-hidden="true">/</span>
           <PipelineSwitch />
-          {SEPARATOR}
-          {/* Le lingue sono della pipeline: stanno accanto a lei, intere. */}
-          <span className="shrink-0 text-sm text-editorial-ink">
-            {languageLabel(sourceLanguage)} → {languageLabel(targetLanguage)}
-          </span>
+          <Tooltip label={t(`pipeline.modeDesc.${mode}`)} side="bottom">
+            <span className="flex shrink-0 items-center gap-1.5 text-sm text-editorial-muted">
+              <ModeIcon size={13} aria-hidden="true" />
+              <span className="font-display italic">{t(`pipeline.modeShort.${mode}`)}</span>
+            </span>
+          </Tooltip>
+          {mode === 'deepl-hybrid' && deeplLanguages && <Tooltip label={t('pipeline.deepl.languagePairHint')} side="bottom">
+            <span className="shrink-0 text-xs text-editorial-ink">
+              {deeplLanguages.sourceLang || t('pipeline.deepl.autoShort')} → {deeplLanguages.targetLang || '…'}
+            </span>
+          </Tooltip>}
         </span>
       }
       actions={

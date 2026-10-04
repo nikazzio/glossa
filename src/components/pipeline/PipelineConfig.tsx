@@ -6,7 +6,7 @@ import { getContextWindow, getSelectableModelIds } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useConfigStore } from '../../stores/configStore';
-import { llmService, ollamaService } from '../../services/llmService';
+import { ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -36,10 +36,6 @@ export function PipelineConfig({ activeTab }: PipelineConfigProps) {
   const { statuses: keyStatuses } = useProviderKeyStatus();
   const { t } = useTranslation();
   const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
-  const [isRefiningPersona, setIsRefiningPersona] = useState(false);
-  const [refiningStageId, setRefiningStageId] = useState<string | null>(null);
-  const [isRefiningJudge, setIsRefiningJudge] = useState(false);
-  const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
 
   const { templates, loadTemplates, saveTemplate } = usePromptTemplateStore();
 
@@ -54,11 +50,12 @@ export function PipelineConfig({ activeTab }: PipelineConfigProps) {
   }, [loadTemplates, t]);
 
   const auditTemplates = templates.filter((tmpl) => tmpl.context === 'audit');
-  const personaTemplates = templates.filter((tmpl) => tmpl.context === 'persona');
+  const briefTemplates = templates.filter((tmpl) => tmpl.context === 'brief');
 
-  const stage0 = config.stages[0];
-  const personaRefineLabel = formatProviderModelLabel(stage0?.provider ?? 'gemini', stage0?.model ?? '');
-  const canRefinePersona = stage0 ? canRefineWithProvider(stage0.provider, keyStatuses) : false;
+  const briefModel = config.stages.find((stage) => stage.enabled && stage.provider !== 'deepl')
+    ?? { provider: config.judgeProvider, model: config.judgeModel };
+  const briefRefineLabel = formatProviderModelLabel(briefModel.provider, briefModel.model);
+  const canRefineBrief = canRefineWithProvider(briefModel.provider, keyStatuses);
   const judgeRefineLabel = formatProviderModelLabel(config.judgeProvider, config.judgeModel);
   const canRefineJudge = canRefineWithProvider(config.judgeProvider, keyStatuses);
   const minSourceAwareContextWindow = config.stages
@@ -91,65 +88,6 @@ export function PipelineConfig({ activeTab }: PipelineConfigProps) {
     }
   };
 
-  const handleRefineStagePrompt = async (stageId: string) => {
-    const stage = config.stages.find((s) => s.id === stageId);
-    if (!stage?.prompt.trim() || !stage?.model.trim()) return;
-    setRefiningStageId(stageId);
-    try {
-      const refined = await llmService.refinePrompt(stage.prompt, stage.provider, stage.model, 'stage');
-      updateStage(stageId, { prompt: refined });
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setRefiningStageId(null);
-    }
-  };
-
-  const handleRefinePersona = async () => {
-    if (!config.persona?.trim()) return;
-    const stage = config.stages[0];
-    if (!stage) return;
-    setIsRefiningPersona(true);
-    try {
-      const refined = await llmService.refinePrompt(config.persona, stage.provider, stage.model, 'stage');
-      setConfig((prev) => ({ ...prev, persona: refined }));
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsRefiningPersona(false);
-    }
-  };
-
-  const handleRefineJudgePrompt = async () => {
-    if (!config.judgePrompt.trim()) return;
-    setIsRefiningJudge(true);
-    try {
-      const refined = await llmService.refinePrompt(config.judgePrompt, config.judgeProvider, config.judgeModel, 'audit');
-      setConfig((prev) => ({ ...prev, judgePrompt: refined }));
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsRefiningJudge(false);
-    }
-  };
-
-  const handleRefineCoherencePrompt = async () => {
-    if (!config.coherencePrompt?.trim()) return;
-    setIsRefiningCoherence(true);
-    try {
-      const refined = await llmService.refinePrompt(config.coherencePrompt, config.judgeProvider, config.judgeModel, 'audit');
-      setConfig((prev) => ({ ...prev, coherencePrompt: refined }));
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsRefiningCoherence(false);
-    }
-  };
-
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
     const models = getSelectableModelIds(newProvider, useConfigStore.getState().ollamaModels);
     setConfig((prev) => ({
@@ -176,13 +114,12 @@ export function PipelineConfig({ activeTab }: PipelineConfigProps) {
           setMode={setMode}
           translationsExist={translationsExist}
           isProcessing={isProcessing}
-          personaTemplates={personaTemplates}
-          isRefiningPersona={isRefiningPersona}
-          canRefinePersona={canRefinePersona}
-          personaRefineLabel={personaRefineLabel}
-          handleRefinePersona={handleRefinePersona}
+          briefTemplates={briefTemplates}
+          canRefineBrief={canRefineBrief}
+          briefRefineLabel={briefRefineLabel}
           saveTemplate={saveTemplate}
-          personaRefineProvider={stage0?.provider ?? ''}
+          briefRefineProvider={briefModel.provider}
+          briefRefineModel={briefModel.model}
         />
       )}
 
@@ -194,10 +131,8 @@ export function PipelineConfig({ activeTab }: PipelineConfigProps) {
           isProcessing={isProcessing}
           isRefreshingOllama={isRefreshingOllama}
           templates={templates}
-          refiningStageId={refiningStageId}
           keyStatuses={keyStatuses}
           contextWindowChanged={contextWindowChanged}
-          handleRefineStagePrompt={handleRefineStagePrompt}
           handleRefreshOllama={handleRefreshOllama}
           updateStage={updateStage}
           saveTemplate={saveTemplate}
@@ -210,12 +145,8 @@ export function PipelineConfig({ activeTab }: PipelineConfigProps) {
             setConfig={setConfig}
             isProcessing={isProcessing}
             auditTemplates={auditTemplates}
-            isRefiningJudge={isRefiningJudge}
-            isRefiningCoherence={isRefiningCoherence}
             canRefine={canRefineJudge}
             judgeRefineLabel={judgeRefineLabel}
-            handleRefineJudgePrompt={handleRefineJudgePrompt}
-            handleRefineCoherencePrompt={handleRefineCoherencePrompt}
             handleJudgeProviderChange={handleJudgeProviderChange}
             keyStatuses={keyStatuses}
             isRefreshingOllama={isRefreshingOllama}

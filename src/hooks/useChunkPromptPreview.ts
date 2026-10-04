@@ -6,6 +6,8 @@ import { buildMemoryInjection } from '../services/phraseMemoryInjection';
 import { buildBlobContext } from './pipeline/blobContext';
 import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
 import { llmService } from '../services/llmService';
+import { deeplService } from '../services/deeplService';
+import { getDeeplOptions } from '../pipeline/deeplConfig';
 import type { PipelineStageConfig, PromptInfo, TranslationChunk } from '../types';
 
 interface ChunkPromptPreviewResult {
@@ -36,6 +38,7 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
   const reset = () => {
     requestIdRef.current += 1;
     setPreview(null);
+    setIsBuilding(false);
     setError(null);
     setIsDeeplStage(false);
   };
@@ -51,13 +54,18 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
     setError(null);
     setIsDeeplStage(false);
 
-    if (stage.provider === 'deepl') {
-      setIsDeeplStage(true);
-      return;
-    }
-
     setIsBuilding(true);
     try {
+      if (stage.provider === 'deepl') {
+        const body = await deeplService.previewDeeplStage({
+          text: stripFootnoteMarkers(chunk.sourceProcessingText),
+          deeplConfig: getDeeplOptions(stage),
+        });
+        if (requestIdRef.current !== requestId) return;
+        setIsDeeplStage(true);
+        setPreview({ systemPrompt: '', userPrompt: body });
+        return;
+      }
       const enabledStages = config.stages.filter((s) => s.enabled);
       const stageIndex = enabledStages.findIndex((s) => s.id === stageId);
       const previousStage = stageIndex > 0 ? enabledStages[stageIndex - 1] : undefined;
@@ -71,8 +79,6 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
 
       const effectiveConfig = {
         ...config,
-        ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
-        ...(!config.persona && stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
         ...(blobContext ? { blobContext, blobCurrentChunkId: chunk.id } : {}),
       };
 

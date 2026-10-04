@@ -26,23 +26,42 @@ fn glossaries_endpoint(api_key: &str) -> String {
     format!("https://{}/v3/glossaries", deepl_host(api_key))
 }
 
+pub(crate) fn build_translate_request(
+    input: &DeeplStageInput,
+) -> Result<DeeplTranslateRequest, String> {
+    let cfg = &input.deepl_config;
+    let target_lang = cfg
+        .target_lang
+        .as_deref()
+        .unwrap_or("")
+        .trim()
+        .to_uppercase();
+    if target_lang.is_empty() {
+        return Err("Choose a target language in the DeepL settings.".to_string());
+    }
+    Ok(DeeplTranslateRequest {
+        text: vec![input.text.clone()],
+        source_lang: cfg
+            .source_lang
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.trim().to_uppercase()),
+        target_lang,
+        model_type: cfg.model_type.clone(),
+        formality: cfg.formality.clone(),
+        context: cfg.context.clone(),
+        preserve_formatting: cfg.preserve_formatting,
+        glossary_id: cfg.glossary_id.clone(),
+        show_billed_characters: cfg.show_billed_characters.unwrap_or(true),
+    })
+}
+
 pub async fn translate(
     client: &Client,
     api_key: &str,
     input: &DeeplStageInput,
 ) -> Result<DeeplStageOutput, String> {
-    let cfg = input.deepl_config.as_ref();
-    let body = DeeplTranslateRequest {
-        text: vec![input.text.clone()],
-        source_lang: input.source_lang.clone(),
-        target_lang: input.target_lang.clone(),
-        model_type: cfg.and_then(|c| c.model_type.clone()),
-        formality: cfg.and_then(|c| c.formality.clone()),
-        context: cfg.and_then(|c| c.context.clone()),
-        preserve_formatting: cfg.and_then(|c| c.preserve_formatting),
-        glossary_id: cfg.and_then(|c| c.glossary_id.clone()),
-        show_billed_characters: cfg.and_then(|c| c.show_billed_characters).unwrap_or(true),
-    };
+    let body = build_translate_request(input)?;
 
     let url = translate_endpoint(api_key);
     let resp = client

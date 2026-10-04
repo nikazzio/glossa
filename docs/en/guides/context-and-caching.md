@@ -23,7 +23,7 @@ rather than the original text.
 
 For translation and revision, the system message preserves this order:
 
-1. Static instructions: persona, structural rules, glossary and examples.
+1. Static instructions: role and shared work brief, structural rules, glossary and examples.
 2. Shared document context.
 3. Stage-specific instructions, including any selected memory references.
 

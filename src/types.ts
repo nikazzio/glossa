@@ -451,6 +451,9 @@ export interface GeminiCacheConfig {
 }
 
 export interface DeeplConfig {
+  /** DeepL API code; empty string selects automatic source detection. */
+  sourceLang?: string;
+  targetLang?: string;
   modelType?: 'latency_optimized' | 'quality_optimized' | 'prefer_quality_optimized';
   formality?: 'default' | 'more' | 'less' | 'prefer_more' | 'prefer_less';
   context?: string;
@@ -528,8 +531,6 @@ export interface PipelineStageConfig {
   model: string;
   provider: ModelProvider;
   enabled: boolean;
-  sourceLanguage?: string;
-  targetLanguage?: string;
   providerOptions?: ProviderRuntimeConfig;
   customProviderId?: string;
 }
@@ -588,7 +589,7 @@ export interface ResponseInfo {
   rawJson: string;
 }
 
-export type PromptTemplateContext = 'stage' | 'audit' | 'persona' | 'memory' | 'ocr';
+export type PromptTemplateContext = 'stage' | 'audit' | 'brief' | 'memory' | 'ocr';
 export type PromptTemplateWorkflow = 'translation' | 'transcription';
 
 export interface PromptTemplate {
@@ -663,10 +664,9 @@ export interface PipelineConfig {
   experimentalImport?: ExperimentalImportMode | null;
   coherencePrompt?: string;
   reviewProviderOptions?: ProviderRuntimeConfig;
-  persona?: string;
+  /** Shared task context for LLM stages and quality checks. */
+  workBrief?: string;
   uiLanguage?: string;
-  customSourceLanguage?: string;
-  customTargetLanguage?: string;
   blobBudgetTokens?: number;
   blobOverlap?: number;
   chunkedWithContextWindow?: number;

@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Plus, Settings2, Trash2 } from 'lucide-react';
+import { ChevronDown, Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -53,6 +53,9 @@ export function PipelineSwitch() {
       toast.error(t('pipeline.renameFailed'), { description: err instanceof Error ? err.message : String(err) });
     });
   };
+  const reportError = (err: unknown) => toast.error(t('pipeline.operationFailed'), {
+    description: err instanceof Error ? err.message : String(err),
+  });
 
   return (
     <span className="flex min-w-0 items-center gap-1">
@@ -65,12 +68,14 @@ export function PipelineSwitch() {
           className="w-48"
         />
       ) : (
-        <Tooltip label={t('pipeline.renamePipeline')} side="bottom">
+        <Tooltip label={`${activeName} — ${t('pipeline.changePipeline')}`} side="bottom" className="min-w-0">
           <button
             type="button"
-            onClick={() => setEditing(true)}
+            onClick={() => setPopoverOpen((open) => !open)}
             disabled={!activePipelineId || isRunning}
-            className="min-w-0 truncate text-sm text-editorial-ink transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed"
+            aria-haspopup="dialog"
+            aria-expanded={popoverOpen}
+            className="max-w-[min(18vw,14rem)] truncate font-display text-base italic text-editorial-ink transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed"
           >
             {activeName}
           </button>
@@ -92,7 +97,7 @@ export function PipelineSwitch() {
               tooltipSide="bottom"
               className="shrink-0"
             >
-              <ArrowLeftRight size={12} />
+              <ChevronDown size={12} />
             </IconButton>
           }
         >
@@ -110,7 +115,7 @@ export function PipelineSwitch() {
                   label={pipeline.name}
                   disabled={isRunning}
                   onSelect={() => {
-                    void switchPipeline(pipeline.id);
+                    void switchPipeline(pipeline.id).catch(reportError);
                     setPopoverOpen(false);
                   }}
                 />
@@ -118,7 +123,7 @@ export function PipelineSwitch() {
                   <IconButton
                     size="sm"
                     tone="muted"
-                    onClick={() => void handleDeletePipeline(pipeline.id, pipeline.name)}
+                    onClick={() => void handleDeletePipeline(pipeline.id, pipeline.name).catch(reportError)}
                     title={t('pipeline.deletePipeline')}
                     className="shrink-0"
                   >
@@ -128,13 +133,17 @@ export function PipelineSwitch() {
               </div>
             );
           })}
+          {activePipelineId && !isRunning && <div className="mt-1 border-t border-rule pt-1">
+            <MenuActionRow icon={<Pencil size={12} />} label={t('pipeline.renamePipeline')}
+              onClick={() => { setPopoverOpen(false); setEditing(true); }} />
+          </div>}
           {hasProject && !isRunning && pipelines.length < maxPipelines && (
             <div className="mt-1 border-t border-rule pt-1">
               <MenuActionRow
                 icon={<Plus size={12} />}
                 label={t('pipeline.newPipeline')}
                 onClick={() => {
-                  void createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }));
+                  void createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 })).catch(reportError);
                   setPopoverOpen(false);
                 }}
               />

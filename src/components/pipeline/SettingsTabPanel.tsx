@@ -1,13 +1,14 @@
-import { ArrowRightLeft, FileText, Globe, Languages, Layers, Network, ShieldCheck, Wand2, type LucideIcon } from 'lucide-react';
+import { FileText, Languages, Layers, Network, ShieldCheck, Wand2, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
-import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
+import type { PipelineConfig, PipelineMode, PromptTemplate, ModelProvider } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
-import { defaultPersonaText, LANGUAGES } from '../../constants';
-import { ChoiceDots, Hint, IconButton, PanelSection, Select, type ChoiceDotsOption } from '../ui';
-import { AuditPromptEditor } from './AuditPromptEditor';
+import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../../constants';
+import { ChoiceDots, Hint, PanelSection, type ChoiceDotsOption } from '../ui';
+import { PipelinePromptEditor } from './PipelinePromptEditor';
+import { DeeplLanguagePair } from './DeeplLanguagePair';
 
 const MODE_ICON: Record<PipelineMode, LucideIcon> = {
   standard: Languages,
@@ -42,28 +43,26 @@ interface SettingsTabPanelProps {
   setMode: (mode: PipelineMode) => void;
   translationsExist: boolean;
   isProcessing: boolean;
-  personaTemplates: PromptTemplate[];
-  isRefiningPersona: boolean;
-  canRefinePersona: boolean;
-  personaRefineLabel: string;
-  personaRefineProvider: string;
-  handleRefinePersona: () => void;
+  briefTemplates: PromptTemplate[];
+  canRefineBrief: boolean;
+  briefRefineLabel: string;
+  briefRefineProvider: ModelProvider;
+  briefRefineModel: string;
   saveTemplate: SaveTemplateFn;
 }
 
-/** Generale: modalità, coppia di lingue, persona. */
+/** Modalità, lingue DeepL e descrizione comune del lavoro. */
 export function SettingsTabPanel({
   config,
   setConfig,
   setMode,
   translationsExist,
   isProcessing,
-  personaTemplates,
-  isRefiningPersona,
-  canRefinePersona,
-  personaRefineLabel,
-  personaRefineProvider,
-  handleRefinePersona,
+  briefTemplates,
+  canRefineBrief,
+  briefRefineLabel,
+  briefRefineProvider,
+  briefRefineModel,
   saveTemplate,
 }: SettingsTabPanelProps) {
   const { t } = useTranslation();
@@ -93,17 +92,10 @@ export function SettingsTabPanel({
       ? t('pipeline.reasonTranslationsExist')
       : undefined;
 
-  // Una persona personalizzata è scritta per una coppia: le lingue restano
-  // ferme finché non la si ripristina.
-  const languagesLocked = Boolean(config.persona);
-  const languageOptions = LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }));
-  const swapLabel = t('pipeline.swapLanguages');
-
-  const defaultPersona = defaultPersonaText(config.sourceLanguage, config.targetLanguage);
-  const handlePersonaChange = (value: string) => {
-    const isDefault = !value.trim() || value.trim() === defaultPersona.trim();
-    setConfig((prev) => ({ ...prev, persona: isDefault ? undefined : value }));
-  };
+  const deeplStage = config.stages.find((stage) => stage.role === 'deepl-translation');
+  const deeplActive = mode === 'deepl-hybrid';
+  const deeplOptions = { ...DEFAULT_DEEPL_STAGE_OPTIONS, ...deeplStage?.providerOptions?.deepl };
+  const pairDisabledReason = !deeplActive ? t('pipeline.deepl.onlyInDeeplMode') : modeLockedReason;
 
   return (
     <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-8">
@@ -116,7 +108,7 @@ export function SettingsTabPanel({
             disabled={Boolean(modeLockedReason)}
             ariaLabel={t('pipeline.modeLabel')}
           />
-          <span className="h-4 w-px bg-rule" aria-hidden="true" />
+          <span className="font-display italic text-editorial-ink">{t(`pipeline.modeShort.${mode}`)}</span>
           <span className="flex items-center gap-1.5 text-editorial-muted">
             {MODE_PHASES[mode].map(({ Icon, labelKey }, index) => (
               <Fragment key={labelKey}>
@@ -130,65 +122,18 @@ export function SettingsTabPanel({
         </div>
       </PanelSection>
 
-      <PanelSection
-        icon={Globe}
-        label={t('pipeline.languagePair')}
-        hint={languagesLocked ? t('pipeline.languagePairLockedByPersona') : undefined}
-      >
-        <div className="flex items-center gap-3">
-          <Select
-            value={config.sourceLanguage}
-            onChange={(value) => setConfig((prev) => ({ ...prev, sourceLanguage: value }))}
-            options={languageOptions}
-            size="md"
-            className="w-full"
-            ariaLabel={t('pipeline.sourceLanguage')}
-            disabled={languagesLocked}
-          />
-          <IconButton
-            size="md"
-            className="shrink-0"
-            onClick={() =>
-              setConfig((prev) => ({ ...prev, sourceLanguage: prev.targetLanguage, targetLanguage: prev.sourceLanguage }))
-            }
-            disabled={languagesLocked}
-            title={languagesLocked ? blocked(swapLabel, t('pipeline.languagePairLockedByPersona')) : swapLabel}
-          >
-            <ArrowRightLeft size={13} />
-          </IconButton>
-          <Select
-            value={config.targetLanguage}
-            onChange={(value) => setConfig((prev) => ({ ...prev, targetLanguage: value }))}
-            options={languageOptions}
-            size="md"
-            className="w-full"
-            ariaLabel={t('pipeline.targetLanguage')}
-            disabled={languagesLocked}
-          />
-        </div>
-      </PanelSection>
+      <DeeplLanguagePair value={deeplOptions} active={deeplActive} disabledReason={pairDisabledReason}
+        onChange={(deepl) => setConfig((prev) => ({ ...prev, stages: prev.stages.map((stage) =>
+          stage.role === 'deepl-translation' ? { ...stage, providerOptions: { ...stage.providerOptions, deepl } } : stage) }))} />
 
-      <AuditPromptEditor
-        variant="stage"
-        label={t('pipeline.personaLabel')}
-        hint=""
-        customLabel={t('pipeline.personaCustomBadge')}
-        value={config.persona ?? defaultPersona}
-        placeholder={defaultPersona}
-        templates={personaTemplates}
-        isRefining={isRefiningPersona}
-        canRefine={canRefinePersona}
-        refineLabel={personaRefineLabel}
-        refineDisabledReason={t('pipeline.reasonMissingKey', { provider: personaRefineProvider })}
-        onRefine={handleRefinePersona}
-        onChange={handlePersonaChange}
-        onApplyTemplate={(template) => handlePersonaChange(template.prompt)}
-        saveTemplate={saveTemplate}
-        defaultValue={defaultPersona}
-        onReset={() => setConfig((prev) => ({ ...prev, persona: undefined }))}
-        templateContext="persona"
-        templateWorkflow="translation"
-        editDisabledReason={isProcessing ? t('document.operationsRunning') : undefined}
+      <PipelinePromptEditor
+        label={t('pipeline.workBriefLabel')} hint={t('pipeline.workBriefHint')}
+        value={config.workBrief ?? ''} placeholder={t('pipeline.workBriefPlaceholder')}
+        templates={briefTemplates} templateContext="brief" saveTemplate={saveTemplate}
+        onConfirm={(workBrief) => setConfig((prev) => ({ ...prev, workBrief }))}
+        defaultValue="" disabledReason={isProcessing ? t('document.operationsRunning') : undefined}
+        provider={briefRefineProvider} model={briefRefineModel} canRefine={canRefineBrief}
+        refineLabel={briefRefineLabel} refineDisabledReason={t('pipeline.reasonMissingKey', { provider: briefRefineProvider })}
       />
     </div>
   );

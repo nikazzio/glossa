@@ -57,11 +57,11 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
     .map((e) => [`${e.provider}/${e.id}`, e.pricing!]),
 );
 
-export function defaultPersonaText(source: string, target: string): string {
-  return `You are an expert translator and linguist specialized in ${source} to ${target} translation.`;
-}
+export const WORK_BRIEF_PERSONA = 'You are an expert translator and linguist. Follow the work brief and the instructions for the current stage.';
 
 export const DEFAULT_DEEPL_STAGE_OPTIONS = {
+  sourceLang: '',
+  targetLang: '',
   modelType: 'prefer_quality_optimized' as const,
   preserveFormatting: true,
   showBilledCharacters: true,
@@ -80,42 +80,3 @@ export const LANGUAGES = [
   'Russian',
 ];
 
-const LANGUAGE_TO_DEEPL_CODE: Record<string, string> = {
-  'Italian': 'IT',
-  'English': 'EN',
-  'French': 'FR',
-  'German': 'DE',
-  'Spanish': 'ES',
-  'Portuguese': 'PT',
-  'Dutch': 'NL',
-  'Polish': 'PL',
-  'Russian': 'RU',
-  'Japanese': 'JA',
-  'Chinese': 'ZH',
-  'Chinese (Simplified)': 'ZH',
-  'Chinese (Traditional)': 'ZH',
-  'Korean': 'KO',
-  'Arabic': 'AR',
-  'Turkish': 'TR',
-  'Swedish': 'SV',
-  'Danish': 'DA',
-  'Norwegian': 'NB',
-  'Finnish': 'FI',
-  'Czech': 'CS',
-  'Slovak': 'SK',
-  'Hungarian': 'HU',
-  'Romanian': 'RO',
-  'Bulgarian': 'BG',
-  'Croatian': 'HR',
-  'Slovenian': 'SL',
-  'Greek': 'EL',
-  'Ukrainian': 'UK',
-  'Indonesian': 'ID',
-  'Latvian': 'LV',
-  'Lithuanian': 'LT',
-  'Estonian': 'ET',
-};
-
-export function toDeeplCode(languageName: string): string {
-  return LANGUAGE_TO_DEEPL_CODE[languageName] ?? languageName.slice(0, 2).toUpperCase();
-}

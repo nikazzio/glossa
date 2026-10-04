@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { LibraryBig, Loader2, Save, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { toDeeplCode } from '../../constants';
+import { resolveDeeplLanguages } from '../../pipeline/deeplConfig';
 import { assignGlossaryToProject, upsertGlossaryEntries } from '../../services/glossaryService';
 import { deeplService } from '../../services/deeplService';
 import { useLibraryStore } from '../../stores/libraryStore';
@@ -25,6 +25,8 @@ export function GlossaryTabPanel() {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const deeplStage = config.stages.find((stage) => stage.enabled && stage.provider === 'deepl');
+  const deeplLanguages = deeplStage ? resolveDeeplLanguages(deeplStage) : undefined;
 
   useEffect(() => {
     loadGlossaries(activeWorkspaceId);
@@ -58,13 +60,12 @@ export function GlossaryTabPanel() {
   };
 
   const handleUploadToDeepL = async () => {
-    if (config.glossary.length === 0) return;
+    if (config.glossary.length === 0 || !deeplLanguages?.sourceLang || !deeplLanguages.targetLang) return;
     setIsUploading(true);
     try {
       await deeplService.createGlossary({
         name: config.assignedGlossaryId ?? 'Glossa',
-        sourceLang: toDeeplCode(config.sourceLanguage),
-        targetLang: toDeeplCode(config.targetLanguage),
+        ...deeplLanguages,
         entries: config.glossary.map((e) => ({ source: e.term, target: e.translation })),
       });
       toast.success(t('pipeline.deepl.glossaryUploaded'));
@@ -75,7 +76,7 @@ export function GlossaryTabPanel() {
     }
   };
 
-  const canUploadToDeepL = config.mode === 'deepl-hybrid' && config.glossary.length > 0;
+  const canUploadToDeepL = Boolean(deeplStage) && config.glossary.length > 0;
 
   return (
     <div id="pconfig-panel-glossary" role="tabpanel" aria-labelledby="pconfig-tab-glossary" className="space-y-8">
@@ -100,8 +101,8 @@ export function GlossaryTabPanel() {
               <IconButton
                 size="sm"
                 onClick={() => void handleUploadToDeepL()}
-                disabled={isUploading}
-                title={t('pipeline.deepl.uploadGlossaryTooltip')}
+                disabled={isUploading || !deeplLanguages?.sourceLang || !deeplLanguages.targetLang}
+                title={deeplLanguages?.sourceLang ? t('pipeline.deepl.uploadGlossaryTooltip') : t('pipeline.deepl.glossaryNeedsSource')}
               >
                 {isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
               </IconButton>

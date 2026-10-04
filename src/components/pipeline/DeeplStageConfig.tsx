@@ -2,55 +2,57 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { deeplService } from '../../services/deeplService';
-import type { DeeplConfig, DeeplLanguageInfo, GlossaryEntry } from '../../types';
+import type { DeeplConfig, DeeplLanguageInfo } from '../../types';
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
-import { DEFAULT_DEEPL_STAGE_OPTIONS, toDeeplCode } from '../../constants';
+import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../../constants';
 import { FIELD_CLASSNAME, FieldLabel, IconButton, Select, SettingRow, ToggleRow } from '../ui';
 import { confirm } from '../../stores/confirmStore';
 
 interface DeeplStageConfigProps {
   value?: DeeplConfig;
-  sourceLang: string;
-  targetLanguage: string;
-  glossaryEntries: GlossaryEntry[];
-  glossaryName: string;
   onChange: (next: DeeplConfig) => void;
 }
 
 export function DeeplStageConfig({
   value,
-  sourceLang,
-  targetLanguage,
-  glossaryEntries,
-  glossaryName: _glossaryName,
   onChange,
 }: DeeplStageConfigProps) {
   const { t } = useTranslation();
   const [languages, setLanguages] = useState<DeeplLanguageInfo[]>([]);
+  const [languageError, setLanguageError] = useState<string | null>(null);
   const [glossaries, setGlossaries] = useState<DeeplGlossaryInfo[]>([]);
   const [glossariesLoading, setGlossariesLoading] = useState(false);
   const [glossaryError, setGlossaryError] = useState<string | null>(null);
 
-  const config = { ...DEFAULT_DEEPL_STAGE_OPTIONS, ...value };
+  const config = {
+    ...DEFAULT_DEEPL_STAGE_OPTIONS,
+    ...value,
+  };
 
-  const targetLang = toDeeplCode(targetLanguage);
-  const normalizedSourceLang = toDeeplCode(sourceLang);
+  const targetLang = config.targetLang;
+  const normalizedSourceLang = config.sourceLang;
   const targetInfo = languages.find((l) => l.language === targetLang);
   const supportsFormality = targetInfo?.supportsFormality ?? false;
 
   useEffect(() => {
-    deeplService
-      .getLanguages('target')
-      .then(setLanguages)
-      .catch(() => setLanguages([]));
-  }, []);
+    let active = true;
+    setLanguageError(null);
+    void deeplService.getLanguages('target').then((languages) => {
+      if (active) setLanguages(languages);
+    }).catch(() => { if (active) setLanguageError(t('pipeline.deepl.languagesUnavailable')); });
+    return () => { active = false; };
+  }, [t]);
 
   const reloadGlossaries = useCallback(() => {
     setGlossariesLoading(true);
+    setGlossaryError(null);
     deeplService
       .listGlossaries()
       .then(setGlossaries)
-      .catch(() => setGlossaries([]))
+      .catch((error: unknown) => {
+        setGlossaries([]);
+        setGlossaryError(error instanceof Error ? error.message : String(error));
+      })
       .finally(() => setGlossariesLoading(false));
   }, []);
 
@@ -68,7 +70,7 @@ export function DeeplStageConfig({
       g.targetLang.toUpperCase() === targetLang,
   );
 
-  const showGlossarySection = filteredGlossaries.length > 0 || glossariesLoading || glossaryEntries.length > 0;
+  const showGlossarySection = filteredGlossaries.length > 0 || glossariesLoading;
 
   const handleDeleteGlossary = async () => {
     if (!config.glossaryId) return;
@@ -82,7 +84,7 @@ export function DeeplStageConfig({
     if (!ok) return;
     deeplService
       .deleteGlossary(config.glossaryId)
-      .then(reloadGlossaries)
+      .then(() => { update({ glossaryId: undefined }); reloadGlossaries(); })
       .catch((e: unknown) =>
         setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'),
       );
@@ -90,6 +92,7 @@ export function DeeplStageConfig({
 
   return (
     <div className="space-y-4">
+      {languageError && <p role="alert" className="text-xs text-editorial-danger">{languageError}</p>}
       <div className="divide-y divide-rule border-y border-rule">
         <div className="py-2.5">
           <ToggleRow

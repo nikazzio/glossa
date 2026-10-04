@@ -13,7 +13,7 @@ import { FieldLabel, IconButton, SectionLabel, Select } from '../ui';
 import { FIELD_CLASSNAME, FIELD_MONO_CLASSNAME } from '../ui/fieldStyles';
 
 export function templateContextLabel(context: PromptTemplateContext, t: TFunction): string {
-  const keys = { stage: 'pipeline.tabStages', audit: 'pipeline.tabAudit', persona: 'pipeline.tabPersona', memory: 'workspace.settings.memoryTab', ocr: 'workspace.settings.ocrTab' };
+  const keys = { stage: 'pipeline.tabStages', audit: 'pipeline.tabAudit', brief: 'pipeline.workBriefLabel', memory: 'workspace.settings.memoryTab', ocr: 'workspace.settings.ocrTab' };
   return t(keys[context]);
 }
 
@@ -45,7 +45,7 @@ export function PromptTemplateForm({ template, busy, onSave, onCancel, onRefinin
       : !validProvider || !model.trim() ? t('library.refineModelRequired')
         : !canRefineWithProvider(provider, statuses) ? t('library.refineKeyRequired', { provider }) : '';
   const saveReason = !name.trim() || !prompt.trim() ? t('library.templateFieldsRequired') : '';
-  const contextHints = { stage: 'library.templateStageHint', audit: 'library.templateAuditHint', persona: 'library.templatePersonaHint', memory: 'library.templateMemoryHint', ocr: 'library.templateOcrHint' };
+  const contextHints = { stage: 'library.templateStageHint', audit: 'library.templateAuditHint', brief: 'pipeline.workBriefHint', memory: 'library.templateMemoryHint', ocr: 'library.templateOcrHint' };
 
   const handleRefine = async () => {
     if (disabled || refineReason || !validProvider) return;
@@ -69,7 +69,7 @@ export function PromptTemplateForm({ template, busy, onSave, onCancel, onRefinin
         <div className="min-w-0 space-y-1.5">
           <FieldLabel block hint={t(contextHints[context])}>{t('library.templateContextLabel')}</FieldLabel>
           <Select value={context} onChange={(value) => setContext(value as PromptTemplateContext)} size="md" className="w-full" ariaLabel={t('library.templateContextLabel')}
-            options={(['stage', 'audit', 'persona', 'memory', 'ocr'] as const).map((value) => ({ value, label: templateContextLabel(value, t) }))} />
+            options={(['stage', 'audit', 'brief', 'memory', 'ocr'] as const).map((value) => ({ value, label: templateContextLabel(value, t) }))} />
         </div>
         <div className="min-w-0 space-y-1.5">
           <FieldLabel block hint={t('library.templateWorkflowHint')}>{t('library.templateWorkflowLabel')}</FieldLabel>

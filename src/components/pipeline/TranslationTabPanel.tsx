@@ -1,11 +1,11 @@
-import { FileText, RotateCcw, ShieldCheck } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
+import { FileText, Languages, Network, RotateCcw, ShieldCheck, Wand2 } from 'lucide-react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, PipelineStageConfig, PromptTemplate } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { calculateBlobBudget } from '../../models/catalog';
-import { IconButton, PanelSection, ToggleRow } from '../ui';
+import { IconButton, PanelSection, TabStrip, ToggleRow } from '../ui';
 import { NumberSettingRow } from './NumberSettingRow';
 import { StageCard } from './StageCard';
 
@@ -19,10 +19,8 @@ interface TranslationTabPanelProps {
   isProcessing: boolean;
   isRefreshingOllama: boolean;
   templates: PromptTemplate[];
-  refiningStageId: string | null;
   keyStatuses: ProviderKeyStatusMap;
   contextWindowChanged: boolean;
-  handleRefineStagePrompt: (stageId: string) => void;
   handleRefreshOllama: () => void;
   updateStage: (id: string, updates: Partial<PipelineStageConfig>) => void;
   saveTemplate: SaveTemplateFn;
@@ -35,10 +33,8 @@ export function TranslationTabPanel({
   isProcessing,
   isRefreshingOllama,
   templates,
-  refiningStageId,
   keyStatuses,
   contextWindowChanged,
-  handleRefineStagePrompt,
   handleRefreshOllama,
   updateStage,
   saveTemplate,
@@ -48,6 +44,18 @@ export function TranslationTabPanel({
   const auto = calculateBlobBudget(config.stages);
   const stageTemplates = templates.filter((tmpl) => tmpl.context === 'stage');
   const blobLocked = translationsExist || isProcessing;
+  const [selectedId, setSelectedId] = useState(config.stages.find((stage) => stage.enabled)?.id ?? '');
+  const activeStage = config.stages.find((stage) => stage.enabled && stage.id === selectedId)
+    ?? config.stages.find((stage) => stage.enabled);
+  useEffect(() => { if (activeStage) setSelectedId(activeStage.id); }, [activeStage]);
+  const icons = { translation: Languages, 'deepl-translation': Network, refine: Wand2, format: FileText };
+  const tabs = config.stages.map((stage) => {
+    const Icon = icons[stage.role ?? 'translation'];
+    const label = t(`pipeline.stageRole.${stage.role ?? 'translation'}`);
+    return { id: stage.id, icon: <Icon size={14} />, disabled: !stage.enabled,
+      label: stage.enabled ? label : `${label} — ${t('pipeline.phaseNotUsed')}` };
+  });
+
 
   const blobContextSection = (
     <PanelSection
@@ -122,26 +130,22 @@ export function TranslationTabPanel({
         </div>
       )}
 
-      {config.stages.map((stage) => (
+      <TabStrip tabs={tabs} activeId={activeStage?.id ?? ''} onChange={setSelectedId}
+        ariaLabel={t('pipeline.tabStages')} idPrefix="pipeline-stage" />
+      {activeStage && <div id={`pipeline-stage-panel-${activeStage.id}`} role="tabpanel" aria-labelledby={`pipeline-stage-tab-${activeStage.id}`}>
         <StageCard
-          key={stage.id}
-          stage={stage}
+          key={activeStage.id}
+          stage={activeStage}
           templates={stageTemplates}
-          isRefining={refiningStageId === stage.id}
           translationsExist={translationsExist}
           isProcessing={isProcessing}
           isRefreshingOllama={isRefreshingOllama}
           keyStatuses={keyStatuses}
-          sourceLanguage={config.sourceLanguage}
-          targetLanguage={config.targetLanguage}
-          glossaryEntries={config.glossary}
-          glossaryName={config.assignedGlossaryId ?? ''}
-          onUpdate={(updates) => updateStage(stage.id, updates)}
-          onRefinePrompt={() => handleRefineStagePrompt(stage.id)}
+          onUpdate={(updates) => updateStage(activeStage.id, updates)}
           onRefreshOllama={handleRefreshOllama}
           saveTemplate={saveTemplate}
         />
-      ))}
+      </div>}
 
       {blobContextSection}
     </div>

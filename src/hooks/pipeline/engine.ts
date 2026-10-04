@@ -24,7 +24,7 @@ import {
 } from '../../services/pipelineProvenance';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../../models/catalog';
-import { toDeeplCode } from '../../constants';
+import { getDeeplOptions, resolveDeeplLanguages } from '../../pipeline/deeplConfig';
 import { stripFootnoteMarkers } from '../../utils/footnoteExtractor';
 import { buildBlobContext } from './blobContext';
 import type { BatchRunMode, ChunkOutcome } from './blobContext';
@@ -275,13 +275,12 @@ export async function executePipelineForChunk(
     const liveChunks = useChunksStore.getState().chunks;
     const stageRole = stage.role ?? 'translation';
     const isFormatStage = stageRole === 'format';
+    const deeplLanguages = stage.provider === 'deepl' ? resolveDeeplLanguages(stage) : undefined;
     const blobContext = isFormatStage
       ? undefined
       : buildBlobContext(liveChunks, chunk.id, (c) => c.sourceProcessingText || undefined);
     const effectiveConfig = {
       ...config,
-      ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
-      ...(!config.persona && stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
       ...(blobContext ? { blobContext, blobCurrentChunkId: chunk.id } : {}),
     };
     lastEffectiveConfig = effectiveConfig;
@@ -303,19 +302,22 @@ export async function executePipelineForChunk(
     try {
       let capturedUsage: TokenUsage | undefined;
       let capturedBilledCharacters: number | undefined;
+      let detectedDeeplSource: string | undefined;
       const stageResult = await withRetry(
         async () => {
           capturedUsage = undefined;
           capturedBilledCharacters = undefined;
+          detectedDeeplSource = undefined;
           updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-          if (stage.provider === 'deepl') {
-            const deeplResult = await deeplService.runDeeplStage({
+          if (deeplLanguages) {
+            const input = {
               text: stageText,
-              sourceLang: effectiveConfig.sourceLanguage ? toDeeplCode(effectiveConfig.sourceLanguage) : undefined,
-              targetLang: toDeeplCode(effectiveConfig.targetLanguage),
-              deeplConfig: stage.providerOptions?.deepl,
-            });
+              deeplConfig: getDeeplOptions(stage),
+            };
+            onPrompt({ systemPrompt: '', userPrompt: await deeplService.previewDeeplStage(input) });
+            const deeplResult = await deeplService.runDeeplStage(input);
             capturedBilledCharacters = deeplResult.billedCharacters;
+            detectedDeeplSource = deeplResult.detectedSourceLanguage;
             return { content: deeplResult.content };
           }
           if (stage.provider === 'ollama') {
@@ -391,8 +393,12 @@ export async function executePipelineForChunk(
         usage: capturedUsage,
         billedCharacters: capturedBilledCharacters,
         durationMs: stageDuration,
-        sourceLanguage: effectiveConfig.sourceLanguage,
-        targetLanguage: effectiveConfig.targetLanguage,
+        sourceLanguage: deeplLanguages
+          ? deeplLanguages.sourceLang || detectedDeeplSource || null
+          : effectiveConfig.sourceLanguage,
+        targetLanguage: deeplLanguages
+          ? deeplLanguages.targetLang
+          : effectiveConfig.targetLanguage,
         input: stageText,
         output: result,
         workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
@@ -425,8 +431,12 @@ export async function executePipelineForChunk(
           provider: stage.provider,
           model: stage.model,
           durationMs: stageDurationMs,
-          sourceLanguage: effectiveConfig.sourceLanguage,
-          targetLanguage: effectiveConfig.targetLanguage,
+          sourceLanguage: deeplLanguages
+            ? deeplLanguages.sourceLang || null
+            : effectiveConfig.sourceLanguage,
+          targetLanguage: deeplLanguages
+            ? deeplLanguages.targetLang
+            : effectiveConfig.targetLanguage,
           input: stageText,
           workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
         },

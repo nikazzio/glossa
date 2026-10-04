@@ -1,11 +1,15 @@
 import type { FewShotExample, PipelineConfig, PipelineStageConfig, GlossaryEntry, StageRole } from '../../types';
-import { defaultPersonaText } from '../../constants';
+import { WORK_BRIEF_PERSONA } from '../../constants';
 
 export type PromptPreviewKind = 'static' | 'runtime';
 
 export interface PromptPreviewBlock {
   id:
     | 'system-opener'
+    | 'work-brief'
+    | 'deepl-request'
+    | 'system-message'
+    | 'user-message'
     | 'structural-rules'
     | 'glossary-constraints'
     | 'markdown-rules'
@@ -27,6 +31,7 @@ export interface PromptPreviewStage {
   id: string;
   name: string;
   role: StageRole;
+  enabled: boolean;
   blocks: PromptPreviewBlock[];
 }
 
@@ -69,9 +74,7 @@ function buildFewShotBlock(examples: FewShotExample[]): string {
 }
 
 function buildSourceAwareBlocks(config: PipelineConfig, stage: PipelineStageConfig): PromptPreviewBlock[] {
-  const src = config.customSourceLanguage?.trim() || config.sourceLanguage;
-  const tgt = config.customTargetLanguage?.trim() || config.targetLanguage;
-  const persona = config.persona?.trim() || defaultPersonaText(src, tgt);
+  const workBrief = config.workBrief?.trim();
   const glossaryConstraints = buildGlossaryConstraints(config.glossary);
 
   const glossaryReminder = config.glossary.length
@@ -83,9 +86,14 @@ function buildSourceAwareBlocks(config: PipelineConfig, stage: PipelineStageConf
   const blocks: PromptPreviewBlock[] = [
     {
       id: 'system-opener',
-      body: persona,
+      body: WORK_BRIEF_PERSONA,
       kind: 'static',
     },
+    ...(workBrief ? [{
+      id: 'work-brief' as const,
+      body: `Work brief:\n${workBrief}`,
+      kind: 'static' as const,
+    }] : []),
     {
       id: 'structural-rules',
       body: [
@@ -214,13 +222,15 @@ function buildFormatBlocks(stage: PipelineStageConfig): PromptPreviewBlock[] {
 
 export function buildPromptPreviewStages(config: PipelineConfig): PromptPreviewStage[] {
   return config.stages
-    .filter((stage) => stage.enabled)
     .map((stage) => ({
       id: stage.id,
       name: stage.name,
       role: stage.role ?? 'translation',
+      enabled: stage.enabled,
       blocks:
-        stage.role === 'format'
+        stage.provider === 'deepl'
+          ? []
+          : stage.role === 'format'
           ? buildFormatBlocks(stage)
           : buildSourceAwareBlocks(config, stage),
     }));

@@ -1,6 +1,6 @@
 import { FileText, Languages, Network, Wand2, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { GlossaryEntry, ModelProvider, PipelineStageConfig, PromptTemplate, StageRole } from '../../types';
+import type { ModelProvider, PipelineStageConfig, PromptTemplate, StageRole } from '../../types';
 import { getKnownModelIds } from '../../models/catalog';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
@@ -8,7 +8,7 @@ import { useCustomProviderStore } from '../../stores/customProviderStore';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { PanelSection } from '../ui';
-import { AuditPromptEditor } from './AuditPromptEditor';
+import { PipelinePromptEditor } from './PipelinePromptEditor';
 import { DeeplStageConfig } from './DeeplStageConfig';
 import { ModelSection } from './ModelSection';
 import { withoutReasoningEffort } from './modelTuning';
@@ -26,17 +26,11 @@ const ROLES_WITH_HINT: ReadonlySet<StageRole> = new Set(['refine', 'format']);
 interface StageCardProps {
   stage: PipelineStageConfig;
   templates: PromptTemplate[];
-  isRefining: boolean;
   translationsExist: boolean;
   isProcessing: boolean;
   isRefreshingOllama: boolean;
   keyStatuses: ProviderKeyStatusMap;
-  sourceLanguage: string;
-  targetLanguage: string;
-  glossaryEntries: GlossaryEntry[];
-  glossaryName: string;
   onUpdate: (updates: Partial<PipelineStageConfig>) => void;
-  onRefinePrompt: () => void;
   onRefreshOllama: () => void;
   saveTemplate: SaveTemplateFn;
 }
@@ -47,17 +41,11 @@ interface StageCardProps {
 export function StageCard({
   stage,
   templates,
-  isRefining,
   translationsExist,
   isProcessing,
   isRefreshingOllama,
   keyStatuses,
-  sourceLanguage,
-  targetLanguage,
-  glossaryEntries,
-  glossaryName,
   onUpdate,
-  onRefinePrompt,
   onRefreshOllama,
   saveTemplate,
 }: StageCardProps) {
@@ -91,10 +79,6 @@ export function StageCard({
       {stage.provider === 'deepl' ? (
         <DeeplStageConfig
           value={stage.providerOptions?.deepl}
-          sourceLang={sourceLanguage}
-          targetLanguage={targetLanguage}
-          glossaryEntries={glossaryEntries}
-          glossaryName={glossaryName}
           onChange={(deepl) => onUpdate({ providerOptions: { ...stage.providerOptions, deepl } })}
         />
       ) : (
@@ -120,34 +104,26 @@ export function StageCard({
             runtimeTitle={t('pipeline.providerOptions.stageTitle')}
             runtimeHint={t('pipeline.providerOptions.stageHint')}
           />
-          <AuditPromptEditor
-            variant="stage"
+          <PipelinePromptEditor
             label={t('pipeline.prompt')}
             hint=""
             value={stage.prompt}
             placeholder={t('pipeline.stagePromptPlaceholder')}
             templates={templates}
-            isRefining={isRefining}
             canRefine={canRefine}
             refineLabel={formatProviderModelLabel(stage.provider, stage.model)}
             refineDisabledReason={t('pipeline.reasonMissingKey', { provider: stage.provider })}
-            onRefine={onRefinePrompt}
-            onChange={(prompt) => onUpdate({ prompt })}
-            onApplyTemplate={(template) =>
-              onUpdate({
-                prompt: template.prompt,
-                ...(template.defaultModel ? { model: template.defaultModel } : {}),
-                ...(template.defaultProvider ? { provider: template.defaultProvider as ModelProvider } : {}),
-              })
-            }
+            onConfirm={(prompt, template) => onUpdate({
+              prompt,
+              ...(template?.defaultModel ? { model: template.defaultModel } : {}),
+              ...(template?.defaultProvider ? { provider: template.defaultProvider as ModelProvider, providerOptions: {} } : {}),
+            })}
             saveTemplate={saveTemplate}
-            defaultModel={stage.model}
-            defaultProvider={stage.provider}
+            model={stage.model}
+            provider={stage.provider}
             defaultValue={STAGE_TEMPLATES[role].defaultPrompt}
-            onReset={() => onUpdate({ prompt: STAGE_TEMPLATES[role].defaultPrompt })}
             templateContext="stage"
-            templateWorkflow="translation"
-            editDisabledReason={editDisabledReason}
+            disabledReason={editDisabledReason}
           />
         </>
       )}

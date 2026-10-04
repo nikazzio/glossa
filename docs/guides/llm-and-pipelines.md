@@ -29,7 +29,7 @@ nella richiesta.
 | Judge | Sorgente, traduzione e criteri di valutazione | Valutazione e problemi strutturati |
 | Coherence | Traduzioni e contesto dei frammenti vicini | Segnalazioni di incoerenza tra frammenti |
 
-La fase Format usa un prompt separato: non riceve persona, glossario o contesto
+La fase Format usa un prompt separato: non riceve la descrizione comune, il glossario o contesto
 sorgente della traduzione. Le istruzioni ne limitano il compito alle correzioni
 di formattazione, ma il risultato deve comunque essere controllato.
 
