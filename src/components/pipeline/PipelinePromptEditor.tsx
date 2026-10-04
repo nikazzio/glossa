@@ -31,11 +31,15 @@ interface PipelinePromptEditorProps {
   footer?: ReactNode;
   /** Il testo non può essere confermato vuoto. */
   required?: boolean;
+  /** Segnaposto che il testo deve conservare, per esempio TEXT per {{TEXT}}. */
+  requiredPlaceholders?: string[];
+  /** Comandi aggiunti prima degli altri, per esempio il lucchetto di un testo di sistema. */
+  extraActions?: ReactNode;
 }
 
 export function PipelinePromptEditor({ label, hint, value, placeholder, templates, templateContext,
   saveTemplate, onConfirm, defaultValue, disabledReason, provider, model, canRefine, refineLabel,
-  refineDisabledReason, footer, required = false }: PipelinePromptEditorProps) {
+  refineDisabledReason, footer, required = false, requiredPlaceholders = [], extraActions }: PipelinePromptEditorProps) {
   const { t } = useTranslation();
   const id = useId();
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -52,8 +56,14 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
     ? t('transcription.commandBlocked', { command, reason: disabledReason }) : command;
   const cancel = () => { setDraft(null); setTemplate(undefined); };
   const emptyDraft = required && draft !== null && !draft.trim();
+  const missingPlaceholders = draft === null ? [] : requiredPlaceholders.filter((name) => !draft.includes(`{{${name}}}`));
+  const confirmReason = emptyDraft
+    ? t('pipeline.promptRequired')
+    : missingPlaceholders.length
+      ? t('pipeline.promptParts.missingPlaceholder', { names: missingPlaceholders.map((name) => `{{${name}}}`).join(', ') })
+      : undefined;
   const confirm = () => {
-    if (draft === null || blocked || emptyDraft) return;
+    if (draft === null || blocked || confirmReason) return;
     onConfirm(draft, template);
     cancel();
   };
@@ -72,6 +82,7 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
   const source = describePromptSource(draft ?? value, templates, defaultValue);
 
   return <PromptCard label={label} hint={hint} meta={<PromptSourceLabel source={source} />} actions={editing ? <>
+    {extraActions}
     <fieldset disabled={blocked} className="flex items-center gap-1">
       <IconButton size="sm" title={canRefine ? refineCommand : `${refineCommand} — ${refineDisabledReason}`}
         disabled={!canRefine || !draft.trim() || !model} onClick={() => void refine()}>
@@ -82,12 +93,13 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
         onApplyTemplate={(selected) => { setDraft(selected.prompt); setTemplate(selected); editorRef.current?.focus(); }} />
       {defaultValue !== undefined && <IconButton size="sm" title={t('pipeline.promptReset')}
         onClick={() => { setDraft(defaultValue); setTemplate(undefined); }}><RotateCcw size={14} /></IconButton>}
-      <IconButton size="sm" disabled={emptyDraft}
-        title={emptyDraft ? t('transcription.commandBlocked', { command: t('common.confirm'), reason: t('pipeline.promptRequired') }) : commandLabel(t('common.confirm'))}
+      <IconButton size="sm" disabled={Boolean(confirmReason)}
+        title={confirmReason ? t('transcription.commandBlocked', { command: t('common.confirm'), reason: confirmReason }) : commandLabel(t('common.confirm'))}
         onClick={confirm}><Check size={14} /></IconButton>
     </fieldset>
     <IconButton size="sm" title={t('common.cancel')} disabled={refining} onClick={cancel}><X size={14} /></IconButton>
   </> : <>
+    {extraActions}
     {!isEmpty && <IconButton size="sm" title={t(expanded ? 'library.collapsePrompt' : 'library.expandPrompt')}
       aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded((open) => !open)}>
       {expanded ? <Minimize2 size={14} /> : <Eye size={14} />}
@@ -101,7 +113,7 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !refining) { event.preventDefault(); event.stopPropagation(); cancel(); }
         if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.stopPropagation(); confirm(); }
-      }} /> : <p id={id} className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${isEmpty ? 'italic text-editorial-muted' : disabledReason ? 'text-editorial-muted' : 'text-editorial-ink'} ${expanded ? '' : 'line-clamp-12'}`}>
+      }} /> : <p id={id} className={`whitespace-pre-wrap break-words font-mono text-sm leading-relaxed ${isEmpty ? 'italic text-editorial-muted' : disabledReason ? 'text-editorial-muted' : 'text-editorial-ink'} ${expanded ? '' : 'line-clamp-12'}`}>
       {value || placeholder}
     </p>}
     {footer}

@@ -86,7 +86,25 @@ esempio «solo per documenti importati come Markdown»). I segnaposto tra doppie
 graffe indicano dove entrano i dati del frammento: è una costruzione con la
 configurazione attuale, non la richiesta storica di un’esecuzione. Il modo
 **Frammento aperto** riempie gli stessi pezzi con i dati veri del frammento
-aperto nello Studio, comprese le frasi della memoria spuntate. DeepL
+aperto nello Studio, comprese le frasi della memoria spuntate.
+
+Tutto il testo che il programma aggiunge attorno ai tuoi prompt — ruoli,
+regole, intestazioni, consegne, formato della risposta, messaggio utente — è un
+**prompt di sistema** e si modifica qui, in modo Struttura. Ogni prompt di
+sistema ha il lucchetto chiuso: aprendolo diventa come gli altri prompt (bozza
+con conferma e annullamento, bacchetta, template della categoria **Sistema**,
+freccia di ripristino al predefinito). Il lucchetto si richiude quando chiudi
+la finestra. Il formato della risposta di audit e coerenza chiede una conferma
+in più, perché l’app legge la risposta secondo quel formato. Nel messaggio
+utente e nelle cornici i segnaposto tra doppie graffe (per esempio
+`{{TEXT}}`) sono obbligatori: senza, la conferma resta spenta. I pezzi il cui
+contenuto sta in un’altra scheda (Contesto di traduzione, prompt delle fasi,
+tabella del glossario, esempi) non si modificano qui: hanno solo la freccia che
+apre quella scheda, e la loro intestazione resta quella predefinita. Le regole
+del glossario sono invece un prompt di sistema e si modificano qui. I prompt si
+leggono e si modificano sempre in carattere a spaziatura fissa. Ruolo, regole e cornici di Traduzione e Refine
+sono in comune: modificarli una volta vale per entrambe. I testi cambiati si
+salvano con la pipeline e passano alle pipeline nuove create per copia. DeepL
 mostra il corpo della richiesta.
 
 I prompt possono essere salvati come modelli riutilizzabili, separati per

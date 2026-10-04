@@ -223,3 +223,16 @@ Ogni passo è piccolo, si prova dal vivo e si salva prima del successivo.
   l'intestazione «Work brief:» diventa «Translation context:» e i ruoli citano
   il «translation context», come il nome nell'interfaccia. Format riceveva già
   senza Contesto.
+- Passo 3 fatto: testi di sistema modificabili per pipeline, con lucchetto
+  nell'anteprima (Struttura), conferma in più per il formato della risposta,
+  segnaposto obbligatori, template categoria Sistema, collegamento alla scheda
+  per i pezzi con contenuto altrove. Campo `prompt_composition` già pronto anche
+  per il passo 4 (pezzi spenti).
+
+## 11. Cambi del database previsti, non ancora fatti
+
+- **Lingue delle memorie** (lingua, varietà, periodo): da decidere nell'analisi
+  delle memorie; il cambio di struttura si fa lì.
+- **Coppia di lingue nascosta nelle pipeline** (`source_language`,
+  `target_language`): resta per memorie e catalogo finché la stessa analisi non
+  decide se tenerla, cambiarla o toglierla.

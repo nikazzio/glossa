@@ -14,7 +14,7 @@ interface TemplateRow {
   created_at: string;
 }
 
-const TEMPLATE_CONTEXTS: readonly PromptTemplateContext[] = ['stage', 'audit', 'brief', 'memory', 'ocr'];
+const TEMPLATE_CONTEXTS: readonly PromptTemplateContext[] = ['stage', 'audit', 'brief', 'memory', 'ocr', 'system'];
 
 function isTemplateContext(value: string): value is PromptTemplateContext {
   return (TEMPLATE_CONTEXTS as readonly string[]).includes(value);

@@ -177,6 +177,7 @@ fn make_config() -> PipelineConfig {
         coherence_prompt: None,
         review_provider_options: None,
         work_brief: Some("Literary translation from English to Italian.".into()),
+        prompt_composition: Default::default(),
         ui_language: None,
         blob_context: None,
         blob_current_chunk_id: None,

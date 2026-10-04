@@ -2,6 +2,7 @@ pub mod blobs;
 pub(crate) mod composition;
 pub mod custom_profiles;
 pub mod pipeline;
+pub mod prompt_texts;
 pub mod prompts;
 pub mod provider;
 pub mod providers;

@@ -16,5 +16,6 @@ export function buildPipelineFingerprint(config: PipelineConfig): string {
       })),
     judge: { provider: config.judgeProvider, model: config.judgeModel, prompt: config.judgePrompt },
     ...(config.workBrief?.trim() ? { workBrief: config.workBrief.trim() } : {}),
+    ...(config.promptComposition ? { promptComposition: config.promptComposition } : {}),
   });
 }

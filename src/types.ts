@@ -579,9 +579,24 @@ export interface TokenUsage {
   cacheMissInputTokens?: number;
 }
 
+/** Pipeline overrides of the prompts' system texts (by id) and disabled parts. */
+export interface PromptComposition {
+  texts?: Record<string, string>;
+  disabled?: string[];
+}
+
+/** Default wording of a system text and the placeholders it must keep. */
+export interface SystemTextInfo {
+  id: string;
+  defaultText: string;
+  required: string[];
+}
+
 /** One named piece of a request, as composed by the backend. */
 export interface PromptPart {
   id: string;
+  /** The editable system text the part is made from, if any. */
+  textId?: string | null;
   message: 'system' | 'user';
   cacheable: boolean;
   text: string;
@@ -599,7 +614,7 @@ export interface ResponseInfo {
   rawJson: string;
 }
 
-export type PromptTemplateContext = 'stage' | 'audit' | 'brief' | 'memory' | 'ocr';
+export type PromptTemplateContext = 'stage' | 'audit' | 'brief' | 'memory' | 'ocr' | 'system';
 export type PromptTemplateWorkflow = 'translation' | 'transcription';
 
 export interface PromptTemplate {
@@ -676,6 +691,8 @@ export interface PipelineConfig {
   reviewProviderOptions?: ProviderRuntimeConfig;
   /** Shared task context for LLM stages and quality checks. */
   workBrief?: string;
+  /** Custom system texts of the prompts and parts switched off; absent = all defaults. */
+  promptComposition?: PromptComposition;
   uiLanguage?: string;
   blobBudgetTokens?: number;
   blobOverlap?: number;

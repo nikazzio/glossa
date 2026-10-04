@@ -3,22 +3,7 @@ import { logger } from '../utils/logger';
 import { DEFAULT_WORK_BRIEF } from '../constants';
 import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { generateId, normalizeQualityRating, qualityDefault } from '../utils';
-import type {
-  CoherenceResult,
-  FewShotExample,
-  Footnote,
-  FootnoteDefinition,
-  GlossaryEntry,
-  JudgeResult,
-  Pipeline,
-  PipelineConfig,
-  PipelineMode,
-  PipelineResult,
-  PipelineRunStatus,
-  PipelineStageConfig,
-  ProviderRuntimeConfig,
-  TranslationChunk,
-} from '../types';
+import type { CoherenceResult, FewShotExample, Footnote, FootnoteDefinition, GlossaryEntry, JudgeResult, Pipeline, PipelineConfig, PipelineMode, PipelineResult, PipelineRunStatus, PipelineStageConfig, PromptComposition, ProviderRuntimeConfig, TranslationChunk } from '../types';
 import type { SavedTranslation } from './projectService';
 
 // ── DB row types ─────────────────────────────────────────────────────
@@ -41,6 +26,7 @@ interface DbPipeline {
   source_footnotes: string | null;
   review_provider_options: string | null;
   work_brief: string | null;
+  prompt_composition: string | null;
   blob_budget_tokens: number | null;
   blob_overlap: number | null;
   coherence_prompt: string | null;
@@ -53,6 +39,23 @@ interface DbPipeline {
   last_run_config: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Stored composition, keeping only well-formed entries: text values and string ids. */
+function parsePromptComposition(value: unknown): PromptComposition | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const raw = value as { texts?: unknown; disabled?: unknown };
+  const texts = typeof raw.texts === 'object' && raw.texts !== null
+    ? Object.fromEntries(Object.entries(raw.texts).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
+    : {};
+  const disabled = Array.isArray(raw.disabled) ? raw.disabled.filter((id): id is string => typeof id === 'string') : [];
+  return { texts, disabled };
+}
+
+function serializePromptComposition(composition: PromptComposition | undefined): string | null {
+  const texts = composition?.texts ?? {};
+  const disabled = composition?.disabled ?? [];
+  return Object.keys(texts).length || disabled.length ? JSON.stringify({ texts, disabled }) : null;
 }
 
 function parseJson<T>(value: string | null | undefined): T | undefined;
@@ -102,6 +105,7 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
     // Mai vuoto: una pipeline senza testo proprio parte dal contesto predefinito.
     workBrief: row.work_brief?.trim() || DEFAULT_WORK_BRIEF,
+    promptComposition: parsePromptComposition(parseJson<unknown>(row.prompt_composition)),
     blobBudgetTokens: row.blob_budget_tokens ?? undefined,
     blobOverlap: row.blob_overlap ?? undefined,
     coherencePrompt: row.coherence_prompt?.trim() || undefined,
@@ -201,8 +205,8 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
        review_provider_options,
        blob_budget_tokens, blob_overlap, few_shot_examples,
        use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results,
-       work_brief
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+       work_brief, coherence_prompt, prompt_composition
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
     [
       newId, source.project_id, newName,
       source.source_language, source.target_language,
@@ -217,6 +221,8 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
       source.phrase_memory_similarity_threshold ?? 0.75,
       source.phrase_memory_max_results ?? 10,
       source.work_brief ?? null,
+      source.coherence_prompt ?? null,
+      source.prompt_composition ?? null,
     ],
   );
   return newId;
@@ -253,8 +259,9 @@ function buildPipelineConfigUpdate(
        phrase_memory_similarity_threshold = $17,
        phrase_memory_max_results = $18,
        work_brief               = $19,
+       prompt_composition       = $20,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $20`,
+     WHERE id = $21`,
     params: [
       config.sourceLanguage,
       config.targetLanguage,
@@ -275,6 +282,7 @@ function buildPipelineConfigUpdate(
       config.phraseMemorySimilarityThreshold ?? 0.75,
       config.phraseMemoryMaxResults ?? 10,
       config.workBrief?.trim() || null,
+      serializePromptComposition(config.promptComposition),
       pipelineId,
     ],
   };

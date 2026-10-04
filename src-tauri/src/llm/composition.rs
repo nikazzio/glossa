@@ -9,6 +9,8 @@ use crate::llm::types::{PromptBlock, StructuredPrompt};
 #[derive(Debug, Clone)]
 pub(crate) struct PromptPart {
     pub id: &'static str,
+    /// The editable system text this part is made from, if any.
+    pub text_id: Option<&'static str>,
     pub text: String,
 }
 
@@ -30,6 +32,7 @@ pub(crate) struct ComposedPrompt {
 #[serde(rename_all = "camelCase")]
 pub struct PreviewPart {
     pub id: &'static str,
+    pub text_id: Option<&'static str>,
     pub message: &'static str,
     pub cacheable: bool,
     pub text: String,
@@ -41,10 +44,20 @@ pub struct PreviewPart {
 pub(crate) struct Parts(Vec<PromptPart>);
 
 impl Parts {
-    pub fn push(mut self, id: &'static str, text: impl Into<String>) -> Self {
+    pub fn push(self, id: &'static str, text: impl Into<String>) -> Self {
+        self.push_from(id, None, text)
+    }
+
+    /// A part made from a system text; `text` already carries its separator.
+    pub fn push_from(
+        mut self,
+        id: &'static str,
+        text_id: Option<&'static str>,
+        text: impl Into<String>,
+    ) -> Self {
         let text = text.into();
         if !text.is_empty() {
-            self.0.push(PromptPart { id, text });
+            self.0.push(PromptPart { id, text_id, text });
         }
         self
     }
@@ -82,6 +95,7 @@ impl ComposedPrompt {
         let system = self.system.iter().flat_map(|block| {
             block.parts.iter().map(|part| PreviewPart {
                 id: part.id,
+                text_id: part.text_id,
                 message: "system",
                 cacheable: block.cacheable,
                 text: part.text.clone(),
@@ -89,6 +103,7 @@ impl ComposedPrompt {
         });
         let user = self.user.iter().map(|part| PreviewPart {
             id: part.id,
+            text_id: part.text_id,
             message: "user",
             cacheable: false,
             text: part.text.clone(),

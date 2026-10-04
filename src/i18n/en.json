@@ -545,14 +545,12 @@
       "userMessage": "User message",
       "userMessageHint": "The chunk to work on and the final request: changes with every chunk.",
       "kind": {
-        "fixed": "Fixed in the program",
-        "yours": "Your text",
-        "data": "Data",
+        "system": "System prompt",
         "auto": "Automatic",
-        "fixedAt": "Fixed · {{place}}",
-        "yoursAt": "Your text · {{place}}",
-        "dataAt": "Data · {{place}}",
-        "autoAt": "Automatic · {{place}}"
+        "linked": "Content",
+        "systemAt": "System prompt · {{place}}",
+        "autoAt": "Automatic · {{place}}",
+        "linkedAt": "Content: {{place}}"
       },
       "place": {
         "general": "General",
@@ -575,7 +573,7 @@
       },
       "translation-context": {
         "title": "Translation context",
-        "hint": "Languages, varieties, goal and register, written in General."
+        "hint": "A system heading followed by the Translation context, written in General."
       },
       "structural-rules": {
         "title": "Structural rules",
@@ -583,11 +581,11 @@
       },
       "glossary-rules": {
         "title": "Glossary rules",
-        "hint": "Mandatory terms and the assigned dictionary table; without a dictionary a sentence says so."
+        "hint": "The rules are a system text; the term table comes from the dictionary assigned in the Glossary tab."
       },
       "glossary-table": {
         "title": "Glossary",
-        "hint": "The assigned dictionary table, to check terminology."
+        "hint": "A system heading followed by the assigned dictionary table, in the Glossary tab."
       },
       "markdown-rules": {
         "title": "Markdown rules",
@@ -595,15 +593,15 @@
       },
       "examples": {
         "title": "Translation examples",
-        "hint": "The example pairs entered in the Memory tab."
+        "hint": "A system introduction followed by the example pairs entered in the Memory tab."
       },
       "neighbour-chunks": {
         "title": "Neighbouring chunks",
-        "hint": "Text of the surrounding chunks, as reference only; the amount is set in Stages."
+        "hint": "A system frame around the surrounding chunks’ text, inserted automatically; the amount is set in Stages."
       },
       "stage-prompt": {
         "title": "Prompt",
-        "hint": "The phase prompt; for translation and Refine, with memory on, the checked phrases are appended at the end."
+        "hint": "A system heading followed by the phase prompt, edited in its tab; for translation and Refine, with memory on, checked phrases are appended."
       },
       "output-contract": {
         "title": "Result request",
@@ -621,29 +619,25 @@
         "title": "Chunk identifier",
         "hint": "Tells which of the neighbouring chunks is the one to work on."
       },
-      "chunk-text": {
-        "title": "Chunk text",
-        "hint": "The source of the current chunk."
-      },
-      "previous-result": {
-        "title": "Previous translation",
-        "hint": "The result of the previous phase, to revise."
-      },
-      "translation": {
-        "title": "Translation to check",
-        "hint": "The current translation of the chunk."
-      },
-      "task": {
-        "title": "Request",
-        "hint": "The final request for this chunk."
-      },
       "audit-findings": {
         "title": "Audit findings",
-        "hint": "The problems found by the audit, to fix."
+        "hint": "A system frame around the problems found by the audit, inserted automatically in the refine loop."
       },
       "deepl-request": {
         "title": "DeepL request",
         "hint": "The request body sent to DeepL: no prompt, only parameters."
+      },
+      "openPlace": "Open {{place}}, where the content is edited",
+      "unlock": "Unlock to edit",
+      "lock": "Lock again",
+      "unlockGuardedTitle": "Unlock the response format?",
+      "unlockGuardedMessage": "The app reads the model’s answer according to this format: changing it incompatibly makes audit or coherence fail. Reset is always available.",
+      "missingPlaceholder": "placeholders {{names}} are missing",
+      "sharedTranslationRefine": "shared by Translation and Refine",
+      "sharedAll": "shared by every phase that uses it",
+      "user-message": {
+        "title": "User message",
+        "hint": "The chunk to work on and the final request; placeholders in double braces are filled for each chunk."
       }
     },
     "promptPreviewMode": "What to show",
@@ -2502,7 +2496,8 @@
               "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unverified segments can replace their results. During execution you cannot switch pipelines or create a new one. Memory, Review and Document remember the selected subtab when you visit another tab.",
               "To see the real request for a chunk, open it in the Studio and choose “Open chunk” in Prompt preview: the same pieces fill with its text, neighbouring chunks, checked memory phrases and previous translation; Audit and Coherence use the current translation and say so when there is none. If models, prompts, the Translation context or DeepL options change after an interruption, resuming tells you.",
               "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free.",
-              "In the Studio's Memory tab, References shows similar phrases already in memory, with where they come from; the circled check decides which to use in the translation. Memory opens once the translation is verified: saved pairs are removed with the bin, new ones are checked and added with the disk, which never deletes anything."
+              "In the Studio's Memory tab, References shows similar phrases already in memory, with where they come from; the circled check decides which to use in the translation. Memory opens once the translation is verified: saved pairs are removed with the bin, new ones are checked and added with the disk, which never deletes anything.",
+              "In Prompt preview, Structure mode, system prompts (roles, rules, headings, response format, user message) are locked: unlock them to edit like the other prompts, with System templates and reset. The lock closes when the window closes; the response format asks for an extra confirmation."
             ]
           },
           {
@@ -2595,7 +2590,7 @@
           {
             "title": "Managing prompt templates",
             "paragraphs": [
-              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Translation context, Memory or OCR. If a saved template has a scope the app no longer recognises, it is left out of the list and a notice names it; the other templates stay available.",
+              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Translation context, System, Memory or OCR. If a saved template has a scope the app no longer recognises, it is left out of the list and a notice names it; the other templates stay available.",
               "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
               "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
             ]
@@ -3314,7 +3309,9 @@
     "localScopeHint": "Corrections apply only to {{workspace}}.",
     "expandPrompt": "Read the full prompt",
     "collapsePrompt": "Collapse the prompt",
-    "searchEditingHint": "Finish editing to search."
+    "searchEditingHint": "Finish editing to search.",
+    "templateSystem": "System",
+    "templateSystemHint": "System texts of pipeline prompts (roles, rules, response formats). Applied from Prompt preview after unlocking the piece."
   },
   "stats": {
     "cacheHitRateHint": "Percentage of tokens served from the provider cache. Higher means lower cost.",

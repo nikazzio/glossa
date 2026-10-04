@@ -545,14 +545,12 @@
       "userMessage": "Messaggio utente",
       "userMessageHint": "Il frammento da lavorare e la consegna finale: cambia a ogni frammento.",
       "kind": {
-        "fixed": "Fisso nel programma",
-        "yours": "Testo tuo",
-        "data": "Dati",
+        "system": "Prompt di sistema",
         "auto": "Automatico",
-        "fixedAt": "Fisso · {{place}}",
-        "yoursAt": "Testo tuo · {{place}}",
-        "dataAt": "Dati · {{place}}",
-        "autoAt": "Automatico · {{place}}"
+        "linked": "Contenuto",
+        "systemAt": "Prompt di sistema · {{place}}",
+        "autoAt": "Automatico · {{place}}",
+        "linkedAt": "Contenuto: {{place}}"
       },
       "place": {
         "general": "Generale",
@@ -575,7 +573,7 @@
       },
       "translation-context": {
         "title": "Contesto di traduzione",
-        "hint": "Lingue, varietà, obiettivo e registro, scritti in Generale."
+        "hint": "Intestazione di sistema seguita dal Contesto di traduzione, che si scrive in Generale."
       },
       "structural-rules": {
         "title": "Regole strutturali",
@@ -583,11 +581,11 @@
       },
       "glossary-rules": {
         "title": "Regole del glossario",
-        "hint": "Termini obbligatori e tabella del dizionario assegnato; senza dizionario resta una frase che lo dice."
+        "hint": "Le regole sono un testo di sistema; la tabella dei termini viene dal dizionario assegnato nella scheda Glossario."
       },
       "glossary-table": {
         "title": "Glossario",
-        "hint": "Tabella del dizionario assegnato, per verificare la terminologia."
+        "hint": "Intestazione di sistema seguita dalla tabella del dizionario assegnato, nella scheda Glossario."
       },
       "markdown-rules": {
         "title": "Regole Markdown",
@@ -595,15 +593,15 @@
       },
       "examples": {
         "title": "Esempi di traduzione",
-        "hint": "Le coppie di esempio inserite nella scheda Memoria."
+        "hint": "Introduzione di sistema seguita dalle coppie di esempio inserite nella scheda Memoria."
       },
       "neighbour-chunks": {
         "title": "Frammenti vicini",
-        "hint": "Testo dei frammenti attorno, solo come riferimento; la quantità si regola in Fasi."
+        "hint": "Cornice di sistema attorno al testo dei frammenti attorno, inserito in automatico; la quantità si regola in Fasi."
       },
       "stage-prompt": {
         "title": "Prompt",
-        "hint": "Il prompt della fase; per traduzione e Refine, con la memoria attiva, in fondo si aggiungono le frasi spuntate."
+        "hint": "Intestazione di sistema seguita dal prompt della fase, che si modifica nella sua scheda; per traduzione e Refine, con la memoria attiva, in fondo si aggiungono le frasi spuntate."
       },
       "output-contract": {
         "title": "Consegna del risultato",
@@ -621,29 +619,25 @@
         "title": "Identificativo del frammento",
         "hint": "Indica quale dei frammenti vicini è quello da lavorare."
       },
-      "chunk-text": {
-        "title": "Testo del frammento",
-        "hint": "L’originale del frammento corrente."
-      },
-      "previous-result": {
-        "title": "Traduzione precedente",
-        "hint": "Il risultato della fase prima, da rivedere."
-      },
-      "translation": {
-        "title": "Traduzione da controllare",
-        "hint": "La traduzione attuale del frammento."
-      },
-      "task": {
-        "title": "Consegna",
-        "hint": "La richiesta finale per questo frammento."
-      },
       "audit-findings": {
         "title": "Rilievi dell’audit",
-        "hint": "I problemi trovati dall’audit, da correggere."
+        "hint": "Cornice di sistema attorno ai problemi trovati dall’audit, inseriti in automatico nel ciclo di raffinamento."
       },
       "deepl-request": {
         "title": "Richiesta DeepL",
         "hint": "Il corpo della richiesta inviata a DeepL: nessun prompt, solo parametri."
+      },
+      "openPlace": "Apri {{place}}, dove si modifica il contenuto",
+      "unlock": "Sblocca per modificare",
+      "lock": "Blocca di nuovo",
+      "unlockGuardedTitle": "Sbloccare il formato della risposta?",
+      "unlockGuardedMessage": "L’app legge la risposta del modello secondo questo formato: se lo cambi in modo incompatibile, audit o coerenza falliranno. Il ripristino resta sempre disponibile.",
+      "missingPlaceholder": "mancano i segnaposto {{names}}",
+      "sharedTranslationRefine": "in comune fra Traduzione e Refine",
+      "sharedAll": "in comune a tutte le fasi che lo usano",
+      "user-message": {
+        "title": "Messaggio utente",
+        "hint": "Il frammento da lavorare e la consegna finale; i segnaposto tra doppie graffe vengono riempiti a ogni frammento."
       }
     },
     "promptPreviewMode": "Che cosa mostrare",
@@ -2502,7 +2496,8 @@
               "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato. Durante l’esecuzione non puoi cambiare pipeline o crearne una nuova. Memoria, Revisione e Documento ricordano la sottoscheda scelta quando passi a un’altra scheda.",
               "Per vedere la richiesta vera di un frammento, aprilo nello Studio e scegli «Frammento aperto» in Anteprima prompt: gli stessi pezzi si riempiono con il suo testo, i frammenti vicini, le frasi della memoria spuntate e la traduzione precedente; Audit e Coerenza usano la traduzione attuale e senza traduzione lo dicono. Se dopo un’interruzione cambi modelli, prompt, Contesto di traduzione o opzioni DeepL, la ripresa te lo segnala.",
               "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi.",
-              "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente."
+              "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente.",
+              "In Anteprima prompt, modo Struttura, i prompt di sistema (ruoli, regole, intestazioni, formato della risposta, messaggio utente) hanno il lucchetto: aprilo per modificarli come gli altri prompt, con template della categoria Sistema e ripristino. Il lucchetto si richiude chiudendo la finestra; il formato della risposta chiede una conferma in più."
             ]
           },
           {
@@ -2595,7 +2590,7 @@
           {
             "title": "Gestire i modelli di prompt",
             "paragraphs": [
-              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Contesto di traduzione, Memoria oppure OCR. Se un modello salvato ha un ambito che l’app non riconosce più, non compare nell’elenco e un avviso ne indica il nome: gli altri modelli restano disponibili.",
+              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Contesto di traduzione, Sistema, Memoria oppure OCR. Se un modello salvato ha un ambito che l’app non riconosce più, non compare nell’elenco e un avviso ne indica il nome: gli altri modelli restano disponibili.",
               "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
               "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
             ]
@@ -3314,7 +3309,9 @@
     "localScopeHint": "Correzioni valide solo per {{workspace}}.",
     "expandPrompt": "Leggi tutto il prompt",
     "collapsePrompt": "Riduci il prompt",
-    "searchEditingHint": "Termina la modifica per cercare."
+    "searchEditingHint": "Termina la modifica per cercare.",
+    "templateSystem": "Sistema",
+    "templateSystemHint": "Testi di sistema dei prompt della pipeline (ruoli, regole, formati di risposta). Si applicano dall’Anteprima prompt, dopo aver aperto il lucchetto del pezzo."
   },
   "stats": {
     "cacheHitRateHint": "Percentuale di token serviti dalla cache del provider. Più è alta, minore il costo.",

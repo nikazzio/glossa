@@ -527,6 +527,8 @@ pub async fn refine_prompt(
         "Rewrite the shared translation context clearly and concisely. Preserve all stated languages, historical varieties, goals, audience and register. Do not invent requirements or add stage-specific commands, evaluation criteria or output formats. Return only the rewritten work brief."
     } else if context == "audit" {
         REFINE_AUDIT_SYSTEM_PROMPT
+    } else if context == "system" {
+        "Rewrite this system instruction of a translation pipeline to be clearer and more effective for modern LLMs. Preserve its purpose and every placeholder written as {{NAME}} exactly, in place. Do not add new requirements. Return only the rewritten text."
     } else {
         REFINE_STAGE_SYSTEM_PROMPT
     };

@@ -178,6 +178,7 @@ pub fn run() {
             llm::pipeline::preview_stage_prompt,
             llm::pipeline::preview_judge_prompt,
             llm::pipeline::preview_coherence_prompt,
+            llm::prompt_texts::prompt_system_texts,
             llm::pipeline::cancel_stream,
             llm::pipeline::judge_translation,
             llm::pipeline::refine_prompt,

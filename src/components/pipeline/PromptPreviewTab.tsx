@@ -1,19 +1,42 @@
-import { Braces, FileText, Languages, Link2, MessageSquare, Network, ScrollText, ShieldCheck, Wand2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { ArrowUpRight, Braces, Settings2, FileText, Languages, Link2, MessageSquare, Network, ScrollText, ShieldCheck, Wand2 } from 'lucide-react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { PipelineConfig, PipelineStageConfig, PromptInfo, PromptPart, StageRole, TranslationChunk } from '../../types';
+import type { PipelineConfig, PipelineStageConfig, PromptInfo, PromptPart, StageRole, SystemTextInfo, TranslationChunk } from '../../types';
 import { llmService } from '../../services/llmService';
 import { deeplService } from '../../services/deeplService';
 import { getDeeplOptions } from '../../pipeline/deeplConfig';
-import { ChoiceDots, Hint, PanelSection, SectionLabel, TabStrip, type ChoiceDotsOption, type TabStripItem } from '../ui';
+import { ChoiceDots, Hint, IconButton, PanelSection, SectionLabel, TabStrip, type ChoiceDotsOption, type TabStripItem } from '../ui';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { AUDIT_PREVIEW_ID, COHERENCE_PREVIEW_ID, useChunkPromptPreview } from '../../hooks/useChunkPromptPreview';
 import { PromptMessage } from './PromptCard';
-import { CONDITIONAL_AT_RUN_TIME, PHASE_PARTS, type PartSpec, type PreviewPhase } from './promptParts';
+import { CONDITIONAL_AT_RUN_TIME, PHASE_PARTS, type PartPlace, type PartSpec, type PreviewPhase } from './promptParts';
+import { SystemTextCard } from './SystemTextCard';
+import { CommandRule } from './PromptSourceLabel';
+import type { ConfigSection } from './PipelineConfig';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
+  setConfig: Dispatch<SetStateAction<PipelineConfig>>;
+  /** Apre la scheda dove si modifica il contenuto di un pezzo. */
+  onOpenSection: (section: ConfigSection) => void;
+  disabledReason?: string;
+}
+
+const PLACE_SECTION: Record<PartPlace, ConfigSection> = {
+  general: 'settings',
+  stages: 'translation',
+  quality: 'audit',
+  glossary: 'glossary',
+  memory: 'memory',
+};
+
+/** Shared editing context passed down to every part card. */
+interface EditContext {
+  setConfig: Dispatch<SetStateAction<PipelineConfig>>;
+  onOpenSection: (section: ConfigSection) => void;
+  systemTexts: Map<string, SystemTextInfo>;
+  disabledReason?: string;
 }
 
 const STAGE_ICON: Record<StageRole, typeof Languages> = {
@@ -50,13 +73,12 @@ function requestPreview(config: PipelineConfig, phase: PreviewPhase, stage?: Pip
 }
 
 function kindLabel(spec: PartSpec, t: (key: string, options?: Record<string, string>) => string): string {
-  const place = spec.place ? t(`pipeline.promptParts.place.${spec.place}`) : '';
-  return place
-    ? t(`pipeline.promptParts.kind.${spec.kind}At`, { place })
+  return spec.place
+    ? t(`pipeline.promptParts.kind.${spec.kind}At`, { place: t(`pipeline.promptParts.place.${spec.place}`) })
     : t(`pipeline.promptParts.kind.${spec.kind}`);
 }
 
-function PartCard({ spec, part, config }: { spec: PartSpec; part?: PromptPart; config: PipelineConfig }) {
+function PartCard({ spec, part, config, edit }: { spec: PartSpec; part?: PromptPart; config: PipelineConfig; edit?: EditContext }) {
   const { t } = useTranslation();
   const title = t(`pipeline.promptParts.${spec.id}.title`);
   const runtimeCondition = CONDITIONAL_AT_RUN_TIME[spec.id];
@@ -64,14 +86,31 @@ function PartCard({ spec, part, config }: { spec: PartSpec; part?: PromptPart; c
     t(`pipeline.promptParts.${spec.id}.hint`),
     runtimeCondition ? t(`pipeline.promptParts.reason.${runtimeCondition}`) : '',
   ].filter(Boolean).join(' — ');
-  const kind = <span className="text-xs text-editorial-muted">{kindLabel(spec, t)}</span>;
-  if (part) return <PromptMessage label={title} hint={hint} text={part.text.trim()} metadata={kind} />;
+  const place = spec.place;
+  const openPlace = edit && place
+    ? <IconButton size="sm" title={t('pipeline.promptParts.openPlace', { place: t(`pipeline.promptParts.place.${place}`) })}
+        onClick={() => edit.onOpenSection(PLACE_SECTION[place])}><ArrowUpRight size={14} /></IconButton>
+    : null;
+  // Il tipo è un'icona muted con la spiegazione nel suggerimento; i comandi stanno dopo un filetto.
+  const KindIcon = spec.kind === 'auto' ? Braces : Settings2;
+  const kindIcon = <Hint label={kindLabel(spec, t)}><KindIcon size={13} className="text-editorial-muted" aria-hidden="true" /></Hint>;
+  if (part) {
+    const info = edit && part.textId ? edit.systemTexts.get(part.textId) : undefined;
+    // Con la freccia il contenuto si modifica altrove: qui niente lucchetto.
+    if (edit && part.textId && info && spec.kind === 'system') {
+      return <SystemTextCard part={part} textId={part.textId} info={info} title={title} hint={hint} kind={kindIcon} commands={openPlace}
+        config={config} setConfig={edit.setConfig} disabledReason={edit.disabledReason} />;
+    }
+    return <PromptMessage label={title} hint={hint} text={part.text.trim()}
+      metadata={<>{kindIcon}{openPlace && <><CommandRule />{openPlace}</>}<CommandRule /></>} />;
+  }
   const reason = spec.absentReason?.(config);
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-l-2 border-rule px-4 py-2 text-sm text-editorial-muted">
       <Hint label={`${title} — ${hint}`}><span className="font-display italic">{title}</span></Hint>
       <span>— {t(`pipeline.promptParts.reason.${reason ?? 'notInThisRequest'}`)}</span>
-      {kind}
+      {kindIcon}
+      {openPlace}
     </div>
   );
 }
@@ -98,13 +137,13 @@ function ChunkParts({ config, phase, previewId, chunk }: {
   if (isBuilding || !preview) return <p className="text-sm text-editorial-muted">{t('common.loading')}</p>;
   if (isDeeplStage || !phase) {
     return <PromptMessage label={t('pipeline.promptParts.deepl-request.title')} hint={t('pipeline.promptParts.deepl-request.hint')} text={preview.userPrompt}
-      metadata={<span className="text-xs text-editorial-muted">{t('pipeline.promptParts.kind.auto')}</span>} />;
+      metadata={<><Hint label={t('pipeline.promptParts.kind.auto')}><Braces size={13} className="text-editorial-muted" aria-hidden="true" /></Hint><CommandRule /></>} />;
   }
   const specs = new Map(PHASE_PARTS[phase].map((spec) => [`${spec.message}:${spec.id}`, spec]));
   const group = (message: 'system' | 'user') => (preview.parts ?? [])
     .filter((part) => part.message === message)
     .map((part) => {
-      const spec = specs.get(`${message}:${part.id}`) ?? { id: part.id, message, kind: 'auto' as const };
+      const spec: PartSpec = specs.get(`${message}:${part.id}`) ?? { id: part.id, message, kind: 'auto' };
       return <PartCard key={`${message}-${part.id}`} spec={spec} part={part} config={config} />;
     });
   return (
@@ -121,7 +160,7 @@ function ChunkParts({ config, phase, previewId, chunk }: {
   );
 }
 
-function PhaseParts({ config, phase, stage }: { config: PipelineConfig; phase: PreviewPhase; stage?: PipelineStageConfig }) {
+function PhaseParts({ config, phase, stage, edit }: { config: PipelineConfig; phase: PreviewPhase; stage?: PipelineStageConfig; edit: EditContext }) {
   const { t } = useTranslation();
   const [parts, setParts] = useState<PromptPart[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +179,7 @@ function PhaseParts({ config, phase, stage }: { config: PipelineConfig; phase: P
   const byId = new Map(parts.map((part) => [`${part.message}:${part.id}`, part]));
   const group = (message: 'system' | 'user') => PHASE_PARTS[phase]
     .filter((spec) => spec.message === message)
-    .map((spec) => <PartCard key={`${message}-${spec.id}`} spec={spec} part={byId.get(`${message}:${spec.id}`)} config={config} />);
+    .map((spec) => <PartCard key={`${message}-${spec.id}`} spec={spec} part={byId.get(`${message}:${spec.id}`)} config={config} edit={edit} />);
 
   return (
     <div className="space-y-6">
@@ -173,16 +212,25 @@ function DeeplRequestPreview({ stage }: { stage: PipelineStageConfig }) {
   if (error) return <p role="alert" className="text-sm text-editorial-danger">{error}</p>;
   if (body === null) return <p className="text-sm text-editorial-muted">{t('common.loading')}</p>;
   return <PromptMessage label={t('pipeline.promptParts.deepl-request.title')} hint={t('pipeline.promptParts.deepl-request.hint')} text={body}
-    metadata={<span className="text-xs text-editorial-muted">{t('pipeline.promptParts.kind.auto')}</span>} />;
+    metadata={<><Hint label={t('pipeline.promptParts.kind.auto')}><Braces size={13} className="text-editorial-muted" aria-hidden="true" /></Hint><CommandRule /></>} />;
 }
 
 /** L'anteprima unica: per ogni fase i pezzi della richiesta, nell'ordine di invio, presi dal backend. */
-export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
+export function PromptPreviewTab({ config, setConfig, onOpenSection, disabledReason }: PromptPreviewTabProps) {
   const { t } = useTranslation();
   const stages = useMemo(() => config.stages, [config.stages]);
   const firstEnabled = stages.find((stage) => stage.enabled)?.id ?? AUDIT_ID;
   const [activeId, setActiveId] = useState<string>(firstEnabled);
   const [mode, setMode] = useState<PreviewMode>('structure');
+  const [systemTexts, setSystemTexts] = useState<Map<string, SystemTextInfo>>(new Map());
+  useEffect(() => {
+    let active = true;
+    void llmService.systemTexts()
+      .then((list) => { if (active) setSystemTexts(new Map(list.map((info) => [info.id, info]))); })
+      .catch(() => { if (active) setSystemTexts(new Map()); });
+    return () => { active = false; };
+  }, []);
+  const edit: EditContext = { setConfig, onOpenSection, systemTexts, disabledReason };
   // Il frammento aperto è quello che lo Studio mostra: il selezionato, altrimenti il primo.
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
   const chunks = useChunksStore((s) => s.chunks);
@@ -236,7 +284,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
             ? <ChunkParts key={`${activeId}-${chunk.id}`} config={config} phase={phase} previewId={activeId} chunk={chunk} />
             : <p className="text-sm text-editorial-muted">{t('pipeline.promptPreviewNoChunk')}</p>
           : phase
-            ? <PhaseParts key={activeId} config={config} phase={phase} stage={stage} />
+            ? <PhaseParts key={activeId} config={config} phase={phase} stage={stage} edit={edit} />
             : stage ? <DeeplRequestPreview stage={stage} /> : null}
       </div>
     </PanelSection>

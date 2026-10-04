@@ -1,16 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import i18n from 'i18next';
-import type {
-  PipelineConfig,
-  PipelineStageConfig,
-  JudgeResult,
-  Issue,
-  TokenUsage,
-  PromptInfo,
-  ResponseInfo,
-  PromptTemplateContext,
-} from '../types';
+import type { Issue, JudgeResult, PipelineConfig, PipelineStageConfig, PromptInfo, PromptTemplateContext, ResponseInfo, SystemTextInfo, TokenUsage } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { useConfigStore } from '../stores/configStore';
 import { logOperation } from '../stores/operationLogStore';
@@ -272,6 +263,11 @@ export const llmService = {
       unlistenResponse();
       useChunksStore.getState().setActiveStreamId(null);
     }
+  },
+
+  /** Default wording and required placeholders of every prompt system text. */
+  async systemTexts(): Promise<SystemTextInfo[]> {
+    return invoke<SystemTextInfo[]>('prompt_system_texts');
   },
 
   async previewJudgePrompt(sourceText: string, translation: string, config: PipelineConfig): Promise<PromptInfo> {

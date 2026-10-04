@@ -21,11 +21,12 @@ export type ConfigSection = 'settings' | 'translation' | 'audit' | 'memory' | 'g
 
 interface PipelineConfigProps {
   activeTab: ConfigSection;
+  onOpenSection: (section: ConfigSection) => void;
 }
 
 /** Il contenuto della linguetta aperta nella finestra di configurazione della
  *  pipeline; le linguette stanno nella fila della finestra. */
-export function PipelineConfig({ activeTab }: PipelineConfigProps) {
+export function PipelineConfig({ activeTab, onOpenSection }: PipelineConfigProps) {
   const {
     config,
     setConfig,
@@ -159,7 +160,8 @@ export function PipelineConfig({ activeTab }: PipelineConfigProps) {
 
       {activeTab === 'preview' && (
         <div id="pconfig-panel-preview" role="tabpanel" aria-labelledby="pconfig-tab-preview" className="space-y-6">
-          <PromptPreviewTab config={config} />
+          <PromptPreviewTab config={config} setConfig={setConfig} onOpenSection={onOpenSection}
+            disabledReason={isProcessing ? t('document.operationsRunning') : undefined} />
         </div>
       )}
 
