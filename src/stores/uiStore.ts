@@ -120,6 +120,11 @@ interface UiState {
   showInsightPanel: boolean;
   /** Linguetta attiva nella colonna destra dello Studio di traduzione. */
   studioTab: TranslationStudioTab;
+  studioGroupViews: {
+    memory: Extract<TranslationStudioTab, 'references' | 'memory'>;
+    review: Extract<TranslationStudioTab, 'audit' | 'notes' | 'sourceNotes' | 'history'> | null;
+    document: Extract<TranslationStudioTab, 'index' | 'stats' | 'coherence'>;
+  };
   /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
   showConsoleDrawer: boolean;
   /**
@@ -371,6 +376,7 @@ export const useUiStore = create<UiState>()(
       chunkDrawerTab: 'summary',
       showInsightPanel: false,
       studioTab: 'references',
+      studioGroupViews: { memory: 'references', review: null, document: 'index' },
       showConsoleDrawer: false,
       drawerTab: 'system',
       // Di partenza le aree del programma senza le librerie di terze parti,
@@ -512,7 +518,14 @@ export const useUiStore = create<UiState>()(
         ),
       setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
       setShowInsightPanel: (show) => set({ showInsightPanel: show }),
-      setStudioTab: (tab) => set({ studioTab: tab }),
+      setStudioTab: (tab) => set((state) => ({
+        studioTab: tab,
+        studioGroupViews: {
+          memory: tab === 'references' || tab === 'memory' ? tab : state.studioTab === 'references' || state.studioTab === 'memory' ? state.studioTab : state.studioGroupViews.memory,
+          review: tab === 'audit' || tab === 'notes' || tab === 'sourceNotes' || tab === 'history' ? tab : state.studioTab === 'audit' || state.studioTab === 'notes' || state.studioTab === 'sourceNotes' || state.studioTab === 'history' ? state.studioTab : state.studioGroupViews.review,
+          document: tab === 'index' || tab === 'stats' || tab === 'coherence' ? tab : state.studioTab === 'index' || state.studioTab === 'stats' || state.studioTab === 'coherence' ? state.studioTab : state.studioGroupViews.document,
+        },
+      })),
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
       setDrawerTab: (tab) => set({ drawerTab: tab }),
       setSystemLogAreas: (areas) => set({ systemLogAreas: areas }),

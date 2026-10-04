@@ -4,6 +4,9 @@ title: Phrase memory and examples
 
 # Phrase memory and examples
 
+While editing text or metadata, search stays disabled with its reason.
+Long provenance titles wrap.
+
 Phrase memory stores source text and approved translation pairs for reuse
 in translations. Finding matches, selecting them for a prompt and saving
 new phrases are separate operations.

@@ -2427,7 +2427,7 @@
             "paragraphs": [
               "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
               "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
-              "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato.",
+              "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato. Durante l’esecuzione non puoi cambiare pipeline o crearne una nuova. Memoria, Revisione e Documento ricordano la sottoscheda scelta quando passi a un’altra scheda.",
               "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi.",
               "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente."
             ]
@@ -2570,7 +2570,7 @@
           {
             "title": "Consultare la raccolta",
             "paragraphs": [
-              "Nelle Risorse linguistiche apri Memorie. Filtra per workspace, tutti o senza workspace; cerca nei testi e nelle etichette, oppure scegli un’etichetta. Le risorse generali partono da tutti, quelle del workspace dal workspace corrente.",
+              "Nelle Risorse linguistiche apri Memorie. Filtra per workspace, tutti o senza workspace; cerca nei testi e nelle etichette, oppure scegli un’etichetta. Le risorse generali partono da tutti, quelle del workspace dal workspace corrente. Durante la modifica, la ricerca è disabilitata con il motivo; i titoli lunghi della provenienza vanno a capo.",
               "Ogni testo mostra provenienza e tutti gli embedding disponibili. Scegli un modello e usa il più per aggiungerlo o la freccia circolare per ricalcolarlo: gli altri embedding restano. Il calcolo tramite OpenAI richiede una chiave e comporta costi, indicati nella conferma.",
               "La matita corregge i due testi della memoria, senza cambiare la traduzione di origine. Cambiare solo la traduzione conserva gli embedding; cambiare l’originale ricalcola tutti quelli disponibili e conserva la versione precedente. Se un calcolo fallisce non viene salvata alcuna modifica.",
               "Aggiungi etichette manuali separate da punto e virgola. Il cestino elimina il testo dalla memoria con le sue versioni ed embedding dopo conferma. Il comando del dizionario copia la coppia nel dizionario scelto. Esporta CSV conserva testi, etichette, provenienza e modelli delle sole frasi visibili.",
@@ -3234,7 +3234,8 @@
     "measureTitle": "Calcolo embedding",
     "measureMessage": "Verrà calcolato l’embedding con {{model}} tramite OpenAI, con i relativi costi. Gli embedding degli altri modelli resteranno disponibili.",
     "measureSaved": "Embedding salvato",
-    "sourceRecalculateMessage": "Modificando l’originale verranno ricalcolati {{count}} embedding tramite OpenAI, con i relativi costi. La versione precedente resterà archiviata. Se un calcolo fallisce, nessuna modifica verrà salvata."
+    "sourceRecalculateMessage": "Modificando l’originale verranno ricalcolati {{count}} embedding tramite OpenAI, con i relativi costi. La versione precedente resterà archiviata. Se un calcolo fallisce, nessuna modifica verrà salvata.",
+    "searchEditingHint": "Termina la modifica per cercare."
   },
   "stats": {
     "cacheHitRateHint": "Percentuale di token serviti dalla cache del provider. Più è alta, minore il costo.",

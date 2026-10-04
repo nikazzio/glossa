@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
 import { useConfigStore } from '../../stores/configStore';
-import { usePipelineStore } from '../../stores/pipelineStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
 import { ClickPopover, IconButton, MenuActionRow, PopoverItem, RenameField, Tooltip } from '../ui';
@@ -28,7 +28,7 @@ export function PipelineSwitch() {
   const renamePipeline = useProjectStore((s) => s.renamePipeline);
   const hasProject = useProjectStore((s) => !!s.currentProjectId);
   const maxPipelines = useConfigStore((s) => s.maxPipelines);
-  const isRunning = usePipelineStore((s) => s.runStatus === 'running');
+  const isRunning = useChunksStore((s) => s.isProcessing);
   const setShowConfigDrawer = useUiStore((s) => s.setShowConfigDrawer);
 
   const activeName =
@@ -86,7 +86,8 @@ export function PipelineSwitch() {
             <IconButton
               size="sm"
               tone={popoverOpen ? 'accent' : 'default'}
-              title={t('pipeline.changePipeline')}
+              disabled={isRunning}
+              title={isRunning ? `${t('pipeline.changePipeline')} — ${t('document.reasonRunning')}` : t('pipeline.changePipeline')}
               ariaPressed={popoverOpen}
               tooltipSide="bottom"
               className="shrink-0"
@@ -107,6 +108,7 @@ export function PipelineSwitch() {
                 />
                 <PopoverItem
                   label={pipeline.name}
+                  disabled={isRunning}
                   onSelect={() => {
                     void switchPipeline(pipeline.id);
                     setPopoverOpen(false);
@@ -126,7 +128,7 @@ export function PipelineSwitch() {
               </div>
             );
           })}
-          {hasProject && pipelines.length < maxPipelines && (
+          {hasProject && !isRunning && pipelines.length < maxPipelines && (
             <div className="mt-1 border-t border-rule pt-1">
               <MenuActionRow
                 icon={<Plus size={12} />}

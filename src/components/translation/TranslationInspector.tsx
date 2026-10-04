@@ -92,6 +92,7 @@ export function TranslationInspector({
   const { t } = useTranslation();
   const activeTab = useUiStore((s) => s.studioTab);
   const setStudioTab = useUiStore((s) => s.setStudioTab);
+  const groupViews = useUiStore((s) => s.studioGroupViews);
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
   const setSelectedChunkId = useUiStore((s) => s.setSelectedChunkId);
   const focusIssueInChunk = useUiStore((s) => s.focusIssueInChunk);
@@ -114,9 +115,9 @@ export function TranslationInspector({
   const firstEnabledTab = TAB_ORDER.find((tab) => !disabledReason[tab]) ?? 'phraseMemory';
   const shownTab: ColumnTab = disabledReason[columnTab] ? firstEnabledTab : columnTab;
   // Ogni gruppo riapre la vista lasciata aperta; la prima volta la sua iniziale.
-  const memoryView: MemoryView = isMemoryView(activeTab) ? activeTab : 'references';
-  const reviewView: ReviewView = isReviewView(activeTab) ? activeTab : 'audit';
-  const documentView: DocumentView = isDocumentView(activeTab) ? activeTab : 'index';
+  const memoryView: MemoryView = isMemoryView(activeTab) ? activeTab : groupViews.memory;
+  const reviewView: ReviewView = isReviewView(activeTab) ? activeTab : groupViews.review ?? 'audit';
+  const documentView: DocumentView = isDocumentView(activeTab) ? activeTab : groupViews.document;
 
   useEffect(() => {
     clearFocusedIssue();
@@ -125,7 +126,7 @@ export function TranslationInspector({
   const openTab = (tab: ColumnTab) => {
     if (tab === 'phraseMemory') setStudioTab(memoryView);
     // Revisione parte dall'audit se ha segnalazioni aperte, sennò dalle note.
-    else if (tab === 'review') setStudioTab(openAuditIssueCount(currentChunk) > 0 ? 'audit' : 'notes');
+    else if (tab === 'review') setStudioTab(groupViews.review ?? (openAuditIssueCount(currentChunk) > 0 ? 'audit' : 'notes'));
     else if (tab === 'document') setStudioTab(documentView);
     else setStudioTab(tab);
   };

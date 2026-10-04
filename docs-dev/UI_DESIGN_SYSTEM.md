@@ -704,3 +704,5 @@ congelata e riga esplicita dopo modifica dell’originale. Costi su Popover comu
 nessun pannello con portal/posizionamento/timer propri. Opzioni vista su righe
 comuni; importazione a vuoto con IconButton. Tab indisponibili aria-disabled,
 focusabili per il motivo e mai attivabili. Dettagli tecnici di errore nel log.
+
+Le ricerche non disponibili durante modifica sono disabilitate con motivo accessibile. Nelle provenienze, nomi e titoli lunghi vanno a capo con `StatBlock`, senza invadere la colonna.

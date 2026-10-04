@@ -412,6 +412,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   // ── Pipeline management ──────────────────────────────────────────────
 
   switchPipeline: async (pipelineId: string) => {
+    if (useChunksStore.getState().isProcessing) return;
     const { currentProjectId, activePipelineId } = get();
     if (!currentProjectId) return;
 
@@ -431,6 +432,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     ]);
 
     if (!pipelineData || !source) return;
+    if (useChunksStore.getState().isProcessing) return;
 
     const { pipeline, config } = pipelineData;
     const mergedConfig: PipelineConfig = {
@@ -472,6 +474,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   createNewPipeline: async (name: string) => {
+    if (useChunksStore.getState().isProcessing) return;
     if (createPipelineInFlight) return;
     const op = (async () => {
       const { currentProjectId, pipelines, activePipelineId } = get();

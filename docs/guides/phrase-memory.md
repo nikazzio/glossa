@@ -4,6 +4,9 @@ title: Memoria di frasi ed esempi
 
 # Memoria di frasi ed esempi
 
+Durante la modifica di testi o metadati, la ricerca resta disabilitata
+con il motivo. I titoli lunghi della provenienza vanno a capo.
+
 La memoria di frasi conserva coppie di testo sorgente e traduzione approvata
 per riutilizzarle nelle traduzioni. La ricerca di corrispondenze,
 la loro selezione per il prompt e il salvataggio di nuove frasi sono operazioni

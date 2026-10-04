@@ -3,7 +3,6 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { PhraseProvenanceLookup } from '../../hooks/usePhraseProvenanceLookup';
 import type { TextProvenance } from '../../types';
 import { StatRow, StatBlock } from '../ui';
-import { WorkspaceIdentity } from '../workspace/WorkspaceIdentity';
 
 interface PhraseProvenanceProps {
   /** Workspace di casa della frase; `null` = traduzione senza workspace. */
@@ -29,25 +28,25 @@ export function PhraseProvenance({ workspaceId, projectId, chunkId, lookup, curr
     : workspaceId === currentWorkspaceId
       ? t('memory.provenance.thisWorkspace')
       : home
-        ? <WorkspaceIdentity workspace={home} iconSize={13} />
+        ? home.name
         : t('memory.provenance.unknownWorkspace');
 
   const position = (chunkId ? lookup.chunkPositions[chunkId] : undefined) ?? provenance?.chunkPosition;
 
   return (
     <dl className="space-y-1">
-      <StatRow label={t('memory.provenance.workspace')} value={workspaceValue} />
+      <StatBlock label={t('memory.provenance.workspace')} value={workspaceValue} />
       {provenance?.workspaceName && provenance.workspaceId !== workspaceId && (
-        <StatRow label={t('memory.provenance.originWorkspace')} value={provenance.workspaceName} />
+        <StatBlock label={t('memory.provenance.originWorkspace')} value={provenance.workspaceName} />
       )}
       <StatBlock label={t('memory.provenance.book')} value={provenance?.sourceTitle ?? t('memory.provenance.noBook')} />
-      {provenance?.sourceVersionLabel && <StatRow label={t('memory.provenance.bookVersion')} value={provenance.sourceVersionLabel} />}
+      {provenance?.sourceVersionLabel && <StatBlock label={t('memory.provenance.bookVersion')} value={provenance.sourceVersionLabel} />}
       {sourcePhrase && provenance?.selection && provenance.selection.exact !== sourcePhrase && (
         <StatRow label={t('memory.provenance.textVersion')} value={t('memory.provenance.sourceEdited')} />
       )}
       {projectId || provenance?.projectName ? (
         <>
-          <StatRow
+          <StatBlock
             label={t('memory.provenance.translation')}
             value={(projectId ? lookup.projectNames[projectId] : undefined) ?? provenance?.projectName ?? t('memory.provenance.unknownTranslation')}
           />

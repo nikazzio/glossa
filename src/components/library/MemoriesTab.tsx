@@ -131,7 +131,7 @@ export function MemoriesTab({ onEditingChange, onBusyChange }: { onEditingChange
         <IconButton onClick={() => void loadEntries()} disabled={loading || busyId !== null || editingId !== null || metadataEditing} title={t('common.refresh')}><RefreshCcw size={14} /></IconButton>
       </div>
     </div>
-    <CatalogSearchField value={search} onChange={(value) => { if (!metadataEditing && !editingId) setSearch(value); }} label={t('library.memorySearch')} placeholder={t('library.memorySearch')} />
+    <CatalogSearchField value={search} onChange={setSearch} disabled={metadataEditing || editingId !== null || busyId !== null} disabledReason={t('library.searchEditingHint')} label={t('library.memorySearch')} placeholder={t('library.memorySearch')} />
     <Select value={tagFilter} onChange={setTagFilter} disabled={metadataEditing || editingId !== null || busyId !== null}
       ariaLabel={t('library.filterByTag')} options={[{ value: '', label: t('library.allTags') }, ...allTags.map((tag) => ({ value: tag, label: tag }))]} />
     {loading ? <Spinner label={t('common.loading')} /> : loadError ? <p role="alert" className="text-sm text-editorial-warning">{t('library.memoryLoadError')}</p>

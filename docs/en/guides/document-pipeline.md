@@ -4,6 +4,10 @@ title: Translating a document
 
 # Translating a document
 
+During execution you cannot switch pipelines or create a new one. Memory,
+Review and Document remember the selected subtab when you visit another tab;
+if that view is unavailable, an available view is shown instead.
+
 Translation operates on text segments, also called *chunks* in the interface.
 Each segment retains its source text, stage outputs, editable translation,
 assessment and annotations. A document containing only one segment uses the

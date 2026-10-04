@@ -2025,3 +2025,5 @@ Date del catalogo e memorie normalizzate UTC con `timestampOf` già comune.
 `ChoiceDots` assegna il tab stop alla scelta corrente solo se disponibile,
 altrimenti alla prima abilitata. `TabButton` usa aria-disabled e blocca il click;
 le linguette indisponibili sono focusabili per la spiegazione e saltate dalle frecce.
+
+Lo Studio conserva le viste dei gruppi Memoria/Revisione/Documento in `studioGroupViews`; cambio e creazione pipeline sono bloccati durante elaborazione anche nello store. `CatalogSearchField` supporta `disabled` e motivo accessibile; il catalogo memorie disabilita la ricerca durante modifica. Le stringhe di provenienza lunghe usano `StatBlock` per andare a capo.

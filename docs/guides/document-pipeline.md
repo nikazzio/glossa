@@ -4,6 +4,10 @@ title: Traduzione di un documento
 
 # Traduzione di un documento
 
+Durante l’esecuzione non puoi cambiare pipeline o crearne una nuova. I gruppi
+Memoria, Revisione e Documento ricordano la sottoscheda scelta quando cambi
+scheda; se non è disponibile, viene mostrata una vista disponibile.
+
 La traduzione opera su frammenti di testo, chiamati *chunk* in alcune parti
 dell’interfaccia. Ogni frammento conserva sorgente, risultati delle fasi,
 traduzione modificabile, valutazione e annotazioni. Anche un documento composto
