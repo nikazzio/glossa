@@ -23,10 +23,62 @@ Check the boundaries before confirming: they define the units used for
 translation and review. See the [import and export reference](../reference/import-export)
 for formats, size limits and imported footnotes.
 
+## Languages of the work
+
+Languages belong to the translated work, not to its pipelines: they apply to
+every pipeline of the work, which no longer have a language pair. The
+translation prompt is guided by the **Translation context**; only DeepL keeps
+its own pair in the options of its stage, because the service requires codes.
+
+Source and Target each have three optional fields:
+
+- **Language**: an ISO 639-3 code from the official SIL register, the one used
+  by library catalogues, including historical languages (Latin, Ancient Greek,
+  Old and Middle French, Old Provençal/Occitan, Old Spanish, Old and Middle
+  English, Old and Middle High German, Anglo-Norman and others). Search by
+  Italian name, English name or code; with an empty search the list shows
+  “Already used in the workspace” and “Historical languages”, and typing
+  searches all roughly 7,900 languages. Names are in Italian where a standard
+  Italian name exists, otherwise the official English name.
+- **Variety**: a Glottolog variety, offered only among the varieties of the
+  chosen language (Latin: Late Latin, Medieval Latin, Vulgar Latin; Italian:
+  Old Italian, Fiorentino, Laziale, Cicolano-Reatino-Aquilano). It stays
+  disabled until you choose a language.
+- **Note**: free text for what codes cannot say (period, area, hand), for
+  example “Po Valley vernacular, 15th c.”.
+
+Every field can be left empty (“not specified”) and has an X to clear it. A new
+work starts with the source not specified and the target Italian.
+
+Limits: the standards have no code for Medieval Latin, Old Italian or Old
+Catalan as languages; Glottolog lists no “classical Latin” variety; regional
+Italo-Romance languages (Venetian, Lombard, Ligurian, Neapolitan, Sicilian…)
+are separate languages with modern varieties only; there are no medieval area
+varieties, so use the note. For a 15th-century vernacular fencing treatise:
+Italian + Old Italian + note, or the regional language + note. The language
+list ships with the app and works offline; there is no in-app command to update
+it yet.
+
+Where to set them: in the import window and in the top row of the Studio.
+There, next to the pipeline name and mode, the pair appears in short form
+(“Latino (Medieval Latin) → Italiano”) and the tooltip shows the notes. One
+click opens the **Languages of the work** window with the same fields, Cancel
+and Confirm: nothing is saved unless you confirm. While the pipeline is
+running the control is visible but blocked, with the reason in the tooltip. If
+the work has no source language and comes from a Library book whose language
+matches a known language, the source is proposed pre-filled (still to be
+confirmed); the import window pre-fills it the same way.
+
+After every Confirm, if memory holds phrases saved from this work with
+different languages, the app asks whether to give them the work’s languages:
+text and similarity measures stay the same and the previous version stays in
+the history. This also aligns phrases saved earlier. See
+[phrase memory](./phrase-memory).
+
 ## Configuration
 
 Open the pipeline configuration (the gear in the Studio's top row) and set the
-Translation context, mode, providers, models and instructions; choose languages only for DeepL: its tabs are described in
+Translation context, mode, providers, models and instructions; languages belong to the work (see below) and only DeepL has a pair of its own: its tabs are described in
 [pipeline configuration](../reference/pipeline-config). Pipeline modes define these sequences:
 
 | Mode | Processing |
@@ -66,7 +118,7 @@ the left stays visible and leads to any area, closing the translation. While
 the pipeline is running its entries are off, like the way back to the
 catalogue.
 
-At the top, the bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover reveals the full name. Click the work name to rename it. The pipeline name, with its small arrow, opens the menu to select, create, rename or delete; the gear opens options. Only DeepL displays a language pair. Import, export, language resources and deletion are on the right.
+At the top, the bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover reveals the full name. Click the work name to rename it. The pipeline name, with its small arrow, opens the menu to select, create, rename or delete; the gear opens options. Next to them the languages of the work appear in short form (see [Languages of the work]). Import, export, language resources and deletion are on the right.
 
 In the middle the two sheets place source and translation side by side. Above
 them, on the left, the number of the open segment; in the middle a window of

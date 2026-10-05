@@ -18,8 +18,9 @@ sezione o il nome di una voce.
 La barra affianca **opera / pipeline**, con i nomi lunghi troncati e il nome
 completo nel suggerimento. Il nome della pipeline, con la piccola freccia accanto, apre il menu
 per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni.
-Il tipo **Semplice, Editoriale o DeepL** è sempre visibile con un’icona. La
-coppia compare nella barra soltanto per DeepL. Le operazioni sulla pipeline
+Il tipo **Semplice, Editoriale o DeepL** è sempre visibile con un’icona. Le
+lingue dell’opera, comuni a tutte le sue pipeline, compaiono in forma breve nella barra
+(vedi «Lingue dell’opera» nel [flusso di traduzione](../guides/document-pipeline)). Le operazioni sulla pipeline
 restano bloccate durante l’elaborazione.
 
 | Linguetta | Parametri |
@@ -46,8 +47,8 @@ Le modalità Standard, Editoriale e DeepL Hybrid sono descritte nel
 
 ## Contesto di traduzione e lingue DeepL
 
-Il **Contesto di traduzione** prende il posto della coppia di lingue per gli
-LLM: lingue e varietà storiche, destinatari, registro e obiettivo. È
+Le pipeline non hanno una coppia di lingue: le lingue appartengono all’opera.
+Per gli LLM la traduzione è guidata dal **Contesto di traduzione**: lingue e varietà storiche, destinatari, registro e obiettivo. È
 obbligatorio e non è mai vuoto: una pipeline nuova parte da un testo
 predefinito (dall’inglese all’italiano), che puoi riscrivere o sostituire con
 un template salvato; la freccia circolare lo ripristina e la conferma di un
@@ -71,8 +72,7 @@ La coppia **DeepL · lingue** resta visibile in Generale, disabilitata nelle
 modalità LLM e attiva in DeepL. Le fasi non usate restano visibili come
 linguette disabilitate. Cambiando modalità conservi la configurazione di tutte
 le fasi. In DeepL restano attive revisione LLM, audit e coerenza.
-Le lingue generali usate dalle memorie sono ancora metadati distinti: la loro
-configurazione sarà consolidata nel lavoro sulle risorse linguistiche.
+Le lingue usate dalle memorie sono quelle dell’opera, non quelle DeepL.
 
 In **Anteprima prompt** scegli una fase, Audit o Coerenza: vedi la richiesta
 pezzo per pezzo, nell’ordine in cui parte, divisa in **messaggio di sistema**

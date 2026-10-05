@@ -19,7 +19,10 @@ documento. La ricerca usa le risorse accessibili al workspace e non modifica
 né traduzioni né frasi salvate.
 
 La sottolinguetta **Riferimenti** della scheda **Memoria** mostra i risultati e permette di regolare la soglia
-di somiglianza. Solo le coppie selezionate vengono incluse nella successiva
+di somiglianza. Ogni risultato dice da dove viene: «questo documento»
+(evidenziato), «altra opera del workspace» o «altro workspace». L’ordine è
+prima questo documento, poi il workspace, poi il resto; in ogni gruppo prima la
+somiglianza più alta. Solo le coppie selezionate vengono incluse nella successiva
 richiesta per quel frammento. Se esistono risultati ma nessuno è selezionato,
 l’avvio segnala che la traduzione procederà senza quei riferimenti.
 
@@ -44,14 +47,22 @@ frammento durante la revisione; non equivalgono a un salvataggio permanente.
 
 ## Ambito e compatibilità
 
-Le frasi estratte seguono il workspace corrente della traduzione di origine.
+Le nuove frasi salvate prendono lingua, varietà e nota dell’opera da cui
+provengono; l’estrazione automatica delle coppie comunica al modello le lingue
+reali dell’opera, con varietà e nota. Dopo ogni conferma nella finestra
+[Lingue dell’opera](./document-pipeline), se la memoria ha frasi
+di quest’opera con lingue diverse, l’app chiede se darle le lingue dell’opera:
+testo e misure di somiglianza restano uguali e la versione precedente resta
+nella cronologia. Le frasi estratte seguono il workspace corrente della traduzione di origine.
 La provenienza conserva separatamente il workspace al momento dell’estrazione.
 Consultare una frase da un altro workspace non crea collegamenti né copie.
 
-In **Impostazioni workspace → Memoria**, **Cerca anche nella memoria degli altri
-workspace** è inizialmente spento. Attivalo e salva per includere anche le frasi
-di altri workspace e senza workspace. La ricerca confronta sempre la stessa
-coppia di lingue e embedding dello stesso modello, dimensione e profilo di input.
+L’icona del globo accanto al comando di aggiornamento dei Riferimenti estende la
+ricerca agli altri workspace e alle frasi senza workspace; la scelta è ricordata
+per ogni workspace e non sta più nelle impostazioni del workspace. Filtra solo la
+lingua di arrivo: frasi tradotte in un’altra lingua di arrivo non vengono
+suggerite; la lingua di partenza non filtra. Se l’opera non ha lingua di arrivo,
+nessun filtro linguistico. La ricerca confronta sempre embedding dello stesso modello, dimensione e profilo di input.
 Testi privi della misura richiesta restano nel catalogo, senza entrare nei risultati.
 Non si confrontano embedding di modelli diversi. Le coppie già salvate nel
 frammento non diventano automaticamente corrispondenze a distanza zero.
@@ -63,7 +74,7 @@ traduzione. Aggiungere un modello conserva gli embedding degli altri modelli e
 non duplica la coppia. Testi uguali provenienti da frammenti diversi restano distinti.
 
 Creando una traduzione puoi indicare **Libro e versione di origine** scegliendo
-una versione della Biblioteca. È una scelta esplicita: senza, il libro resta
+una versione della Biblioteca (con la ricerca per titolo o copia). È una scelta esplicita: senza, il libro resta
 **Non specificato**. Non viene dedotto dal nome del file. Le frasi estratte
 registrano questo libro, la versione, la traduzione, il frammento e il workspace
 di origine; non ricevono numeri di pagina se questi non sono noti.
@@ -133,7 +144,7 @@ per ognuna, sotto la coppia, da dove viene (workspace, traduzione, frammento,
 oppure «importata»). La spunta in cerchio decide quali usare nella traduzione.
 **Memoria** si apre solo a traduzione verificata: le coppie già salvate si
 tolgono una a una con il cestino; quelle nuove si spuntano e si aggiungono con
-il dischetto, che non cancella mai le altre. La ricerca usa solo frasi della
-stessa coppia di lingue.
+il dischetto, che non cancella mai le altre. La ricerca esclude le frasi tradotte
+in una lingua di arrivo diversa da quella dell’opera.
 
 Le voci della raccolta hanno un unico sfondo tenue distinto dalla finestra; i dettagli aperti condividono lo stesso fondo. Nei dettagli gli embedding sono elencati uno per riga; il comando di calcolo mostra una rotellina fino al termine della richiesta.

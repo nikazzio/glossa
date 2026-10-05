@@ -160,8 +160,6 @@ impl StreamChunkSource for MockChunkSource {
 
 fn make_config() -> PipelineConfig {
     PipelineConfig {
-        source_language: "English".into(),
-        target_language: "Italian".into(),
         stages: vec![],
         judge_prompt: "Evaluate translation quality.".into(),
         judge_model: "gemini-3-flash-preview".into(),
@@ -740,7 +738,7 @@ fn pipeline_config_roundtrip() {
     let config = make_config();
     let json = serde_json::to_string(&config).unwrap();
     let parsed: PipelineConfig = serde_json::from_str(&json).unwrap();
-    assert_eq!(parsed.source_language, "English");
+    assert_eq!(parsed.judge_model, "gemini-3-flash-preview");
     assert_eq!(parsed.glossary.len(), 1);
 }
 

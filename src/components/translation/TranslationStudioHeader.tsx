@@ -9,8 +9,8 @@ import { useLibraryStore } from '../../stores/libraryStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
-import { resolveDeeplLanguages } from '../../pipeline/deeplConfig';
 import { PipelineSwitch } from './PipelineSwitch';
+import { WorkLanguagesControl } from './WorkLanguagesControl';
 
 interface TranslationStudioHeaderProps {
   onBack: () => void;
@@ -76,8 +76,6 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
   );
   const removeProject = useProjectStore((s) => s.removeProject);
   const mode = usePipelineStore((s) => s.config.mode ?? 'standard');
-  const deeplStage = usePipelineStore((s) => s.config.stages.find((stage) => stage.enabled && stage.provider === 'deepl'));
-  const deeplLanguages = deeplStage ? resolveDeeplLanguages(deeplStage) : null;
   const ModeIcon = MODE_ICONS[mode];
   const setShowExportDialog = useUiStore((s) => s.setShowExportDialog);
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
@@ -129,11 +127,7 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
               <span className="font-display italic">{t(`pipeline.modeShort.${mode}`)}</span>
             </span>
           </Tooltip>
-          {mode === 'deepl-hybrid' && deeplLanguages && <Tooltip label={t('pipeline.deepl.languagePairHint')} side="bottom">
-            <span className="shrink-0 text-xs text-editorial-ink">
-              {deeplLanguages.sourceLang || t('pipeline.deepl.autoShort')} → {deeplLanguages.targetLang || '…'}
-            </span>
-          </Tooltip>}
+          <WorkLanguagesControl disabledReason={running} />
         </span>
       }
       actions={

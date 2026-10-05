@@ -70,16 +70,9 @@ export const DEFAULT_DEEPL_STAGE_OPTIONS = {
   showBilledCharacters: true,
 } satisfies import('./types').DeeplConfig;
 
-export const LANGUAGES = [
-  'English',
-  'Italian',
-  'Spanish',
-  'French',
-  'German',
-  'Portuguese',
-  'Japanese',
-  'Chinese',
-  'Korean',
-  'Russian',
-];
+/** Lingue di un'opera nuova: partenza non indicata, arrivo italiano (codici ISO 639-3). */
+export const DEFAULT_WORK_LANGUAGES: import('./types').WorkLanguages = {
+  source: { code: null, variety: null, note: '' },
+  target: { code: 'ita', variety: null, note: '' },
+};
 

@@ -18,7 +18,10 @@ resources available to the workspace. This search changes neither translations
 nor saved phrases.
 
 The **References** sub-tab of the **Memory** tab displays matches and lets you adjust the similarity
-threshold. Only selected pairs are included in the next request for that
+threshold. Each result says where it comes from: “this document”
+(highlighted), “another work in the workspace” or “another workspace”. The
+order is this document first, then the workspace, then the rest; within each
+group the highest similarity comes first. Only selected pairs are included in the next request for that
 segment. If matches exist but none are selected, starting translation warns
 that those references will not be used.
 
@@ -43,13 +46,22 @@ permanent save.
 
 ## Scope and compatibility
 
-Extracted phrases follow the current workspace of their source translation.
+New saved phrases take the language, variety and note of the work they come
+from; automatic phrase-pair extraction tells the model the work’s real
+languages, with variety and note. After every Confirm in the
+[Languages of the work](./document-pipeline) window, if
+memory holds phrases from this work with different languages, the app asks
+whether to give them the work’s languages: text and similarity measures stay
+the same and the previous version stays in the history. Extracted phrases follow the current workspace of their source translation.
 Provenance separately preserves the workspace at extraction time. Viewing a
 phrase from another workspace does not create links or copies.
 
-In **Workspace settings → Memory**, **Search memory from other workspaces too**
-is initially off. Enable it and save to include other workspaces and unassigned
-phrases. Search always requires the same language pair, embedding model,
+The globe icon next to the References refresh button extends the search to
+other workspaces and unassigned phrases; the choice is remembered per workspace
+and is no longer in the workspace settings. Only the target language filters:
+phrases translated into a different target language are not suggested; the
+source language does not filter. If the work has no target language, no
+language filter applies. Search always requires the same embedding model,
 dimensions and input profile. Texts without the requested embedding remain
 in the catalogue but are excluded from similarity results. Different models
 are never compared. Already saved chunk pairs are not inserted as zero-distance matches.
@@ -60,7 +72,7 @@ Each pair links to a textual unit with revisions of its source and translation.
 Adding a model preserves embeddings from other models without duplicating the
 pair. Equal texts from different chunks remain distinct units.
 
-When creating a translation, select **Source book and version** from the Library.
+When creating a translation, select **Source book and version** from the Library (searchable by title or copy).
 Without this explicit choice, the book remains **Not specified**; the filename
 does not determine it. Extracted phrases record the book, version, translation,
 chunk and original workspace. Unknown page numbers are never invented.
@@ -127,7 +139,7 @@ each, under the pair, where it comes from (workspace, translation, segment, or
 “imported”). The circled check decides which to use in the translation.
 **Memory** opens only once the translation is verified: saved pairs are removed
 one by one with the bin; new ones are checked and added with the disk, which
-never deletes the others. The search only uses phrases of the same language
-pair.
+never deletes the others. The search excludes phrases translated into a
+different target language than the work’s.
 
 Collection entries have one muted background distinct from the window; expanded details share that same surface. Details list embeddings one per row; the calculation command shows a spinner until the request completes.

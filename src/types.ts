@@ -407,8 +407,6 @@ export interface Pipeline {
   id: string;
   projectId: string;
   name: string;
-  sourceLanguage: string;
-  targetLanguage: string;
   mode: PipelineMode;
   runStatus: PipelineRunStatus;
   lastRunConfig: string | null;
@@ -665,10 +663,24 @@ export interface CoherenceResult {
   promptInfo?: PromptInfo;
 }
 
+/**
+ * One side of a work's languages: ISO 639-3 code, Glottolog variety of that
+ * language and a free note (period, area, hand). Every field may be empty.
+ */
+export interface LanguageChoice {
+  code: string | null;
+  variety: string | null;
+  note: string;
+}
+
+/** The languages of a translated work, owned by the work, not by its pipelines. */
+export interface WorkLanguages {
+  source: LanguageChoice;
+  target: LanguageChoice;
+}
+
 export interface PipelineConfig {
   pipelineId: string;
-  sourceLanguage: string;
-  targetLanguage: string;
   mode?: PipelineMode;
   stages: PipelineStageConfig[];
   judgePrompt: string;

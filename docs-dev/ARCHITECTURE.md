@@ -18,8 +18,8 @@ dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
 
 `PipelineConfig.workBrief` / Rust `work_brief` è l’unico contesto comune degli
 LLM. Migrazione 0004 aggiunge la colonna; 0005 elimina Persona e override
-lingua globali, senza conversioni semantiche o percorsi legacy. La coppia base
-resta metadato per memorie/catalogo, da consolidare nel lavoro successivo.
+lingua globali, senza conversioni semantiche o percorsi legacy. Le lingue non
+stanno più nella pipeline: sono dell'opera (vedi «Lingue dell'opera» sotto).
 Lettura, salvataggio e duplicazione includono la descrizione. Backup usa righe
 e colonne dello schema corrente. Nome visibile «Contesto di traduzione» (campo `workBrief`, colonna `work_brief`): obbligatorio, mai vuoto — `DEFAULT_WORK_BRIEF` (inglese → italiano, come la vecchia coppia predefinita) nei default dello store e alla lettura di una riga vuota; l’editor non conferma un testo vuoto e il ripristino torna al predefinito. Template nel contesto `brief`;
 contesti obsoleti non vengono riclassificati silenziosamente: la lettura
@@ -967,7 +967,28 @@ da `importErrorMessageKey`, mostrati nella finestra; nulla si crea). Dopo
 `createAndOpen` il file va in `uiStore.pendingImportFile` (non persistito):
 l'editor montato lo consuma con `startImport`, la stessa via del comando di
 import, e apre `ImportPreviewDialog`. Chiudendo l'anteprima il progetto resta
-vuoto.
+vuoto. Il libro di origine si sceglie con `SearchPicker` (titolo, copia sotto),
+mai con un `Select` che si allarga al titolo più lungo.
+
+**Lingue dell'opera.** Le lingue sono dell'opera (`projects`), valgono per
+tutte le sue pipeline; `pipelines` non ha più colonne di lingua (migrazione
+0007, che converte i vecchi nomi inglesi in codici e aggiunge
+`*_language_variety` e `*_language_note`). Ogni lato è un `LanguageChoice`
+(`code` ISO 639-3 o null, `variety` Glottocode o null, `note`); `WorkLanguages`
+vive in `pipelineStore.workLanguages`, caricato da `getProjectSource` e salvato
+da `saveProjectSource`, `createProject` e `projectStore.updateWorkLanguages`
+(`saveWorkLanguages`). Colonne vuote = non indicata. Elenco incluso in
+`src/languages/data` (ISO 639-3 dal registro SIL, varietà Glottolog di livello
+«dialect» collegate alla loro lingua ISO, nomi italiani da CLDR), rigenerato da
+`scripts/update-languages.mjs`; caricato a richiesta come testo grezzo e
+validato (`languages/catalog.ts`, `useLanguageCatalog`). Interfaccia unica
+`WorkLanguagesFields` in `ImportPreviewDialog` (colonna sinistra) e nella
+finestra di `WorkLanguagesControl` (salva solo con Conferma; partenza vuota
+proposta dalla lingua del libro con `matchLanguage`). Dopo ogni Conferma
+`countProjectPhraseRelabels` e, se l'utente accetta, `relabelProjectPhrases`.
+Estrazione delle coppie: `describeLanguageForModel` (nome inglese, varietà,
+nota). Catalogo e Memorie mostrano i nomi con `useLanguageLabel`. Fatti di
+provenienza: codici dell'opera.
 
 **Studio di traduzione** (`components/translation/TranslationStudio`): si apre
 quando `projectStore.currentProjectId` è valorizzato, **dentro**
@@ -998,18 +1019,24 @@ vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
 salva solo le risorse linguistiche, fuori dai campi, come prima.
 
 Memoria di frasi: `vec_save_locked_phrases` **aggiunge** e
-basta (niente più cancellazione delle coppie del frammento); una coppia si
+basta (niente più cancellazione delle coppie del frammento); le lingue delle
+revisioni le legge dal progetto (`text_languages::project_languages`, `und` se
+non indicata), non dal chiamante. Una coppia si
 toglie con `vec_delete_phrase_memory`. `vec_list_phrase_memory(workspaceId?,
 chunkId?)`: senza workspace tutte le frasi. `vec_search_phrase_memory` ha
-`allWorkspaces` e `sourceLanguage`/`targetLanguage`, e restituisce la
+`allWorkspaces` e `sourceLanguage`/`targetLanguage` (lo Studio passa solo la
+lingua di arrivo dell'opera; nessun filtro se non indicata), e restituisce la
 provenienza (workspace di casa = quello della traduzione o dell'importazione,
 `NULL` = senza workspace; `project_id`, `chunk_id`), mostrata da
 `PhraseProvenance` con `usePhraseProvenanceLookup` (due letture in tutto).
-`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo
-dell’interruttore nella scheda Memoria delle impostazioni workspace, salvato
-con le altre impostazioni della scheda. Cambiare workspace, modello di misura,
-coppia di lingue o ambito invalida i riferimenti selezionati anche a ricerca
-automatica spenta; con ricerca automatica attiva ne avvia una nuova.
+`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo del
+globo nei Riferimenti (`ReferencesTab`, `updateActiveWorkspace`), non più nelle
+impostazioni workspace. `ReferencesTab` ordina con `orderByCircle`
+(`utils/memoryCircles.ts`): documento corrente, poi workspace, poi altrove,
+dentro ogni cerchio per somiglianza; ogni riga porta l'etichetta del cerchio.
+Cambiare workspace, modello di misura, lingua di arrivo dell'opera o ambito
+invalida i riferimenti selezionati anche a ricerca automatica spenta; con
+ricerca automatica attiva ne avvia una nuova.
 
 Risorse linguistiche: `LibraryPanel` usa `TabStrip`; Modelli aggiunge ricerca,
 filtro OCR e `PromptTemplateForm` per creazione/modifica in posto tramite
@@ -1115,7 +1142,7 @@ linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hi
 «Azzera tutte le traduzioni» (`resetAllChunks`, conferma), spento con motivo.
 
 Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
-`RenameField`, accessorio `titleAccessory`: separatore /, `PipelineSwitch` con menu scelta/creazione/rinomina/eliminazione e ⚙, tipo Semplice/Editoriale/DeepL; coppia soltanto con DeepL; a destra importa, esporta,
+`RenameField`, accessorio `titleAccessory`: separatore /, `PipelineSwitch` con menu scelta/creazione/rinomina/eliminazione e ⚙, tipo Semplice/Editoriale/DeepL, poi `WorkLanguagesControl` (coppia dell'opera; la coppia DeepL resta nelle opzioni della fase); a destra importa, esporta,
 risorse linguistiche del workspace, elimina), al centro `DocumentView` invariato salvo la fila
 `ChunkStrip` («nn/nn», poi una finestra di 7 `ChunkDot` con il frammento
 aperto fisso al centro: la fila intera trasla di `SLOT_PX` per posto, i
@@ -1124,9 +1151,7 @@ pallini fuori finestra restano montati per lo scorrimento ma con `tabIndex`
 passivo), `StageStatusRow` (spie delle fasi del frammento aperto, aprono
 `StageTraceDialog`) e la lente che apre `SearchTab` sotto la fila (regione,
 non più linguetta; Esc dal campo la chiude), a destra `TranslationInspector`: `InspectorShell` con `beforeTabs`
-per l'esecuzione (le lingue, nella riga in cima, sono della pipeline:
-`projects.source_language/target_language` ne è solo la copia dell'ultima
-salvata): (`PipelineSidebarRunSection` + `ChunkCostPanel`, il cui dettaglio
+per l'esecuzione (`PipelineSidebarRunSection` + `ChunkCostPanel`, il cui dettaglio
 della stima si apre a sinistra del riquadro) e cinque
 linguette (Glossario, Memoria, Anteprima, Revisione, Documento) su un solo
 stato, `uiStore.studioTab` (`TranslationStudioTab` =
@@ -2070,6 +2095,15 @@ coppie salvate come match a distanza zero; il frontend conserva queste nella Mem
 modifica solo tag dell’unità. `vec_update_phrase_memory(input)` confronta entrambe
 le revisioni prima della scrittura atomica. La rigenerazione del workspace aggiunge
 il modello selezionato e conserva tutti gli altri, con controllo dello snapshot.
+
+Lingua delle revisioni: `language` (ISO 639-3, `und` = non indicata) più
+`language_variety` (Glottocode) e `language_note` (migrazione 0008). Una lingua
+corretta è una revisione nuova con lo stesso testo: `text_languages::relabel_project`
+crea le revisioni per le frasi dell'opera con lingue diverse da quelle
+dell'opera, ricopia le misure dell'originale, sposta i puntatori di
+`phrase_memory` e registra `text.language.changed`, tutto in una transazione;
+`count_relabels` le conta. Comandi `vec_count_project_phrase_relabels`,
+`vec_relabel_project_phrases`.
 
 Tag manuali in `text_unit_tags`, non proposte automatiche né vocabolario controllato.
 Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel

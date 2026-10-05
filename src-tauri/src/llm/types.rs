@@ -180,8 +180,6 @@ pub struct PromptComposition {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
-    pub source_language: String,
-    pub target_language: String,
     pub stages: Vec<StageConfig>,
     pub judge_prompt: String,
     pub judge_model: String,

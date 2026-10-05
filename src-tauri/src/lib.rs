@@ -238,6 +238,8 @@ pub fn run() {
             vector::memory_commands::vec_update_phrase_memory,
             vector::memory_commands::vec_search_phrase_memory,
             vector::memory_commands::vec_save_locked_phrases,
+            vector::memory_commands::vec_count_project_phrase_relabels,
+            vector::memory_commands::vec_relabel_project_phrases,
             vector::memory_commands::vec_regenerate_all_embeddings,
             deepl::commands::run_deepl_stage,
             deepl::commands::preview_deepl_stage,

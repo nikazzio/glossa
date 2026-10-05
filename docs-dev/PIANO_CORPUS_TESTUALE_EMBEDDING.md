@@ -163,5 +163,7 @@ conservati, ricerca compatibile, correzioni atomiche e provenienza visibile; sce
 esplicita del libro alla creazione; backup dei dati testuali. La migrazione
 incrementale 0003 conserva i testi esistenti e trasferisce le misure identificate;
 non attribuisce modelli ai vettori anonimi e non ricrea il database.
+Ogni revisione porta lingua ISO 639-3, varietà Glottolog e nota; una lingua
+corretta è una revisione nuova con lo stesso testo e le misure ricopiate.
 Non comprende selettore di pagine/sezioni, analisi del
 corpus, tag automatici, ricerca ibrida o modelli locali: restano nelle issue collegate.

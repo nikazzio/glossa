@@ -625,8 +625,6 @@ mod tests {
 
     fn en_it_config() -> PipelineConfig {
         PipelineConfig {
-            source_language: "English".to_string(),
-            target_language: "Italian".to_string(),
             work_brief: Some("Literary translation from English to Italian.".to_string()),
             ..Default::default()
         }
@@ -814,8 +812,6 @@ mod tests {
     #[test]
     fn refine_user_turn_includes_audit_context_when_provided() {
         let config = PipelineConfig {
-            source_language: "English".to_string(),
-            target_language: "Italian".to_string(),
             ..Default::default()
         };
         let stage = StageConfig {
@@ -843,8 +839,6 @@ mod tests {
     #[test]
     fn refine_user_turn_omits_audit_section_when_context_is_none() {
         let config = PipelineConfig {
-            source_language: "English".to_string(),
-            target_language: "Italian".to_string(),
             ..Default::default()
         };
         let stage = StageConfig {

@@ -146,6 +146,14 @@ interattivi.
 - Il chiamante controlla `open` e `onOpenChange`.
 - Il trigger usa `ariaPressed={open}` e non ribalta manualmente lo stato.
 - Overlay sopra le finestre: `z-[210]`.
+- `SearchPicker`: un `IconButton` che apre un elenco lungo con ricerca
+  (`CatalogSearchField`) e gruppi sotto piccole didascalie maiuscole; voci
+  `PopoverItem` con il codice o la seconda informazione in `description`; una
+  scelta chiude. Si usa al posto di un `Select` quando le voci sono molte o
+  lunghe (lingue, libri della Biblioteca): un `Select` nativo si allarga alla
+  voce più lunga e allarga la finestra. Il valore scelto sta accanto, nella
+  riga, troncato con il testo intero nel suggerimento; la «x» lo toglie.
+- `CommandRule`: filetto verticale fra gruppi di comandi in una riga.
 
 ### PopoverItem e LinkChip
 
@@ -311,6 +319,17 @@ testo nel suggerimento e per chi legge con la voce.
 - Interruttori booleani usano `ToggleRow`.
 
 ### Dialog
+
+- Finestre di lavoro grandi (anteprima d'importazione): `Dialog` con
+  `widthClassName="max-w-6xl"`, `panelClassName="h-[90vh]"`, corpo senza
+  padding a due colonne: impostazioni a sinistra (`w-96`, scorrimento proprio,
+  sezioni con `SectionLabel`), contenuto a destra a tutta altezza con la sua
+  barra di conteggi e la scelta di vista su `ChoiceDots`.
+- Lingue di un'opera: `WorkLanguagesFields`, due sezioni (Partenza, Arrivo) di
+  `SettingRow`: Lingua e Varietà con valore in `font-display`, codice mono
+  piccolo, `SearchPicker` e «x»; Nota con campo in linea. Nella riga in cima
+  allo Studio la coppia è testo corsivo cliccabile; la modifica sta in una
+  finestra con Annulla/Conferma, mai salvata all'uscita.
 
 - Finestre modali tramite `Dialog`; conferme distruttive tramite `AlertDialog`.
 - Conferma e annullamento usano i pulsanti dialog condivisi.

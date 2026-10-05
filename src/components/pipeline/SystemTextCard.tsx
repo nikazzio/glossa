@@ -8,7 +8,8 @@ import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus }
 import { IconButton } from '../ui';
 import { PipelinePromptEditor } from './PipelinePromptEditor';
 import { PromptMessage } from './PromptCard';
-import { CommandRule, PromptSourceIcon } from './PromptSourceLabel';
+import { PromptSourceIcon } from './PromptSourceLabel';
+import { CommandRule } from '../ui/CommandRule';
 import { describePromptSource } from './promptSource';
 import { GUARDED_TEXTS, SHARED_TEXTS } from './promptParts';
 

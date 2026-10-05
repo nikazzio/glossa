@@ -401,10 +401,10 @@ export async function executePipelineForChunk(
         durationMs: stageDuration,
         sourceLanguage: deeplLanguages
           ? deeplLanguages.sourceLang || detectedDeeplSource || null
-          : effectiveConfig.sourceLanguage,
+          : usePipelineStore.getState().workLanguages.source.code,
         targetLanguage: deeplLanguages
           ? deeplLanguages.targetLang
-          : effectiveConfig.targetLanguage,
+          : usePipelineStore.getState().workLanguages.target.code,
         input: stageText,
         output: result,
         workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
@@ -439,10 +439,10 @@ export async function executePipelineForChunk(
           durationMs: stageDurationMs,
           sourceLanguage: deeplLanguages
             ? deeplLanguages.sourceLang || null
-            : effectiveConfig.sourceLanguage,
+            : usePipelineStore.getState().workLanguages.source.code,
           targetLanguage: deeplLanguages
             ? deeplLanguages.targetLang
-            : effectiveConfig.targetLanguage,
+            : usePipelineStore.getState().workLanguages.target.code,
           input: stageText,
           workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
         },

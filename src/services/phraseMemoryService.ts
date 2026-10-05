@@ -143,8 +143,6 @@ export interface SaveApprovedPhrasePairsOptions {
   projectId: string;
   chunkId: string;
   embeddingModel: EmbeddingModel;
-  sourceLanguage: string;
-  targetLanguage: string;
   pairs: ApprovedPhrasePair[];
 }
 
@@ -545,7 +543,7 @@ export async function setPhraseMemoryTags(entry: PhraseMemoryEntry, tags: string
 }
 
 export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOptions): Promise<number> {
-  const { workspaceId, projectId, chunkId, embeddingModel, sourceLanguage, targetLanguage } = options;
+  const { workspaceId, projectId, chunkId, embeddingModel } = options;
 
   if (options.pairs.length === 0) {
     throw new Error('saveApprovedPhrasePairs called with no pairs to save.');
@@ -591,8 +589,6 @@ export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOp
     projectId,
     chunkId,
     pairs,
-    sourceLanguage,
-    targetLanguage,
     embeddingModel,
   });
   logger.info('phrase_memory.save_approved.insert_done', {
@@ -706,4 +702,14 @@ export function exportPhraseMemoryToCsv(entries: PhraseMemoryEntry[]): string {
     created_at: e.createdAt,
   }));
   return Papa.unparse({ fields: [...PHRASE_MEMORY_CSV_FIELDS], data: rows });
+}
+
+/** Phrases saved from the work whose languages differ from the work's current ones. */
+export async function countProjectPhraseRelabels(projectId: string): Promise<number> {
+  return invoke<number>('vec_count_project_phrase_relabels', { projectId });
+}
+
+/** Gives the phrases saved from the work the work's current languages (new revisions, same text). */
+export async function relabelProjectPhrases(projectId: string): Promise<number> {
+  return invoke<number>('vec_relabel_project_phrases', { projectId });
 }

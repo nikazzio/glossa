@@ -84,8 +84,6 @@ pub async fn vec_save_locked_phrases(
     project_id: String,
     chunk_id: String,
     pairs: Vec<PhrasePair>,
-    source_language: String,
-    target_language: String,
     embedding_model: String,
 ) -> Result<u32, EmbeddingError> {
     let _guard = write_coordinator.lock().await;
@@ -97,11 +95,37 @@ pub async fn vec_save_locked_phrases(
                 &project_id,
                 &chunk_id,
                 &embedding_model,
-                &source_language,
-                &target_language,
                 pairs,
             )
         },
+    )
+    .await
+}
+
+/// Frasi salvate dall'opera con lingue diverse da quelle attuali dell'opera.
+#[tauri::command]
+pub async fn vec_count_project_phrase_relabels(
+    database: State<'_, VectorDatabase>,
+    project_id: String,
+) -> Result<u32, EmbeddingError> {
+    run_blocking(
+        database.connection().map_err(EmbeddingError::Http)?,
+        move |conn| super::text_languages::count_relabels(conn, &project_id),
+    )
+    .await
+}
+
+/// Dà alle frasi salvate dall'opera le lingue attuali dell'opera.
+#[tauri::command]
+pub async fn vec_relabel_project_phrases(
+    database: State<'_, VectorDatabase>,
+    write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
+    project_id: String,
+) -> Result<u32, EmbeddingError> {
+    let _guard = write_coordinator.lock().await;
+    run_blocking(
+        database.connection().map_err(EmbeddingError::Http)?,
+        move |conn| super::text_languages::relabel_project(conn, &project_id),
     )
     .await
 }

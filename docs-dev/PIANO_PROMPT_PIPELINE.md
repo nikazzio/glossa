@@ -234,8 +234,94 @@ Ogni passo è piccolo, si prova dal vivo e si salva prima del successivo.
 
 ## 11. Cambi del database previsti, non ancora fatti
 
-- **Lingue delle memorie** (lingua, varietà, periodo): da decidere nell'analisi
-  delle memorie; il cambio di struttura si fa lì.
-- **Coppia di lingue nascosta nelle pipeline** (`source_language`,
-  `target_language`): resta per memorie e catalogo finché la stessa analisi non
-  decide se tenerla, cambiarla o toglierla.
+- **Lingue**: decise al §12 (nota sull'opera, colonne di lingua tolte dalla
+  pipeline, nomi convertiti in codici).
+
+## 12. Lingue dell'opera e Riferimenti (decisioni del 5 ottobre 2026)
+
+Analisi dal codice: la coppia di lingue nasce all'importazione (dieci lingue
+moderne), poi è invisibile e immutabile. Etichetta le frasi salvate, filtra la
+ricerca dei Riferimenti a confronto esatto, entra nel prompt dell'estrazione
+delle coppie e nel registro delle operazioni. I prompt di traduzione non la
+usano più (comanda il Contesto di traduzione). DeepL ha una coppia propria nelle
+opzioni della fase, richiesta dall'API. Il deposito delle unità di testo
+(`0003_text_corpus.sql`) ha già lingua per revisione, tag e provenienza, ma lo
+riempie solo la memoria.
+
+### Decisioni
+
+- **Le lingue appartengono all'opera**, non alla pipeline. L'opera ha lingua di
+  partenza, lingua di arrivo e una nota libera facoltativa (varietà, periodo).
+  Le colonne di lingua dell'opera esistono già; quelle della pipeline si tolgono.
+  DeepL conserva la sua coppia nelle opzioni della fase.
+- **Tre campi per lingua**, nessuno obbligatorio («non indicata» ammesso):
+  lingua con codice ISO 639-3 (registro SIL, usato da cataloghi MARC e TEI),
+  varietà con codice Glottolog limitata alle varietà della lingua scelta
+  (per esempio latino → latino medievale, tardo, volgare; italiano → italiano
+  antico, fiorentino), nota libera. Si salvano codice e nome, così un codice
+  ritirato resta leggibile. Verificato il 5 ottobre 2026: ISO non ha codici per
+  latino medievale, italiano antico, catalano antico; Glottolog ha le varietà
+  come dialetti della lingua ISO; il latino arcaico è per Glottolog una lingua
+  con codice non ISO (`qbb`), da trattare a parte.
+- **Elenco incluso nell'app** (ISO circa 180 KB, Glottolog circa 2,5 MB),
+  funzionante senza rete. Il comando «Aggiorna elenco lingue» dalle fonti
+  ufficiali è un passo successivo con issue propria.
+- **Un solo selettore di lingua** con ricerca per nome italiano, nome inglese o
+  codice; gruppi: già usate nel workspace, lingue storiche, tutte. Varietà con
+  ricerca, visibile dopo la lingua; poi la nota. Nomi italiani per le lingue
+  comuni, nome ufficiale inglese per le altre. Stesso selettore
+  nell'importazione e nel pannello dello Studio. Lingua di arrivo precompilata
+  con l'italiano; senza lingua di arrivo i Riferimenti non filtrano per lingua.
+  La Biblioteca resta col suo campo libero (fuori da questo lavoro).
+- **Lingua di partenza precompilata** dalla lingua del libro in Biblioteca,
+  quando c'è.
+- **Modifica nella riga in cima allo Studio**: coppia in breve accanto al nome
+  dell'opera e alla pipeline, nota nel suggerimento. Un clic apre un pannello con
+  due menu e la nota; si salva solo con la conferma (icona di spunta con
+  suggerimento), l'annullamento o l'uscita senza conferma non salvano niente.
+  Con DeepL in cima compare solo la coppia dell'opera.
+- **Frasi salvate**: prendono lingue e nota dell'opera. Se le lingue dell'opera
+  cambiano, l'app chiede se aggiornare anche le frasi già salvate. L'estrazione
+  automatica riceve le lingue vere dell'opera.
+- **Riferimenti nello Studio, tre cerchi**: questo documento (sempre), workspace
+  (sempre), tutti i workspace (facoltativo). Il globo che allarga a tutti i
+  workspace sta nei Riferimenti accanto all'aggiornamento; la scelta resta
+  ricordata per il workspace e sparisce dalle impostazioni del workspace. Ogni
+  risultato dice da dove viene; prima quelli del documento. Unico vincolo di
+  lingua: stessa lingua di arrivo; la lingua di partenza non filtra.
+- **Analisi futura** (ricerche generali, paragrafi di originali, tag, tecniche
+  simili): solo predisposta, cioè testi salvati con lingua, nota, provenienza e
+  tag puliti. Nessuna interfaccia in questo lavoro.
+- **Dati di prova**: dopo il passo 1, le frasi già salvate si aggiornano una
+  volta alle lingue della loro opera, con copia del database prima e senza file
+  di migrazione (correzione di dati, non di struttura).
+
+### Passi
+
+1. Elenco ISO e Glottolog incluso; selettore di lingua; l'opera unica fonte
+   delle lingue; pipeline senza coppia; importazione col selettore e
+   precompilazione dal libro. Cambio di struttura: lingua, varietà e nota
+   sull'opera, colonne tolte dalla pipeline, nomi attuali convertiti in codici.
+2. Riga in cima allo Studio: coppia in breve e pannello con conferma.
+3. Memoria: salvataggio ed estrazione con le lingue dell'opera; domanda di
+   aggiornamento delle frasi al cambio; catalogo Traduzioni ed elenco Memorie con
+   i nomi delle lingue.
+4. Riferimenti: tre cerchi, provenienza su ogni risultato, ordine, filtro sulla
+   sola lingua di arrivo, globo spostato dalle impostazioni.
+5. Aggiornamento una tantum delle frasi di prova.
+6. Documentazione nei tre posti; test solo alla verifica finale.
+
+### Avanzamento (5 ottobre 2026)
+
+- Passi 1-4 fatti: elenco ISO/Glottolog incluso e rigenerabile; lingue, varietà
+  e note sull'opera (migrazione 0007), pipeline senza coppia; selettore unico
+  nell'importazione e nella finestra «Lingue dell'opera» della riga in cima allo
+  Studio; frasi salvate con lingue dell'opera, varietà e nota sulle revisioni
+  (migrazione 0008), riallineamento proposto dopo ogni Conferma; Riferimenti a
+  tre cerchi con globo e filtro sulla sola lingua di arrivo.
+- Passo 5: si fa dall'app (Conferma nella finestra delle lingue di ogni opera
+  con frasi salvate), senza script sul database.
+- Fuori piano, chiesti da Niki: finestra d'importazione sulla `Dialog` comune a
+  due colonne; scelta del libro in «Crea traduzione» con elenco a ricerca.
+- Resta: verifica finale (test da riallineare alla nuova struttura).
+

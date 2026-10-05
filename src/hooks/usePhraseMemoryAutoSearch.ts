@@ -42,7 +42,8 @@ export function usePhraseMemoryAutoSearch(
     model: s.activeWorkspace?.embeddingModel,
     all: s.activeWorkspace?.memorySearchAllWorkspaces,
   }));
-  const languagePairKey = usePipelineStore((s) => `${s.config.sourceLanguage}|${s.config.targetLanguage}`);
+  // Solo la lingua di arrivo filtra: una frase tradotta in un'altra lingua non aiuta.
+  const targetLanguageKey = usePipelineStore((s) => s.workLanguages.target.code ?? '');
   const chunksSearchKey = useChunksStore((s) =>
     s.chunks.map((c) => `${c.id}:${c.sourceProcessingText ?? ''}`).join('\u001f'),
   );
@@ -52,7 +53,7 @@ export function usePhraseMemoryAutoSearch(
   const runSearch = useCallback(() => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
-    const config = usePipelineStore.getState().config;
+    const { config, workLanguages } = usePipelineStore.getState();
     const activeWorkspace = useWorkspaceStore.getState().activeWorkspace;
     const chunks = useChunksStore.getState().chunks;
     const { setSearchStatus } = usePhraseMemoryStore.getState();
@@ -94,8 +95,7 @@ export function usePhraseMemoryAutoSearch(
           threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
           maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
           allWorkspaces: activeWorkspace.memorySearchAllWorkspaces,
-          sourceLanguage: config.sourceLanguage,
-          targetLanguage: config.targetLanguage,
+          targetLanguage: workLanguages.target.code ?? undefined,
         });
         if (requestIdRef.current !== requestId) return;
 
@@ -137,7 +137,7 @@ export function usePhraseMemoryAutoSearch(
   }, []);
 
   const runSearchForChunk = useCallback(async (chunkId: string) => {
-    const config = usePipelineStore.getState().config;
+    const { config, workLanguages } = usePipelineStore.getState();
     const activeWorkspace = useWorkspaceStore.getState().activeWorkspace;
     const chunk = useChunksStore.getState().chunks.find((entry) => entry.id === chunkId);
     const { setMatches, setSearchStatus } = usePhraseMemoryStore.getState();
@@ -172,8 +172,7 @@ export function usePhraseMemoryAutoSearch(
         threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
         maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
         allWorkspaces: activeWorkspace.memorySearchAllWorkspaces,
-        sourceLanguage: config.sourceLanguage,
-        targetLanguage: config.targetLanguage,
+        targetLanguage: workLanguages.target.code ?? undefined,
       });
       if (requestIdRef.current !== requestId) return;
       setMatches(chunkId, matches);
@@ -216,7 +215,7 @@ export function usePhraseMemoryAutoSearch(
     requestIdRef.current += 1;
     const memory = usePhraseMemoryStore.getState();
     for (const id of memory.matchesByChunk.keys()) memory.clearMatches(id);
-  }, [workspaceScopeKey, languagePairKey]);
+  }, [workspaceScopeKey, targetLanguageKey]);
 
   useEffect(() => {
     if (!auto) return;
@@ -229,7 +228,7 @@ export function usePhraseMemoryAutoSearch(
   }, [
     activeWorkspaceId,
     workspaceScopeKey,
-    languagePairKey,
+    targetLanguageKey,
     auto,
     autoSearchPhraseMemory,
     chunksSearchKey,

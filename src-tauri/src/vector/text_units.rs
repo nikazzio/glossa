@@ -60,6 +60,8 @@ fn db(error: rusqlite::Error) -> EmbeddingError {
     EmbeddingError::Http(error.to_string())
 }
 
+pub use super::text_languages::{project_languages, revision_language, LanguageLabel};
+
 pub fn dimensions(model: &str) -> Result<usize, EmbeddingError> {
     match model {
         "text-embedding-3-small" => Ok(1536),
@@ -127,7 +129,7 @@ pub fn put_embedding(
     Ok(())
 }
 
-fn record_fact(
+pub(crate) fn record_fact(
     conn: &Connection,
     event_type: &str,
     entity_type: &str,
@@ -167,10 +169,10 @@ pub fn new_revision(
     conn: &Connection,
     unit: &str,
     role: &str,
-    language: &str,
+    language: &LanguageLabel,
     text: &str,
 ) -> Result<String, EmbeddingError> {
-    if text.trim().is_empty() || language.trim().is_empty() {
+    if text.trim().is_empty() || language.code.trim().is_empty() {
         return Err(EmbeddingError::Parse(
             "Text and language are required".into(),
         ));
@@ -178,9 +180,9 @@ pub fn new_revision(
     let id: String = conn
         .query_row("SELECT lower(hex(randomblob(16)))", [], |r| r.get(0))
         .map_err(db)?;
-    conn.execute("INSERT INTO text_unit_revisions (id, unit_id, role, language, text, content_hash, revision_number)
-        SELECT ?1, ?2, ?3, ?4, ?5, ?6, COALESCE(MAX(revision_number),0)+1 FROM text_unit_revisions WHERE unit_id=?2 AND role=?3 AND language=?4",
-        params![id, unit, role, language, text, fnv1a_hex(text)]).map_err(db)?;
+    conn.execute("INSERT INTO text_unit_revisions (id, unit_id, role, language, language_variety, language_note, text, content_hash, revision_number)
+        SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, COALESCE(MAX(revision_number),0)+1 FROM text_unit_revisions WHERE unit_id=?2 AND role=?3 AND language=?4",
+        params![id, unit, role, language.code, language.variety, language.note, text, fnv1a_hex(text)]).map_err(db)?;
     record_fact(
         conn,
         "text.revision.created",
@@ -334,7 +336,7 @@ pub fn update(conn: &mut Connection, input: UpdateInput) -> Result<u32, Embeddin
             &tx,
             &entry.unit_id,
             "source",
-            &entry.source_language,
+            &revision_language(&tx, &entry.source_revision_id)?,
             source,
         )?;
         for embedding in &input.embeddings {
@@ -354,7 +356,7 @@ pub fn update(conn: &mut Connection, input: UpdateInput) -> Result<u32, Embeddin
             &tx,
             &entry.unit_id,
             "translation",
-            &entry.target_language,
+            &revision_language(&tx, &entry.target_revision_id)?,
             target,
         )?
     } else {
@@ -387,12 +389,12 @@ pub fn save_pairs(
     project: &str,
     chunk: &str,
     model: &str,
-    source_language: &str,
-    target_language: &str,
     pairs: Vec<PhrasePair>,
 ) -> Result<u32, EmbeddingError> {
     dimensions(model)?;
     let tx = conn.transaction().map_err(db)?;
+    // Le lingue sono quelle dell'opera da cui nasce la frase, lette qui: una sola fonte.
+    let (source_language, target_language) = project_languages(&tx, project)?;
     let (workspace,project_name,chunk_source,chunk_target,position,approved): (Option<String>,String,String,String,Option<i64>,Option<String>)=tx.query_row(
         "SELECT p.workspace_id,p.name,t.source_processing_text,t.translation_processing_text,t.position,t.approved_revision_id
         FROM projects p JOIN translations t ON t.project_id=p.id WHERE p.id=?1 AND t.id=?2 AND t.translation_locked=1",
@@ -426,7 +428,7 @@ pub fn save_pairs(
         }
         validate_embedding(model, &pair.source_embedding)?;
         let existing: Option<(String,String)>=tx.query_row("SELECT id,source_revision_id FROM phrase_memory_entries WHERE project_id=?1 AND chunk_id=?2 AND source_phrase=?3 AND target_phrase=?4 AND source_language=?5 AND target_language=?6",
-            params![project,chunk,source,target,source_language,target_language],|r|Ok((r.get(0)?,r.get(1)?))).optional().map_err(db)?;
+            params![project,chunk,source,target,source_language.code,target_language.code],|r|Ok((r.get(0)?,r.get(1)?))).optional().map_err(db)?;
         if let Some((_, revision)) = existing {
             put_embedding(
                 &tx,
@@ -454,8 +456,8 @@ pub fn save_pairs(
             "sourceTitle":book.as_ref().map(|b|&b.2),"sourceVersionLabel":book.as_ref().map(|b|&b.3),"selection":{"exact":source,"start":position_start,"end":position_start.map(|start|start+source.chars().count())}});
         tx.execute("INSERT INTO text_units(id,source_id,source_version_id,workspace_id,provenance) VALUES(?1,?2,?3,?4,?5)",
             params![unit,book.as_ref().map(|b|&b.0),book.as_ref().map(|b|&b.1),workspace,provenance.to_string()]).map_err(db)?;
-        let sr = new_revision(&tx, &unit, "source", source_language, source)?;
-        let tr = new_revision(&tx, &unit, "translation", target_language, target)?;
+        let sr = new_revision(&tx, &unit, "source", &source_language, source)?;
+        let tr = new_revision(&tx, &unit, "translation", &target_language, target)?;
         tx.execute("INSERT INTO phrase_memory(id,unit_id,source_revision_id,target_revision_id,project_id,chunk_id,confidence,work) VALUES(?1,?1,?2,?3,?4,?5,?6,?7)",
             params![unit,sr,tr,project,chunk,pair.confidence.clamp(0.0,1.0),book.as_ref().map(|b|&b.2)]).map_err(db)?;
         put_embedding(

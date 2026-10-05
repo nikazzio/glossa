@@ -12,8 +12,6 @@ interface DbPipeline {
   id: string;
   project_id: string;
   name: string;
-  source_language: string;
-  target_language: string;
   pipeline_mode: string | null;
   stages: string;
   judge_prompt: string;
@@ -80,8 +78,6 @@ function rowToPipeline(row: DbPipeline): Pipeline {
     id: row.id,
     projectId: row.project_id,
     name: row.name,
-    sourceLanguage: row.source_language,
-    targetLanguage: row.target_language,
     mode: toPipelineMode(row.pipeline_mode),
     runStatus: toPipelineRunStatus(row.run_status),
     lastRunConfig: row.last_run_config ?? null,
@@ -93,8 +89,6 @@ function rowToPipeline(row: DbPipeline): Pipeline {
 function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assignedGlossaryId: string | null): PipelineConfig {
   return {
     pipelineId: row.id,
-    sourceLanguage: row.source_language,
-    targetLanguage: row.target_language,
     mode: toPipelineMode(row.pipeline_mode),
     stages: buildStagesForMode(toPipelineMode(row.pipeline_mode), parseJson<PipelineStageConfig[]>(row.stages, [])),
     judgePrompt: row.judge_prompt,
@@ -173,13 +167,11 @@ export async function getPipelineConfig(pipelineId: string): Promise<{
 export async function createPipeline(
   projectId: string,
   name: string,
-  sourceLanguage: string,
-  targetLanguage: string,
 ): Promise<string> {
   const id = generateId('pipeline');
   await execute(
-    `INSERT INTO pipelines (id, project_id, name, source_language, target_language) VALUES ($1, $2, $3, $4, $5)`,
-    [id, projectId, name, sourceLanguage, targetLanguage],
+    `INSERT INTO pipelines (id, project_id, name) VALUES ($1, $2, $3)`,
+    [id, projectId, name],
   );
   return id;
 }
@@ -199,17 +191,16 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
 
   await execute(
     `INSERT INTO pipelines (
-       id, project_id, name, source_language, target_language, pipeline_mode,
+       id, project_id, name, pipeline_mode,
        stages, judge_prompt, judge_model, judge_provider,
        use_chunking, words_per_chunk,
        review_provider_options,
        blob_budget_tokens, blob_overlap, few_shot_examples,
        use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results,
        work_brief, coherence_prompt, prompt_composition
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
     [
       newId, source.project_id, newName,
-      source.source_language, source.target_language,
       source.pipeline_mode ?? 'standard',
       source.stages, source.judge_prompt, source.judge_model, source.judge_provider,
       source.use_chunking, source.words_per_chunk,
@@ -240,31 +231,27 @@ function buildPipelineConfigUpdate(
 ): { query: string; params: unknown[] } {
   return {
     query: `UPDATE pipelines SET
-       source_language          = $1,
-       target_language          = $2,
-       pipeline_mode            = $3,
-       stages                   = $4,
-       judge_prompt             = $5,
-       judge_model              = $6,
-       judge_provider           = $7,
-       use_chunking             = $8,
-       words_per_chunk       = $9,
-       review_provider_options  = $10,
-       blob_budget_tokens       = $11,
-       blob_overlap             = $12,
-       coherence_prompt         = $13,
-       few_shot_examples        = $14,
-       use_phrase_memory        = $15,
-       auto_search_phrase_memory = $16,
-       phrase_memory_similarity_threshold = $17,
-       phrase_memory_max_results = $18,
-       work_brief               = $19,
-       prompt_composition       = $20,
+       pipeline_mode            = $1,
+       stages                   = $2,
+       judge_prompt             = $3,
+       judge_model              = $4,
+       judge_provider           = $5,
+       use_chunking             = $6,
+       words_per_chunk       = $7,
+       review_provider_options  = $8,
+       blob_budget_tokens       = $9,
+       blob_overlap             = $10,
+       coherence_prompt         = $11,
+       few_shot_examples        = $12,
+       use_phrase_memory        = $13,
+       auto_search_phrase_memory = $14,
+       phrase_memory_similarity_threshold = $15,
+       phrase_memory_max_results = $16,
+       work_brief               = $17,
+       prompt_composition       = $18,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $21`,
+     WHERE id = $19`,
     params: [
-      config.sourceLanguage,
-      config.targetLanguage,
       config.mode ?? 'standard',
       JSON.stringify(config.stages),
       config.judgePrompt,

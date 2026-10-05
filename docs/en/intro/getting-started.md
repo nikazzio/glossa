@@ -28,7 +28,7 @@ connection under **Settings → Provider**.
 1. Create a workspace: a group of projects and shared resources.
 2. Create a project in that workspace and import a document.
 3. Check the extracted text and segment boundaries in the import preview.
-4. Set the languages, pipeline mode, providers and models for the active stages.
+4. Set the languages of the work, pipeline mode, providers and models for the active stages.
 5. Run a test on a representative segment and compare the result with the source.
 6. Process the remaining segments, review the translations and export the document.
 

@@ -1,5 +1,5 @@
-import { BookPlus, CircleCheck, Layers, Loader2, RefreshCcw } from 'lucide-react';
-import { useState } from 'react';
+import { BookPlus, CircleCheck, Globe, Layers, Loader2, RefreshCcw } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePhraseMemoryAutoSearch } from '../../../hooks/usePhraseMemoryAutoSearch';
@@ -12,6 +12,9 @@ import { CopyButton, EmptyState, IconButton, PanelSection, SettingRow, StatRow }
 import { PhraseProvenance } from '../../library/PhraseProvenance';
 import { usePhraseProvenanceLookup, type PhraseProvenanceLookup } from '../../../hooks/usePhraseProvenanceLookup';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
+import { useProjectStore } from '../../../stores/projectStore';
+import { reportUiError } from '../../../utils/reportUiError';
+import { memoryCircle, orderByCircle, type MemoryCircle } from '../../../utils/memoryCircles';
 import { ExtractTermDialog } from '../ExtractTermDialog';
 import type { TranslationChunk } from '../../../types';
 
@@ -51,7 +54,23 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
 
   const effectiveThreshold = Number.isFinite(threshold) ? threshold : DEFAULT_THRESHOLD;
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspace?.id ?? null);
+  const searchAllWorkspaces = useWorkspaceStore((s) => s.activeWorkspace?.memorySearchAllWorkspaces ?? false);
+  const updateActiveWorkspace = useWorkspaceStore((s) => s.updateActiveWorkspace);
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const lookup = usePhraseProvenanceLookup(matches);
+  const orderedMatches = useMemo(
+    () => orderByCircle(matches, currentProjectId, activeWorkspaceId),
+    [matches, currentProjectId, activeWorkspaceId],
+  );
+
+  // Il terzo cerchio: la scelta resta del workspace, ma si comanda da qui, dove si vedono i risultati.
+  const toggleAllWorkspaces = async () => {
+    try {
+      await updateActiveWorkspace({ memorySearchAllWorkspaces: !searchAllWorkspaces });
+    } catch (err: unknown) {
+      reportUiError(t('memory.searchScopeSaveFailed'), err);
+    }
+  };
 
   const handleThresholdChange = (value: number) => {
     setConfig((prev) => ({ ...prev, phraseMemorySimilarityThreshold: value }));
@@ -74,6 +93,18 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
           label={t('memory.referencesMemorySectionTitle')}
           hint={t('memory.selectionHint')}
           actions={
+            <>
+            <IconButton
+              size="md"
+              tone={searchAllWorkspaces ? 'accent' : 'default'}
+              ariaPressed={searchAllWorkspaces}
+              title={t(searchAllWorkspaces ? 'memory.searchAllWorkspacesOn' : 'memory.searchAllWorkspacesOff')}
+              onClick={() => void toggleAllWorkspaces()}
+              disabled={!activeWorkspaceId || searchStatus === 'searching'}
+              tooltipSide="left"
+            >
+              <Globe size={13} />
+            </IconButton>
             <IconButton
               size="md"
               tone={searchStatus === 'searching' ? 'running' : 'default'}
@@ -86,6 +117,7 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
                 ? <Loader2 size={13} className="animate-spin" />
                 : <RefreshCcw size={13} />}
             </IconButton>
+            </>
           }
         >
           <SettingRow label={t('memory.similarityThreshold')}>
@@ -107,10 +139,11 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
       {hasMatches ? (
         <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
           <div className="divide-y divide-rule">
-            {matches.map((match) => (
+            {orderedMatches.map((match) => (
               <MatchRow
                 key={match.id}
                 match={match}
+                circle={memoryCircle(match, currentProjectId, activeWorkspaceId)}
                 enabled={enabledMatchIds.has(match.id)}
                 lookup={lookup}
                 currentWorkspaceId={activeWorkspaceId}
@@ -138,6 +171,7 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
 
 interface MatchRowProps {
   match: PhraseMemoryMatch;
+  circle: MemoryCircle;
   enabled: boolean;
   lookup: PhraseProvenanceLookup;
   currentWorkspaceId: string | null;
@@ -145,7 +179,7 @@ interface MatchRowProps {
   onExtractTerm: () => void;
 }
 
-function MatchRow({ match, enabled, lookup, currentWorkspaceId, onToggle, onExtractTerm }: MatchRowProps) {
+function MatchRow({ match, circle, enabled, lookup, currentWorkspaceId, onToggle, onExtractTerm }: MatchRowProps) {
   const { t } = useTranslation();
   return (
     <div className="flex items-start gap-3 py-3">
@@ -160,7 +194,10 @@ function MatchRow({ match, enabled, lookup, currentWorkspaceId, onToggle, onExtr
         <CircleCheck size={14} />
       </IconButton>
       <div className="min-w-0 flex-1 space-y-2">
-        <span className="font-mono text-xs text-editorial-muted">{Math.round(match.score * 100)}%</span>
+        <span className="flex items-baseline gap-2 text-xs text-editorial-muted">
+          <span className="font-mono">{Math.round(match.score * 100)}%</span>
+          <span className={circle === 'document' ? 'text-editorial-accent' : ''}>{t(`memory.circle.${circle}`)}</span>
+        </span>
         <p className="text-sm leading-relaxed text-editorial-charcoal">{match.sourcePhrase}</p>
         <p className="text-sm leading-relaxed text-editorial-ink">{match.targetPhrase}</p>
         {match.embeddingModel && <dl><StatRow label={t('library.embeddingModel')} value={match.embeddingModel} /></dl>}

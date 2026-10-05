@@ -209,6 +209,7 @@ function EditorView() {
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const leaveProject = useProjectStore((state) => state.leaveProject);
+  const updateWorkLanguages = useProjectStore((state) => state.updateWorkLanguages);
   const navigate = useUiStore((state) => state.navigate);
   const leaveTranslation = useCallback(async () => {
     if (await leaveProject()) navigate({ area: 'translations' });
@@ -282,8 +283,6 @@ function EditorView() {
       : config.stages;
     const updatedConfig = {
       ...config,
-      sourceLanguage: pipelineConfig?.sourceLanguage ?? config.sourceLanguage,
-      targetLanguage: pipelineConfig?.targetLanguage ?? config.targetLanguage,
       stages: updatedStages,
       useChunking: pendingImport.useChunking,
       wordsPerChunk,
@@ -300,6 +299,16 @@ function EditorView() {
       chunkedWithContextWindow: contextWindow,
     };
     setConfig(() => updatedConfig);
+    if (pipelineConfig) {
+      try {
+        await updateWorkLanguages(pipelineConfig.languages);
+      } catch (err: unknown) {
+        logger.error('saveWorkLanguages after import failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        toast.warning(t('files.languagesSaveAfterImportFailed'));
+      }
+    }
     loadDocument(
       pendingImport.rawText,
       {
@@ -338,6 +347,7 @@ function EditorView() {
     setConfig,
     setShowConfigDrawer,
     t,
+    updateWorkLanguages,
   ]);
 
   return (

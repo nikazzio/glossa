@@ -24,10 +24,63 @@ Verifica i confini prima di confermare: essi determinano le unità di traduzione
 e revisione. I dettagli su formati, limiti e note importate sono nel
 [riferimento per importazione ed esportazione](../reference/import-export).
 
+## Lingue dell’opera
+
+Le lingue appartengono all’opera tradotta, non alle sue pipeline: valgono per
+tutte le pipeline dell’opera, che non hanno più una coppia di lingue. Il
+prompt di traduzione è guidato dal **Contesto di traduzione**; solo DeepL
+conserva una coppia propria nelle opzioni della sua fase, perché il servizio
+richiede codici.
+
+Partenza e Arrivo hanno ciascuno tre campi facoltativi:
+
+- **Lingua**: codice ISO 639-3 del registro ufficiale SIL, quello dei cataloghi
+  bibliotecari, comprese lingue storiche (latino, greco antico, francese antico
+  e medio, provenzale/occitano antico, spagnolo antico, inglese antico e
+  medio, alto tedesco antico e medio, anglo-normanno e altre). Si cerca per
+  nome italiano, nome inglese o codice; a ricerca vuota l’elenco mostra
+  «Già usate nel workspace» e «Lingue storiche», scrivendo si cercano tutte le
+  circa 7.900 lingue. I nomi sono in italiano dove esiste un nome standard,
+  altrimenti l’inglese ufficiale.
+- **Varietà**: una varietà di Glottolog, offerta solo tra quelle della lingua
+  scelta (latino: tardo latino, latino medievale, latino volgare; italiano:
+  italiano antico, fiorentino, laziale, cicolano-reatino-aquilano). Resta
+  disabilitata finché non scegli una lingua.
+- **Nota**: testo libero per ciò che i codici non dicono (epoca, area, mano),
+  per esempio «volgare padano, sec. XV».
+
+Ogni campo può restare vuoto («non indicata») e ha una X per svuotarlo. Una
+nuova opera parte con partenza non indicata e arrivo italiano.
+
+Limiti: gli standard non hanno un codice per latino medievale, italiano antico
+o catalano antico come lingue; Glottolog non elenca una varietà «latino
+classico»; le lingue regionali italo-romanze (veneto, lombardo, ligure,
+napoletano, siciliano…) sono lingue separate con sole varietà moderne; non
+esistono varietà d’area medievali, per cui si usa la nota. Per un trattato di
+scherma volgare del Quattrocento: italiano + italiano antico + nota, oppure la
+lingua regionale + nota. L’elenco delle lingue è incluso nell’app e funziona
+senza rete; non c’è ancora un comando per aggiornarlo.
+
+Dove si impostano: nella finestra di importazione e nella riga in cima allo
+Studio. Lì, accanto a nome e modalità della pipeline, la coppia compare in
+breve («Latino (Medieval Latin) → Italiano»); il suggerimento mostra le note.
+Un clic apre la finestra **Lingue dell’opera** con gli stessi campi, Annulla e
+Conferma: senza conferma non si salva nulla. Mentre la pipeline lavora il
+comando è visibile ma bloccato, con il motivo nel suggerimento. Se l’opera non
+ha lingua di partenza e viene da un libro della Biblioteca la cui lingua
+corrisponde a una lingua nota, la partenza è proposta già compilata (da
+confermare); nella finestra di importazione si precompila allo stesso modo.
+
+Dopo ogni conferma, se la memoria contiene frasi salvate da questa opera con
+lingue diverse, l’app chiede se darle le lingue dell’opera: testo e misure di
+somiglianza restano uguali e la versione precedente resta nella cronologia. Vale
+anche per allineare frasi salvate prima. Vedi la
+[memoria di frasi](./phrase-memory).
+
 ## Configurazione
 
 Apri la configurazione della pipeline (l’ingranaggio nella riga in cima allo
-Studio) e imposta Contesto di traduzione, modalità, provider, modelli e istruzioni; scegli le lingue soltanto per DeepL: le
+Studio) e imposta Contesto di traduzione, modalità, provider, modelli e istruzioni; le lingue stanno nell’opera (vedi sotto) e solo DeepL ha una propria coppia: le
 linguette sono descritte nella [configurazione della pipeline](../reference/pipeline-config). Le modalità definiscono questa sequenza:
 
 | Modalità | Elaborazione |
@@ -67,7 +120,7 @@ principale a sinistra resta in vista e porta a qualunque area, chiudendo la
 traduzione. Mentre la pipeline lavora le sue voci sono spente, come il ritorno
 al catalogo.
 
-In cima, la barra mostra opera / pipeline e il tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano; il suggerimento mostra il nome completo. Il nome dell’opera si rinomina con un clic. Il nome della pipeline, con la piccola freccia accanto, apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. La coppia linguistica compare solo con DeepL. A destra stanno importa, esporta, risorse linguistiche ed eliminazione.
+In cima, la barra mostra opera / pipeline e il tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano; il suggerimento mostra il nome completo. Il nome dell’opera si rinomina con un clic. Il nome della pipeline, con la piccola freccia accanto, apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. Accanto compaiono le lingue dell’opera in forma breve (vedi [Lingue dell’opera]). A destra stanno importa, esporta, risorse linguistiche ed eliminazione.
 
 Al centro i due fogli affiancano originale e traduzione. Sopra di loro, a
 sinistra, il numero del frammento aperto; al centro una finestra di sette

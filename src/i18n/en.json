@@ -1143,6 +1143,11 @@
     "sourceBook": "Source book and version",
     "sourceBookUnspecified": "Book not specified",
     "sourceBookHint": "Explicitly link a Library version. The imported file name does not determine the book.",
+    "chooseSourceBook": "Choose the book",
+    "searchSourceBook": "Search by title or copy",
+    "sourceBookGroup": "Library books",
+    "noSourceBookFound": "No book found",
+    "clearSourceBook": "No book",
     "sourceBookLoadError": "Could not load available books"
   },
   "transcription": {
@@ -1918,8 +1923,6 @@
     "technicalSummary": "Technical summary",
     "createdAt": "Created",
     "memoryScope": "Memory scope",
-    "memorySearchAllWorkspaces": "Also search other workspaces’ memory",
-    "memorySearchAllWorkspacesHint": "Includes phrases from other workspaces and without a workspace, for the same language pair. When the embedding model is recorded, it must match the workspace model; each reference shows its origin.",
     "workspaceScoped": "Workspace-scoped",
     "pipelineBadge_one": "1 pipeline",
     "pipelineBadge_other": "{{count}} pipelines",
@@ -2064,6 +2067,7 @@
     "import": "Import text file",
     "imported": "File imported successfully",
     "importError": "Import failed",
+    "languagesSaveAfterImportFailed": "The work’s languages could not be saved",
     "pipelineSaveAfterImportFailed": "Pipeline config could not be saved",
     "backupExportSuccess": "Backup saved",
     "backupImportSuccess": "Restore complete",
@@ -2098,6 +2102,8 @@
     "importCoherenceOk": "All text accounted for",
     "importCoherenceWarning": "~{{pct}}% of words may be missing after chunking — check the settings",
     "importModelLabel": "Model",
+    "importSegmentationLabel": "Splitting into chunks",
+    "importViewLabel": "Preview view",
     "chunkShort": "Short",
     "chunkShortTitle": "~400 words per chunk — maximum granularity",
     "chunkMedium": "Medium",
@@ -2478,17 +2484,17 @@
           {
             "title": "Configuring stages",
             "paragraphs": [
-              "The Studio bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover shows the full name. The pipeline name opens the menu to select, create, rename or delete; the gear opens options. The language pair appears only for DeepL. Pipeline operations are blocked while processing.",
+              "The Studio bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover shows the full name. The pipeline name opens the menu to select, create, rename or delete; the gear opens options. Next to them is the work’s language pair in short, the same for all its pipelines. Pipeline operations are blocked while processing.",
               "The red icon at the bottom of the window resets all translations and their audits, after a confirmation. It is off, with the reason, while the pipeline runs or when there is nothing to reset.",
               "Next to each prompt title you see where its text comes from: Default, Custom or the name of the saved template in use."
             ],
             "steps": [
               "Open the configuration with the gear in the Studio's top row, or with Ctrl + comma. The title is the pipeline name; the tabs are General, Stages, Quality control, Memory, Glossary and Prompt preview.",
-              "In General choose the mode and edit the Translation context with the pencil: languages, historical varieties, audience and register. Confirm with the checkmark or discard with X. It is never empty: it starts from a default text (English into Italian) that you can rewrite or replace with a saved template; the circular arrow restores it. Translation, refinement, audit and coherence receive it; languages are never added automatically to LLM prompts. The DeepL pair stays visible and is enabled only in DeepL mode. Unused stages are disabled; switching modes preserves their configuration.",
+              "In General choose the mode and edit the Translation context with the pencil: audience and register. Languages are not set here: they are the work’s Languages. Confirm with the checkmark or discard with X. It is never empty: it starts from a default text (English into Italian) that you can rewrite or replace with a saved template; the circular arrow restores it. Translation, refinement, audit and coherence receive it; languages are never added automatically to LLM prompts. The DeepL pair stays visible and is enabled only in DeepL mode. Unused stages are disabled; switching modes preserves their configuration.",
               "In Stages and Quality control choose service, model and instructions for each stage. Once translations exist the model is closed by the lock: opening it leaves already translated chunks on the previous model. Explanations appear when you hover titles and rows.",
               "In Memory set phrase memory and translation examples (DeepL mode does not use them); in Glossary assign the dictionary and save its terms with the disk icon.",
               "Prompt preview shows each phase’s request piece by piece, each marked as fixed, yours, data or automatic with where it is changed; absent pieces stay disabled with the reason. Audit and Coherence show complete messages, DeepL the API request body. Expand text with the eye and copy it in full with the clipboard. Placeholders represent chunk data and optional context. The backend builds requests as for execution, without contacting services. Unused stages are disabled; audit and coherence remain available with DeepL.",
-              "Choose a separate language pair for standard translation in the DeepL stage. Automatic source detection is available, but a glossary requires an explicit source. DeepL Context is separate from the Translation context. Previews and logs show the API body; the configuration preview uses a chunk-text placeholder."
+              "Pipelines have no language pair of their own: in the DeepL stage choose the pair for standard translation. Automatic source detection is available, but a glossary requires an explicit source. DeepL Context is separate from the Translation context. Previews and logs show the API body; the configuration preview uses a chunk-text placeholder."
             ]
           },
           {
@@ -2521,7 +2527,7 @@
             "title": "The translation studio",
             "paragraphs": [
               "The main bar stays on the left: from there you move to another area, and the translation closes. While the pipeline is running its entries are off.",
-              "The top row leads back to the catalogue and shows the translation name and the open pipeline with its languages: click the work name to rename it, the pipeline name opens the menu to select, rename, create or delete one, the gear opens its options. On the right are import, export, the workspace language resources, configuration and delete.",
+              "The top row leads back to the catalogue and shows the translation name and the open pipeline, the mode and, in short, the work’s language pair (click it to open “Work languages”): click the work name to rename it, the pipeline name opens the menu to select, rename, create or delete one, the gear opens its options. On the right are import, export, the workspace language resources, configuration and delete.",
               "The Tools column on the right starts with translate, Multiple chunks with the number of segments and the costs. Below are Glossary, Memory (similar phrases and extraction), Preview, Review (Audit, Notes, Source notes and History) and Document (Index, Statistics and Coherence). Collapsed, it keeps only the translate button visible."
             ]
           },
@@ -2530,6 +2536,9 @@
             "paragraphs": [
               "Use Import in the studio’s top row. Supported formats are TXT and Markdown up to 50 MiB, DOCX up to 100 MiB and PDF up to 50 MiB. DOCX extraction is experimental; PDFs must contain text rather than images alone.",
               "Check the preview before confirming. Automatic segmentation divides text using a target word count. Markdown provides additional heading options.",
+              "The import window opens large. On the left are Work languages, Model and Chunk splitting; on the right the counts, the card or segment view (two small round icons) and the chunk preview at full height. At the bottom are the word check, Cancel and Import.",
+              "Work languages apply to all its pipelines. For each side, Source and Target, you can choose the Language (historical ones too, searchable by Italian name, English name or code), the Variety (only those of the chosen language, for example medieval Latin; disabled until you choose a language) and a free Note on period, area or hand. All are optional and the x clears a field. A new work starts with source not specified and target Italian; if the Library knows the book’s language, it is proposed as the source.",
+              "You can change them later from the Studio top row: click the pair next to pipeline and mode, edit, and press Confirm (nothing is saved otherwise). This is blocked while the pipeline runs. If phrases saved from this work have other languages, Glossa asks whether to update them: text and measures do not change and the previous version stays in the history.",
               "Choose a size appropriate for the text and review segment boundaries. Text files using an encoding other than UTF-8 must be converted before import."
             ]
           },
@@ -2616,9 +2625,9 @@
           {
             "title": "Using saved phrases",
             "paragraphs": [
-              "Open Memory → References for the chunk. Glossa compares only texts with the same language pair and an embedding matching the workspace model, dimensions and input profile. Adjust the similarity threshold and select relevant references.",
-              "Each reference shows the book when known, workspace, translation and source chunk, plus the model used. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
-              "In workspace settings enable “Search memory from other workspaces too” and save to include other workspaces and unassigned phrases. Language and embedding compatibility still apply. Viewing a phrase does not link it to this workspace."
+              "Open Memory → References for the chunk. Glossa filters only by the target language and compares texts with an embedding matching the workspace model, dimensions and input profile. Adjust the similarity threshold and select relevant references.",
+              "Each reference shows its origin (“this document”, “other work in the workspace” or “other workspace”), the book when known, the translation and the source chunk, plus the model used. Results from this document come first, then the workspace, then the rest. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
+              "The globe next to refresh extends the search to other workspaces and unassigned phrases; the choice is remembered per workspace and is no longer in workspace settings. The target language and embedding compatibility still apply. Viewing a phrase does not link it to this workspace."
             ]
           },
           {
@@ -2894,7 +2903,7 @@
           {
             "title": "Creating and identifying a project",
             "paragraphs": [
-              "Create a translation with the «+» next to the Translations title, or from the workspace page. The window asks for the name, the workspace (unless it already knows it) and, optionally, the file to translate, in the same formats as the editor import. The file is read as soon as you choose it: if it cannot be read, for example a scanned PDF with no text or a file not in UTF-8, the reason appears under the field and nothing is created. Pressing Create opens the translation in the editor with the import preview, where you choose languages and segments; if you close the preview the translation stays empty and you can import the file later from the editor. The workspace name, description and icon are edited in its settings.",
+              "Create a translation with the «+» next to the Translations title, or from the workspace page. The window asks for the name, the workspace (unless it already knows it) and, optionally, the file to translate, in the same formats as the editor import. The file is read as soon as you choose it: if it cannot be read, for example a scanned PDF with no text or a file not in UTF-8, the reason appears under the field and nothing is created. The chosen book shows its title in its row; the book icon opens a searchable list (title, with the copy below) and the x removes it. Pressing Create opens the translation in the editor with the import preview, where you choose Work languages and segments; if you close the preview the translation stays empty and you can import the file later from the editor. The workspace name, description and icon are edited in its settings.",
               "A project can contain multiple pipelines with separate settings and results. Select the pipeline you want to work on before changing its configuration."
             ]
           },
@@ -3341,17 +3350,44 @@
     "estimateDetails": "Estimated cost details",
     "actualDetails": "Chunk usage details"
   },
-  "languages": {
-    "English": "English",
-    "Italian": "Italian",
-    "Spanish": "Spanish",
-    "French": "French",
-    "German": "German",
-    "Portuguese": "Portuguese",
-    "Japanese": "Japanese",
-    "Chinese": "Chinese",
-    "Korean": "Korean",
-    "Russian": "Russian"
+  "workLanguages": {
+    "title": "Languages of the work",
+    "source": "Source",
+    "target": "Target",
+    "sourceHint": "The language of the original text. It fills in from the book’s language when the Library knows it.",
+    "targetHint": "The language of the translation. Memory References only suggest phrases translated into this language.",
+    "language": "Language",
+    "languageHint": "ISO 639-3 code, the register used by library catalogues. Historical languages included.",
+    "variety": "Variety",
+    "varietyHint": "Variety of the language according to Glottolog, such as Medieval Latin or Old Italian.",
+    "note": "Note",
+    "noteHint": "Whatever code and variety do not say: period, area, hand.",
+    "notePlaceholder": "e.g. Tuscan, 14th century",
+    "notSpecified": "not specified",
+    "chooseLanguage": "Choose the language",
+    "chooseVariety": "Choose the variety",
+    "clearLanguage": "Remove the language",
+    "clearVariety": "Remove the variety",
+    "searchLanguage": "Search by name or code",
+    "searchVariety": "Search the variety",
+    "groupUsed": "Already used in the workspace",
+    "groupHistorical": "Historical languages",
+    "groupAll": "All",
+    "groupVarieties": "Varieties",
+    "typeToSearchAll": "Type to search all languages.",
+    "noResults": "No language found",
+    "varietyNeedsLanguage": "choose the language first",
+    "noVarieties": "Glottolog lists no varieties for this language",
+    "loading": "language list loading",
+    "edit": "Edit the languages of the work",
+    "saveFailed": "The languages of the work could not be saved",
+    "relabelTitle": "Update the saved phrases?",
+    "relabelMessage_one": "Memory holds {{count}} phrase saved from this work with languages other than the ones just confirmed. Give it the work’s languages? Text and measures stay the same; the previous version stays in the history.",
+    "relabelMessage_other": "Memory holds {{count}} phrases saved from this work with languages other than the ones just confirmed. Give them the work’s languages? Text and measures stay the same; the previous version stays in the history.",
+    "relabelConfirm": "Update",
+    "relabelDone_one": "{{count}} phrase updated",
+    "relabelDone_other": "{{count}} phrases updated",
+    "relabelFailed": "The languages of the saved phrases could not be updated"
   },
   "log": {
     "scopePipeline": "Pipeline",
@@ -3397,6 +3433,14 @@
     "dismiss": "Dismiss"
   },
   "memory": {
+    "searchAllWorkspacesOff": "Search other workspaces too: References now come only from this document and its workspace",
+    "searchAllWorkspacesOn": "Search this workspace only: References now also come from other workspaces",
+    "searchScopeSaveFailed": "Could not change where References search",
+    "circle": {
+      "document": "this document",
+      "workspace": "another work in the workspace",
+      "elsewhere": "another workspace"
+    },
     "extractTermButton": "Add to glossary",
     "extractTermTitle": "Extract term",
     "sourcePhraseShort": "Source",

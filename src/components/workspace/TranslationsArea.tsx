@@ -26,7 +26,8 @@ import {
   type TranslationFilters,
 } from '../../utils/translationCatalogFilters';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
-import { TranslationCatalogRow, useLanguageLabel, type TranslationRowProps } from '../projects/TranslationCatalogRow';
+import { TranslationCatalogRow, type TranslationRowProps } from '../projects/TranslationCatalogRow';
+import { useLanguageLabel } from '../../hooks/useLanguageLabel';
 import { TranslationCatalogTable } from '../projects/TranslationCatalogTable';
 import { TranslationQuickFilters } from '../projects/TranslationQuickFilters';
 import { TranslationShelves } from '../projects/TranslationShelves';

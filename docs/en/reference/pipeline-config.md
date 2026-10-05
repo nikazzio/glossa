@@ -17,8 +17,9 @@ when you hover a section title or a row name.
 The bar places **work / pipeline** together, truncating long names and showing
 the full name on hover. The pipeline name, with its small arrow, opens the menu to
 select, create, rename or delete; the gear opens options. **Simple, Editorial
-or DeepL** mode is always visible with an icon. Only DeepL displays a language
-pair in the bar. Pipeline operations stay blocked while processing.
+or DeepL** mode is always visible with an icon. The languages of the work, shared by all its
+pipelines, appear in short form in the bar (see
+[Languages of the work](../guides/document-pipeline)). Pipeline operations stay blocked while processing.
 
 | Tab | Parameters |
 | --- | --- |
@@ -43,7 +44,8 @@ Standard, Editorial and DeepL Hybrid modes are described in the
 
 ## Translation context and DeepL languages
 
-The **Translation context** replaces the language pair for LLMs: languages,
+Pipelines have no language pair: languages belong to the work. For LLMs the
+translation is guided by the **Translation context**: languages,
 historical varieties, audience, register and goal. It is required and never
 empty: a new pipeline starts from a default text (English into Italian) that
 you can rewrite or replace with a saved template; the circular arrow restores
@@ -66,8 +68,7 @@ the pipeline and copied when duplicated.
 The **DeepL · languages** pair remains visible in General, disabled in LLM
 modes and enabled in DeepL. Unused stages remain visible as disabled tabs.
 Switching modes preserves all stage configurations. DeepL retains LLM
-refinement, audit and coherence. General language metadata is still used by
-phrase memory; its configuration will be consolidated with linguistic resources.
+refinement, audit and coherence. Phrase memory uses the languages of the work, not the DeepL ones.
 
 In **Prompt preview**, choose a stage, Audit or Coherence: you see the request
 piece by piece in sending order, split into the **system message**

@@ -49,7 +49,7 @@ fn connection() -> Result<Connection, Box<dyn std::error::Error>> {
     ))?;
     conn.execute_batch(include_str!("../../migrations/0003_text_corpus.sql"))?;
     conn.execute_batch("INSERT INTO workspaces(id,name,created_at) VALUES('ws-a','Archivio',CURRENT_TIMESTAMP),('ws-b','Studio',CURRENT_TIMESTAMP);
-        INSERT INTO projects(id,name,workspace_id) VALUES('project','Traduzione','ws-a');
+        INSERT INTO projects(id,name,workspace_id,source_language,target_language) VALUES('project','Traduzione','ws-a','la','en');
         INSERT INTO translations(id,project_id,source_processing_text,translation_processing_text,position,translation_locked)
         VALUES('chunk','project','Salve amice','Hello friend',2,1);
         INSERT INTO sources(id,title,kind) VALUES('book','Libro medievale','manuscript');
@@ -67,8 +67,6 @@ fn save(conn: &mut Connection, model: &str) -> Result<u32, super::embedding::Emb
         "project",
         "chunk",
         model,
-        "la",
-        "en",
         vec![PhrasePair {
             source_phrase: "Salve".into(),
             target_phrase: "Hello".into(),
@@ -304,8 +302,6 @@ fn equal_texts_from_different_chunks_remain_separate_units() -> TestResult {
         "project",
         "chunk-two",
         SMALL,
-        "la",
-        "en",
         vec![PhrasePair {
             source_phrase: "Salve".into(),
             target_phrase: "Hello".into(),

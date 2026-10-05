@@ -12,7 +12,7 @@ import { AUDIT_PREVIEW_ID, COHERENCE_PREVIEW_ID, useChunkPromptPreview } from '.
 import { PromptMessage } from './PromptCard';
 import { CONDITIONAL_AT_RUN_TIME, PHASE_PARTS, SWITCHABLE_PARTS, isPartOff, withPartSwitch, type PartPlace, type PartSpec, type PreviewPhase } from './promptParts';
 import { SystemTextCard } from './SystemTextCard';
-import { CommandRule } from './PromptSourceLabel';
+import { CommandRule } from '../ui/CommandRule';
 import type { ConfigSection } from './PipelineConfig';
 
 interface PromptPreviewTabProps {

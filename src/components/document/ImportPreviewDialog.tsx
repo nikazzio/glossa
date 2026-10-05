@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlignCenter,
@@ -9,34 +9,34 @@ import {
   CheckCircle2,
   Cpu,
   FileText,
-  Globe,
   Hash,
   Info,
   LayoutGrid,
   RotateCcw,
   Scissors,
   SplitSquareVertical,
-  X,
   type LucideIcon,
 } from 'lucide-react';
 import { buildImportPreview } from '../../utils/documentWorkflow';
 import { findBestSplitIndex, trimSplitFragment } from '../../utils';
-import * as RadixDialog from '@radix-ui/react-dialog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
-import { LANGUAGES } from '../../constants';
 import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { useConfigStore } from '../../stores/configStore';
-import type { ModelProvider } from '../../types';
-import { IconButton, DialogConfirmButton, DialogCancelButton, Select, Tooltip } from '../ui';
+import type { ModelProvider, WorkLanguages } from '../../types';
+import { useProjectStore } from '../../stores/projectStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useLanguageCatalog } from '../../hooks/useLanguageCatalog';
+import { useWorkLanguageSuggestions } from '../../hooks/useWorkLanguageSuggestions';
+import { WorkLanguagesFields } from '../languages/WorkLanguagesFields';
+import { ChoiceDots, CommandRule, Dialog, DialogCancelButton, DialogConfirmButton, IconButton, SectionLabel, Select, Tooltip, type ChoiceDotsOption } from '../ui';
 import { ChunkCard, BoundaryDivider, SegmentEditor } from './ChunkEditor';
 import { type ParagraphChunks, toParagraphChunks, countWords, toFlatModel, fromFlatModel } from '../../utils/paragraphChunks';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ImportDialogPipelineConfig = {
-  sourceLanguage: string;
-  targetLanguage: string;
+  languages: WorkLanguages;
   provider: ModelProvider;
   model: string;
 };
@@ -82,15 +82,25 @@ export function ImportPreviewDialog({
 }: ImportPreviewDialogProps) {
   const { t } = useTranslation();
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
-  const { config } = usePipelineStore();
+  const { config, workLanguages } = usePipelineStore();
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
+  const workspaceId = useWorkspaceStore((s) => s.activeWorkspace?.id ?? null);
+  const languageCatalog = useLanguageCatalog();
+  const { usedCodes, bookLanguageCode } = useWorkLanguageSuggestions(languageCatalog, workspaceId, currentProjectId);
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const chunkPresetShort = useConfigStore((s) => s.chunkPresetShort);
   const chunkPresetMedium = useConfigStore((s) => s.chunkPresetMedium);
   const chunkPresetLong = useConfigStore((s) => s.chunkPresetLong);
 
   const stage0 = config.stages[0];
-  const [sourceLanguage, setSourceLanguage] = useState<string>(config.sourceLanguage);
-  const [targetLanguage, setTargetLanguage] = useState<string>(config.targetLanguage);
+  const [languages, setLanguages] = useState<WorkLanguages>(workLanguages);
+  // La lingua del libro riempie una partenza vuota una volta sola: poi decide chi importa.
+  const bookLanguageApplied = useRef(false);
+  useEffect(() => {
+    if (bookLanguageApplied.current || !bookLanguageCode) return;
+    bookLanguageApplied.current = true;
+    setLanguages((prev) => (prev.source.code ? prev : { ...prev, source: { ...prev.source, code: bookLanguageCode } }));
+  }, [bookLanguageCode]);
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(stage0?.provider ?? 'openai');
   const [selectedModel, setSelectedModel] = useState<string>(stage0?.model ?? '');
   const getProviderModels = useCallback(
@@ -108,19 +118,6 @@ export function ImportPreviewDialog({
 
   const handleModelChange = (model: string) => {
     setSelectedModel(model);
-  };
-
-  const handleSourceLanguageChange = (lang: string) => {
-    setSourceLanguage(lang);
-  };
-
-  const handleTargetLanguageChange = (lang: string) => {
-    setTargetLanguage(lang);
-  };
-
-  const handleSwapLanguages = () => {
-    setSourceLanguage(targetLanguage);
-    setTargetLanguage(sourceLanguage);
   };
 
   // ── Settings: words-per-chunk presets ────────────────────────────────────
@@ -346,8 +343,7 @@ export function ImportPreviewDialog({
   // ── Confirm ───────────────────────────────────────────────────────────────
   const handleConfirm = () => {
     const pipelineConfig: ImportDialogPipelineConfig = {
-      sourceLanguage,
-      targetLanguage,
+      languages,
       provider: selectedProvider,
       model: selectedModel,
     };
@@ -360,311 +356,224 @@ export function ImportPreviewDialog({
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  const viewOptions: ChoiceDotsOption<EditorMode>[] = [
+    { value: 'cards', label: t('files.viewCards'), content: <LayoutGrid size={11} /> },
+    { value: 'segments', label: t('files.viewSegments'), content: <SplitSquareVertical size={11} /> },
+  ];
+
   return (
-    <RadixDialog.Root open onOpenChange={(o) => { if (!o) onCancel(); }}>
-      <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-[200] bg-editorial-ink/30 backdrop-blur-sm" />
-        <RadixDialog.Content
-          aria-labelledby="import-preview-title"
-          className="fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-editorial-border bg-editorial-bg shadow-modal">
+    <Dialog
+      open
+      onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}
+      title={t('files.importPreviewTitle')}
+      eyebrow={fileName}
+      icon={<FileText size={20} />}
+      closeLabel={t('common.close')}
+      compact
+      widthClassName="max-w-6xl"
+      panelClassName="h-[90vh]"
+      bodyClassName="min-h-0 p-0"
+      headerActions={preview.experimental ? (
+        <Tooltip label={t('files.importExperimentalDocxMarkdown')}>
+          <span className="shrink-0 cursor-help"><Info size={14} className="text-editorial-accent" /></span>
+        </Tooltip>
+      ) : null}
+      footer={
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {hasCoherenceIssue ? (
+            <div className="flex items-center gap-2 text-sm text-editorial-warning">
+              <AlertTriangle size={13} className="shrink-0" />
+              {t('files.importCoherenceWarning', { pct: wordLossPct })}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs text-editorial-muted">
+              <CheckCircle2 size={13} className="shrink-0" />
+              {t('files.importCoherenceOk')}
+            </div>
+          )}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <DialogCancelButton onClick={onCancel}>{t('common.cancel')}</DialogCancelButton>
+            <DialogConfirmButton onClick={handleConfirm}>{t('files.importConfirm')}</DialogConfirmButton>
+          </div>
+        </div>
+      }
+    >
+      <div className="flex h-full min-h-0">
+        {/* Colonna delle impostazioni: scorre per conto suo, l'anteprima resta a tutta altezza. */}
+        <aside className="w-96 shrink-0 space-y-6 overflow-y-auto border-r border-rule px-6 py-5 custom-scrollbar">
+          <WorkLanguagesFields catalog={languageCatalog} value={languages} onChange={setLanguages} usedCodes={usedCodes} />
 
-        {/* ── Unified header (filename + title + stats + controls) ───────── */}
-        <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
+          <section className="space-y-2">
+            <SectionLabel icon={Cpu} label={t('files.importModelLabel')} />
+            <div className="flex items-center gap-1.5">
+              <Select
+                value={selectedProvider}
+                onChange={(value) => handleProviderChange(value as ModelProvider)}
+                options={LLM_PROVIDER_ORDER.map((p) => ({ value: p, label: p }))}
+                className="w-28 font-bold uppercase"
+                ariaLabel={t('pipeline.source')}
+              />
+              <Select
+                value={selectedModel}
+                onChange={handleModelChange}
+                disabled={availableModels.length === 0}
+                className="min-w-0 flex-1 font-mono"
+                ariaLabel={t('pipeline.stageModelLabel')}
+                options={
+                  availableModels.length === 0
+                    ? [{ value: '', label: t('ollama.noModels') }]
+                    : availableModels.map((m) => ({ value: m, label: m }))
+                }
+              />
+            </div>
+          </section>
 
-          {/* Row 1: filename + mode toggle + close */}
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-2">
-              <FileText size={15} className="shrink-0 text-editorial-muted" />
-              <span className="truncate text-sm font-mono text-editorial-muted">{fileName}</span>
-              {preview.experimental && (
-                <Tooltip label={t('files.importExperimentalDocxMarkdown')}>
-                  <span className="shrink-0 cursor-help">
-                    <Info size={14} className="text-editorial-accent" />
+          <section className="space-y-2">
+            <SectionLabel icon={Scissors} label={t('files.importSegmentationLabel')} />
+            <div className="flex flex-wrap items-center gap-1">
+              <IconButton
+                size="md"
+                tone={useChunking ? 'accent' : 'default'}
+                onClick={() => onUseChunkingChange(!useChunking)}
+                title={t('pipeline.autoSegment')}
+                ariaPressed={useChunking}
+              >
+                <Scissors size={14} />
+              </IconButton>
+              {markdownAware && (
+                <IconButton
+                  size="md"
+                  tone={headingAware && useChunking ? 'accent' : 'default'}
+                  onClick={() => useChunking && onHeadingAwareChange(!headingAware)}
+                  title={t('pipeline.headingAware')}
+                  disabled={!useChunking}
+                  ariaPressed={headingAware && useChunking}
+                >
+                  <Hash size={14} />
+                </IconButton>
+              )}
+              <IconButton
+                size="md"
+                tone={carryTrailingShortBlocks && useChunking ? 'accent' : 'default'}
+                onClick={() => useChunking && onCarryTrailingShortBlocksChange(!carryTrailingShortBlocks)}
+                title={t('pipeline.trailingShortBlocks')}
+                disabled={!useChunking}
+                ariaPressed={carryTrailingShortBlocks && useChunking}
+              >
+                <ArrowLeftRight size={14} />
+              </IconButton>
+              {useChunking && <CommandRule />}
+              {/* Preset — stessa posizione sempre, si colora d'avviso se ci sono modifiche a mano */}
+              {useChunking && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
+                <IconButton
+                  key={words}
+                  size="md"
+                  tone={activePresetWords === words ? (hasManualEdits ? 'warning' : 'accent') : 'default'}
+                  onClick={() => handleWordsPerChunkChange(words)}
+                  title={hasManualEdits ? `${t(titleKey)} — ${t('files.recalculateHint')}` : t(titleKey)}
+                  ariaPressed={activePresetWords === words}
+                >
+                  <Icon size={14} />
+                </IconButton>
+              ))}
+              {/* Ricalcola — sempre nello stesso punto, attivo solo con modifiche a mano */}
+              <IconButton
+                size="md"
+                tone={hasManualEdits ? 'warning' : 'default'}
+                disabled={!hasManualEdits}
+                onClick={recalculate}
+                title={t('files.recalculateHint')}
+              >
+                <RotateCcw size={13} />
+              </IconButton>
+            </div>
+          </section>
+        </aside>
+
+        {/* Anteprima dei frammenti */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-rule px-6 py-3">
+            <p className="whitespace-nowrap font-mono text-xs text-editorial-muted">
+              {preview.stats.words.toLocaleString()} {t('pipeline.words').toLowerCase()}
+              {' · '}
+              {preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}
+              {' · '}
+              <span className={hasManualEdits ? 'text-editorial-warning' : ''}>
+                {activeParaChunks.length} {t('pipeline.statsSegmentsUnit')}
+              </span>
+              {hasManualEdits && (
+                <span className="ml-2 italic text-editorial-warning">{t('files.manualEditsActive')}</span>
+              )}
+              {preview.warnings.length > 0 && (
+                <Tooltip label={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
+                  <span className="ml-1">
+                    <Info size={12} className="inline cursor-help align-middle text-editorial-muted/60" />
                   </span>
                 </Tooltip>
               )}
-            </div>
-            <div className="flex shrink-0 items-center gap-3">
-              <div className="flex items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
-                <Tooltip label={t('files.viewCards')}>
-                  <button
-                    type="button"
-                    onClick={() => setEditorMode('cards')}
-                    aria-label={t('files.viewCards')}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-on-accent' : 'text-editorial-muted hover:text-editorial-accent'}`}
-                  >
-                    <LayoutGrid size={16} />
-                  </button>
-                </Tooltip>
-                <Tooltip label={t('files.viewSegments')}>
-                  <button
-                    type="button"
-                    onClick={() => setEditorMode('segments')}
-                    aria-label={t('files.viewSegments')}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-on-accent' : 'text-editorial-muted hover:text-editorial-accent'}`}
-                  >
-                    <SplitSquareVertical size={16} />
-                  </button>
-                </Tooltip>
-              </div>
-              <Tooltip label={t('common.close')}>
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  aria-label={t('common.close')}
-                  className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <X size={16} />
-                </button>
-              </Tooltip>
-            </div>
+            </p>
+            <ChoiceDots options={viewOptions} value={editorMode} onChange={setEditorMode} ariaLabel={t('files.importViewLabel')} />
           </div>
 
-          {/* Row 2: title */}
-          <RadixDialog.Title asChild>
-            <h2
-              id="import-preview-title"
-              className="mb-2 font-display text-2xl italic tracking-tight text-editorial-ink"
-            >
-              {t('files.importPreviewTitle')}
-            </h2>
-          </RadixDialog.Title>
-
-          {/* Row 3: stats */}
-          <p className="mb-4 text-xs font-mono text-editorial-muted whitespace-nowrap">
-            {preview.stats.words.toLocaleString()} {t('pipeline.words').toLowerCase()}
-            {' · '}
-            {preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}
-            {' · '}
-            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>
-              {activeParaChunks.length} {t('pipeline.statsSegmentsUnit')}
-            </span>
-            {hasManualEdits && (
-              <span className="ml-2 italic text-editorial-warning">{t('files.manualEditsActive')}</span>
-            )}
-            {preview.warnings.length > 0 && (
-              <Tooltip label={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
-                <span className="ml-1">
-                  <Info size={12} className="inline align-middle text-editorial-muted/60 cursor-help" />
+          {contextWarning && (
+            <div className="shrink-0 px-6 pt-3">
+              <div className="flex items-start gap-2 border-y border-editorial-warning/40 bg-editorial-warning/10 py-3 text-xs text-editorial-warning">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-editorial-warning" />
+                <span>
+                  {t('pipeline.contextOverflowWarning', {
+                    tokens: contextWarning.estimatedTokens.toLocaleString(),
+                    model: contextWarning.modelId,
+                    window: contextWarning.contextWindow.toLocaleString(),
+                  })}
                 </span>
-              </Tooltip>
-            )}
-          </p>
-
-          {/* Separator */}
-          <div className="mb-4 h-px bg-editorial-border" />
-
-          {/* Row 4: controls — icon buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-
-            {/* Auto-segment toggle — icon button */}
-            <IconButton
-              size="md"
-              tone={useChunking ? 'accent' : 'default'}
-              onClick={() => onUseChunkingChange(!useChunking)}
-              title={t('pipeline.autoSegment')}
-              ariaPressed={useChunking}
-            >
-              <Scissors size={14} />
-            </IconButton>
-
-            {/* Heading-aware toggle — icon button (markdown only) */}
-            {markdownAware && (
-              <IconButton
-                size="md"
-                tone={headingAware && useChunking ? 'accent' : 'default'}
-                onClick={() => useChunking && onHeadingAwareChange(!headingAware)}
-                title={t('pipeline.headingAware')}
-                disabled={!useChunking}
-                ariaPressed={headingAware && useChunking}
-              >
-                <Hash size={14} />
-              </IconButton>
-            )}
-
-            <IconButton
-              size="md"
-              tone={carryTrailingShortBlocks && useChunking ? 'accent' : 'default'}
-              onClick={() => useChunking && onCarryTrailingShortBlocksChange(!carryTrailingShortBlocks)}
-              title={t('pipeline.trailingShortBlocks')}
-              disabled={!useChunking}
-              ariaPressed={carryTrailingShortBlocks && useChunking}
-            >
-              <ArrowLeftRight size={14} />
-            </IconButton>
-
-            {/* Separator */}
-            {useChunking && (
-              <span className="select-none text-editorial-border">·</span>
-            )}
-
-            {/* Preset — stessa posizione sempre, si colora d'avviso se ci sono modifiche a mano */}
-            {useChunking && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
-              <IconButton
-                key={words}
-                size="md"
-                tone={activePresetWords === words ? (hasManualEdits ? 'warning' : 'accent') : 'default'}
-                onClick={() => handleWordsPerChunkChange(words)}
-                title={hasManualEdits ? `${t(titleKey)} — ${t('files.recalculateHint')}` : t(titleKey)}
-                ariaPressed={activePresetWords === words}
-              >
-                <Icon size={14} />
-              </IconButton>
-            ))}
-
-            {/* Ricalcola — sempre nello stesso punto, attivo solo con modifiche a mano */}
-            <IconButton
-              size="md"
-              tone={hasManualEdits ? 'warning' : 'default'}
-              disabled={!hasManualEdits}
-              onClick={recalculate}
-              title={t('files.recalculateHint')}
-              className="ml-auto"
-            >
-              <RotateCcw size={13} />
-            </IconButton>
-          </div>
-
-          {/* Row 5: pipeline setup — language pair + model */}
-          <div className="mt-3 pt-3 border-t border-rule">
-            <div className="grid grid-cols-[1.25rem_1fr] gap-y-2.5 gap-x-2 items-center">
-              {/* Language pair */}
-              <Globe size={11} className="text-editorial-accent shrink-0" />
-              <div className="flex items-center gap-1.5">
-                <Select
-                  value={sourceLanguage}
-                  onChange={handleSourceLanguageChange}
-                  options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
-                  className="w-32 font-mono appearance-none"
-                  ariaLabel={t('pipeline.sourceLanguage')}
-                />
-                <Tooltip label={t('pipeline.swapLanguages')}>
-                  <button
-                    type="button"
-                    onClick={handleSwapLanguages}
-                    aria-label={t('pipeline.swapLanguages')}
-                    className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <ArrowLeftRight size={12} />
-                  </button>
-                </Tooltip>
-                <Select
-                  value={targetLanguage}
-                  onChange={handleTargetLanguageChange}
-                  options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
-                  className="w-32 font-mono appearance-none"
-                  ariaLabel={t('pipeline.targetLanguage')}
-                />
-              </div>
-              {/* Model */}
-              <Cpu size={11} className="text-editorial-accent shrink-0" />
-              <div className="flex items-center gap-1.5">
-                <Select
-                  value={selectedProvider}
-                  onChange={(value) => handleProviderChange(value as ModelProvider)}
-                  options={LLM_PROVIDER_ORDER.map((p) => ({ value: p, label: p }))}
-                  className="w-24 font-bold uppercase appearance-none"
-                  ariaLabel={t('pipeline.source')}
-                />
-                <Select
-                  value={selectedModel}
-                  onChange={handleModelChange}
-                  disabled={availableModels.length === 0}
-                  className="flex-1 min-w-0 font-mono appearance-none"
-                  ariaLabel={t('pipeline.stageModelLabel')}
-                  options={
-                    availableModels.length === 0
-                      ? [{ value: '', label: t('ollama.noModels') }]
-                      : availableModels.map((m) => ({ value: m, label: m }))
-                  }
-                />
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* ── Context overflow warning ──────────────────────────────────────── */}
-        {contextWarning && (
-          <div className="shrink-0 px-6 pb-2">
-            <div className="flex items-start gap-2 border-y border-editorial-warning/40 bg-editorial-warning/10 py-3 text-xs text-editorial-warning">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-editorial-warning" />
-              <span>
-                {t('pipeline.contextOverflowWarning', {
-                  tokens: contextWarning.estimatedTokens.toLocaleString(),
-                  model: contextWarning.modelId,
-                  window: contextWarning.contextWindow.toLocaleString(),
-                })}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* ── Content area ─────────────────────────────────────────────────── */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 custom-scrollbar">
-          {editorMode === 'cards' ? (
-            <div className="flex flex-col gap-0">
-              {activeParaChunks.map((paras, i) => {
-                const chunkStart = activeParaChunks.slice(0, i).reduce((sum, c) => sum + c.length, 0);
-                return (
-                  <div key={chunkStart}>
-                    <ChunkCard
-                      paras={paras}
-                      index={i}
-                      total={activeParaChunks.length}
-                      minWords={effectiveMinWords}
-                      maxWords={effectiveMaxWords}
-                      isExpanded={expandedChunks.has(i)}
-                      onToggleExpand={() => toggleExpanded(i)}
-                      onSplit={() => splitChunkAtMid(i)}
-                      canSplit={paras.length >= 2}
-                    />
-                    {i < activeParaChunks.length - 1 && (
-                      <BoundaryDivider
-                        onGive={() => giveLastParagraph(i)}
-                        onTake={() => takeFirstParagraph(i)}
-                        onMerge={() => mergeChunks(i)}
-                        canGive={paras.length >= 2}
-                        canTake={activeParaChunks[i + 1].length >= 2}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <SegmentEditor
-              chunks={activeParaChunks}
-              minWords={effectiveMinWords}
-              maxWords={effectiveMaxWords}
-              onAddBoundary={addBoundaryAt}
-              onRemoveBoundary={removeBoundaryAt}
-              onSplitParagraph={splitParagraphAt}
-            />
           )}
-        </div>
 
-        {/* ── Footer ─────────────────────────────────────────────────────── */}
-        <div className="shrink-0 border-t border-editorial-border px-6 py-4">
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {hasCoherenceIssue ? (
-              <div className="flex items-center gap-2 text-sm text-editorial-warning">
-                <AlertTriangle size={13} className="shrink-0" />
-                {t('files.importCoherenceWarning', { pct: wordLossPct })}
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
+            {editorMode === 'cards' ? (
+              <div className="flex flex-col gap-0">
+                {activeParaChunks.map((paras, i) => {
+                  const chunkStart = activeParaChunks.slice(0, i).reduce((sum, c) => sum + c.length, 0);
+                  return (
+                    <div key={chunkStart}>
+                      <ChunkCard
+                        paras={paras}
+                        index={i}
+                        total={activeParaChunks.length}
+                        minWords={effectiveMinWords}
+                        maxWords={effectiveMaxWords}
+                        isExpanded={expandedChunks.has(i)}
+                        onToggleExpand={() => toggleExpanded(i)}
+                        onSplit={() => splitChunkAtMid(i)}
+                        canSplit={paras.length >= 2}
+                      />
+                      {i < activeParaChunks.length - 1 && (
+                        <BoundaryDivider
+                          onGive={() => giveLastParagraph(i)}
+                          onTake={() => takeFirstParagraph(i)}
+                          onMerge={() => mergeChunks(i)}
+                          canGive={paras.length >= 2}
+                          canTake={activeParaChunks[i + 1].length >= 2}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 text-xs text-editorial-muted">
-                <CheckCircle2 size={13} className="shrink-0" />
-                {t('files.importCoherenceOk')}
-              </div>
+              <SegmentEditor
+                chunks={activeParaChunks}
+                minWords={effectiveMinWords}
+                maxWords={effectiveMaxWords}
+                onAddBoundary={addBoundaryAt}
+                onRemoveBoundary={removeBoundaryAt}
+                onSplitParagraph={splitParagraphAt}
+              />
             )}
-            <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <DialogCancelButton onClick={onCancel}>{t('common.cancel')}</DialogCancelButton>
-              <DialogConfirmButton onClick={handleConfirm}>{t('files.importConfirm')}</DialogConfirmButton>
-            </div>
           </div>
         </div>
-        </RadixDialog.Content>
-      </RadixDialog.Portal>
-    </RadixDialog.Root>
+      </div>
+    </Dialog>
   );
 }
