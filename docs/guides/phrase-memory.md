@@ -18,8 +18,12 @@ Quando la funzione è attiva, Glossa cerca corrispondenze per i frammenti del
 documento. La ricerca usa le risorse accessibili al workspace e non modifica
 né traduzioni né frasi salvate.
 
-La sottolinguetta **Riferimenti** della scheda **Memoria** mostra i risultati e permette di regolare la soglia
-di somiglianza. Ogni risultato dice da dove viene: «questo documento»
+La sottolinguetta **Riferimenti** della scheda **Memoria** mostra i risultati.
+In alto, una sola riga: la soglia di somiglianza (cursore, oppure − e + per un
+centesimo alla volta), il globo e l’aggiornamento. Ogni risultato mostra
+l’originale in carattere da libro e la traduzione sotto, con il codice della
+lingua a margine, e una riga con opera e frammento; l’icona «i» aggiunge
+workspace, libro e modello. Ogni risultato dice da dove viene: «questo documento»
 (evidenziato), «altra opera del workspace» o «altro workspace». L’ordine è
 prima questo documento, poi il workspace, poi il resto; in ogni gruppo prima la
 somiglianza più alta. Solo le coppie selezionate vengono incluse nella successiva

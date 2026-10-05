@@ -3,7 +3,9 @@
 //! testi inviati non siano cambiati di un carattere.
 #![allow(dead_code)]
 
-use crate::llm::types::{CoherenceChunkInput, PipelineConfig, PromptBlock, StageConfig, StructuredPrompt};
+use crate::llm::types::{
+    CoherenceChunkInput, PipelineConfig, PromptBlock, StageConfig, StructuredPrompt,
+};
 
 fn format_glossary_table(glossary: &[crate::llm::types::GlossaryEntry]) -> String {
     super::prompts::format_glossary_table_for_tests(glossary)

@@ -3,7 +3,7 @@ import { buildMemoryInjection } from './phraseMemoryInjection';
 import type { PhraseMemoryMatch } from '../stores/phraseMemoryStore';
 
 const makeMatch = (src: string, tgt: string): PhraseMemoryMatch => ({
-  id: 'x', sourcePhrase: src, targetPhrase: tgt, score: 0.9, confidence: 0.8, createdAt: '', workspaceId: null, projectId: null, chunkId: null });
+  id: 'x', sourcePhrase: src, targetPhrase: tgt, score: 0.9, confidence: 0.8, createdAt: '', sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null });
 
 describe('buildMemoryInjection', () => {
   it('returns null for empty array', () => {

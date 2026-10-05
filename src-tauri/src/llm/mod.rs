@@ -12,6 +12,6 @@ pub mod types;
 pub use stream::StreamRegistry;
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod legacy_prompts_test;
+#[cfg(test)]
+mod tests;

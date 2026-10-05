@@ -5,8 +5,6 @@ import { buildPipelineFingerprint } from './pipelineFingerprint';
 function config(overrides: Omit<Partial<PipelineConfig>, 'pipelineId'> = {}): PipelineConfig {
   return {
     pipelineId: 'pipeline-1',
-    sourceLanguage: 'Latin',
-    targetLanguage: 'Italian',
     stages: [
       { id: 'stg-translation', name: 'Translation', role: 'translation', prompt: 'Translate.', model: 'gpt-5.4', provider: 'openai', enabled: true },
       { id: 'stg-refine', name: 'Refine', role: 'refine', prompt: 'Refine.', model: 'gpt-5.4', provider: 'openai', enabled: false },

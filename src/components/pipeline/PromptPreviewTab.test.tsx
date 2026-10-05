@@ -15,8 +15,6 @@ vi.mock('../../services/deeplService', () => ({ deeplService: { previewDeeplStag
 
 const config: PipelineConfig = {
   pipelineId: 'p1',
-  sourceLanguage: 'English',
-  targetLanguage: 'Italian',
   stages: [
     { id: 'stg-translation', name: 'Translation', role: 'translation', prompt: 'Translate.', model: 'm', provider: 'openai', enabled: true },
   ],

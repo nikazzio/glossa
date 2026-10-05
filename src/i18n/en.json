@@ -2484,7 +2484,7 @@
           {
             "title": "Configuring stages",
             "paragraphs": [
-              "The Studio bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover shows the full name. The pipeline name opens the menu to select, create, rename or delete; the gear opens options. Next to them is the work’s language pair in short, the same for all its pipelines. Pipeline operations are blocked while processing.",
+              "The Studio bar shows work / pipeline and, as an icon, the Simple, Editorial or DeepL mode (name in the tooltip). Long names are truncated; hover shows the full name. The pipeline name opens the menu to select, create, rename or delete; the gear opens options. On the right, before the commands, the work’s language pair appears in short, the same for all its pipelines. Pipeline operations are blocked while processing.",
               "The red icon at the bottom of the window resets all translations and their audits, after a confirmation. It is off, with the reason, while the pipeline runs or when there is nothing to reset.",
               "Next to each prompt title you see where its text comes from: Default, Custom or the name of the saved template in use."
             ],
@@ -2527,7 +2527,7 @@
             "title": "The translation studio",
             "paragraphs": [
               "The main bar stays on the left: from there you move to another area, and the translation closes. While the pipeline is running its entries are off.",
-              "The top row leads back to the catalogue and shows the translation name and the open pipeline, the mode and, in short, the work’s language pair (click it to open “Work languages”): click the work name to rename it, the pipeline name opens the menu to select, rename, create or delete one, the gear opens its options. On the right are import, export, the workspace language resources, configuration and delete.",
+              "The top row leads back to the catalogue and shows the translation name, the open pipeline and the mode icon: click the work name to rename it, the pipeline name opens the menu to select, rename, create or delete one, the gear opens its options. On the right are the work’s language pair in short with the icon that opens “Languages of the work”, then import, export, the workspace language resources and delete.",
               "The Tools column on the right starts with translate, Multiple chunks with the number of segments and the costs. Below are Glossary, Memory (similar phrases and extraction), Preview, Review (Audit, Notes, Source notes and History) and Document (Index, Statistics and Coherence). Collapsed, it keeps only the translate button visible."
             ]
           },
@@ -2538,7 +2538,7 @@
               "Check the preview before confirming. Automatic segmentation divides text using a target word count. Markdown provides additional heading options.",
               "The import window opens large. On the left are Work languages, Model and Chunk splitting; on the right the counts, the card or segment view (two small round icons) and the chunk preview at full height. At the bottom are the word check, Cancel and Import.",
               "Work languages apply to all its pipelines. For each side, Source and Target, you can choose the Language (historical ones too, searchable by Italian name, English name or code), the Variety (only those of the chosen language, for example medieval Latin; disabled until you choose a language) and a free Note on period, area or hand. All are optional and the x clears a field. A new work starts with source not specified and target Italian; if the Library knows the book’s language, it is proposed as the source.",
-              "You can change them later from the Studio top row: click the pair next to pipeline and mode, edit, and press Confirm (nothing is saved otherwise). This is blocked while the pipeline runs. If phrases saved from this work have other languages, Glossa asks whether to update them: text and measures do not change and the previous version stays in the history.",
+              "You can change them later from the Studio top row: click the languages icon on the right, next to the pair, edit, and press Confirm (nothing is saved otherwise). This is blocked while the pipeline runs. If phrases saved from this work have other languages, Glossa asks whether to update them: text and measures do not change and the previous version stays in the history.",
               "Choose a size appropriate for the text and review segment boundaries. Text files using an encoding other than UTF-8 must be converted before import."
             ]
           },
@@ -2625,8 +2625,8 @@
           {
             "title": "Using saved phrases",
             "paragraphs": [
-              "Open Memory → References for the chunk. Glossa filters only by the target language and compares texts with an embedding matching the workspace model, dimensions and input profile. Adjust the similarity threshold and select relevant references.",
-              "Each reference shows its origin (“this document”, “other work in the workspace” or “other workspace”), the book when known, the translation and the source chunk, plus the model used. Results from this document come first, then the workspace, then the rest. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
+              "Open Memory → References for the chunk. Glossa filters only by the target language and compares texts with an embedding matching the workspace model, dimensions and input profile. Adjust the threshold with the slider or, one hundredth at a time, with − and +; then select relevant references.",
+              "Each reference shows similarity and origin (“this document”, “another work in the workspace” or “another workspace”), then the original in book type and the translation below, with the language code in the margin; one line gives work and chunk, and the “i” icon shows workspace, book and model. Results from this document come first, then the workspace, then the rest. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
               "The globe next to refresh extends the search to other workspaces and unassigned phrases; the choice is remembered per workspace and is no longer in workspace settings. The target language and embedding compatibility still apply. Viewing a phrase does not link it to this workspace."
             ]
           },
@@ -3433,6 +3433,16 @@
     "dismiss": "Dismiss"
   },
   "memory": {
+    "threshold": "Threshold",
+    "thresholdHint": "Minimum similarity for a phrase to appear among References. Then tick the phrases to use for translating this chunk.",
+    "thresholdDown": "Lower the threshold by 0.01",
+    "thresholdUp": "Raise the threshold by 0.01",
+    "reference": {
+      "original": "Original",
+      "translation": "Translation",
+      "chunk": "chunk {{number}}",
+      "details": "Full provenance"
+    },
     "searchAllWorkspacesOff": "Search other workspaces too: References now come only from this document and its workspace",
     "searchAllWorkspacesOn": "Search this workspace only: References now also come from other workspaces",
     "searchScopeSaveFailed": "Could not change where References search",
@@ -3464,7 +3474,6 @@
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} matches",
     "matchBadge": "{{count}} match",
-    "similarityThreshold": "Similarity threshold",
     "extractButton": "Extract phrases",
     "extracting": "Extracting phrases…",
     "extractFailed": "Phrase extraction failed",
@@ -3489,11 +3498,11 @@
     "toggleSavedListHide": "Hide already saved phrases",
     "referencesGlossaryHint": "The entire project glossary is always included when translating this segment.",
     "referencesMemorySectionTitle": "Similar phrases in memory",
-    "selectionHint": "Select the phrases to use for translating this segment.",
     "addCheckedToMemory": "Add the checked pairs to memory",
     "reasonNoNewChecked": "no new pair checked",
     "reasonNotVerified": "translation not verified",
     "inMemoryBadge": "In memory",
+    "manualPair": "written by hand",
     "inMemoryCount_one": "pair in memory",
     "inMemoryCount_other": "pairs in memory",
     "removeFromMemory": "Remove from memory",

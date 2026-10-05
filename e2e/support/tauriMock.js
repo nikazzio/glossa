@@ -24,8 +24,12 @@
     id: project.id,
     name: project.name,
     workspace_id: project.workspaceId,
-    source_language: project.sourceLanguage,
-    target_language: project.targetLanguage,
+    source_language: project.sourceLanguage ?? '',
+    source_language_variety: project.sourceLanguageVariety ?? null,
+    source_language_note: project.sourceLanguageNote ?? '',
+    target_language: project.targetLanguage ?? '',
+    target_language_variety: project.targetLanguageVariety ?? null,
+    target_language_note: project.targetLanguageNote ?? '',
     source_display_text: project.sourceDisplayText,
     source_processing_text: project.sourceProcessingText,
     source_footnotes: '[]',
@@ -43,8 +47,6 @@
     id: pipeline.id,
     project_id: pipeline.projectId,
     name: 'Default',
-    source_language: pipeline.sourceLanguage,
-    target_language: pipeline.targetLanguage,
     pipeline_mode: 'standard',
     stages: '[]',
     judge_prompt: '',
@@ -126,9 +128,13 @@
       state.projects.push({
         id: params[0],
         name: params[1],
-        sourceLanguage: params[2],
-        targetLanguage: params[3],
-        workspaceId: params[4],
+        workspaceId: params[2],
+        sourceLanguage: params[3],
+        sourceLanguageVariety: params[4],
+        sourceLanguageNote: params[5],
+        targetLanguage: params[6],
+        targetLanguageVariety: params[7],
+        targetLanguageNote: params[8],
         sourceDisplayText: '',
         sourceProcessingText: '',
         createdAt: timestamp,
@@ -140,8 +146,6 @@
       state.pipelines.push({
         id: params[0],
         projectId: params[1],
-        sourceLanguage: params[2],
-        targetLanguage: params[3],
       });
       return;
     }
@@ -150,7 +154,7 @@
       return;
     }
     if (sql.startsWith('UPDATE PROJECTS SET SOURCE_DISPLAY_TEXT')) {
-      const project = state.projects.find((candidate) => candidate.id === params[9]);
+      const project = state.projects.find((candidate) => candidate.id === params[13]);
       if (project) {
         project.sourceDisplayText = params[0];
         project.sourceProcessingText = params[1];

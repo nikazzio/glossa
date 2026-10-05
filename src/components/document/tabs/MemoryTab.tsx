@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useMemoryExtractionDraft } from '../../../hooks/useMemoryExtractionDraft';
 import { confirm as confirmDialog } from '../../../stores/confirmStore';
-import { EmptyState, FIELD_CLASSNAME, FieldLabel, IconButton, Spinner } from '../../ui';
+import { EmptyState, FIELD_CLASSNAME, IconButton, Spinner } from '../../ui';
+import { useLanguageLabel } from '../../../hooks/useLanguageLabel';
+import { UNDETERMINED_LANGUAGE } from '../../../languages/catalog';
+import { usePipelineStore } from '../../../stores/pipelineStore';
+import { PhraseLine } from './ReferenceMatchRow';
 import type { PhraseCandidateDraft } from '../../../stores/phraseMemoryDraftStore';
 import type { TranslationChunk } from '../../../types';
 
@@ -119,14 +123,35 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
   );
 }
 
+/** Lingue dell'opera per il margine delle righe: codice breve, nome e ruolo nel suggerimento. */
+function usePairLanguages() {
+  const { t } = useTranslation();
+  const languageLabel = useLanguageLabel();
+  const workLanguages = usePipelineStore((s) => s.workLanguages);
+  const side = (code: string | null, role: string) => {
+    const value = code ?? UNDETERMINED_LANGUAGE;
+    return { code: value, label: languageLabel(value), role };
+  };
+  return {
+    source: side(workLanguages.source.code, t('memory.reference.original')),
+    target: side(workLanguages.target.code, t('memory.reference.translation')),
+  };
+}
+
+// Stessa forma dei Riferimenti: originale in carattere da libro, traduzione sotto, lingua a margine.
 function SavedPairRow({ candidate, onRemove }: { candidate: PhraseCandidateDraft; onRemove: () => void }) {
   const { t } = useTranslation();
+  const languages = usePairLanguages();
   return (
-    <div className="flex items-start gap-3 py-3">
-      <div className="min-w-0 flex-1 space-y-1">
-        <span className="caption-label text-editorial-success">{t('memory.inMemoryBadge')}</span>
-        <p className="text-sm leading-relaxed text-editorial-charcoal">{candidate.sourcePhrase}</p>
-        <p className="text-sm leading-relaxed text-editorial-ink">{candidate.targetPhrase}</p>
+    <div className="flex items-start gap-2.5 py-3">
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <span className="text-xs text-editorial-success">{t('memory.inMemoryBadge')}</span>
+        <PhraseLine {...languages.source}>
+          <p className="font-display text-base leading-snug text-editorial-charcoal">{candidate.sourcePhrase}</p>
+        </PhraseLine>
+        <PhraseLine {...languages.target}>
+          <p className="text-sm leading-snug text-editorial-ink">{candidate.targetPhrase}</p>
+        </PhraseLine>
       </div>
       <IconButton size="sm" title={t('memory.removeFromMemory')} onClick={onRemove} className="shrink-0">
         <Trash2 size={13} />
@@ -150,10 +175,9 @@ function autoResizeTextarea(el: HTMLTextAreaElement | null) {
 
 function NewPairRow({ candidate, disabled, onToggle, onChange }: NewPairRowProps) {
   const { t } = useTranslation();
-  const sourceId = `memory-pair-source-${candidate.id}`;
-  const targetId = `memory-pair-target-${candidate.id}`;
+  const languages = usePairLanguages();
   return (
-    <div className="flex items-start gap-3 py-3">
+    <div className="flex items-start gap-2.5 py-3">
       <IconButton
         size="sm"
         tone={candidate.accepted ? 'accent' : 'default'}
@@ -161,36 +185,38 @@ function NewPairRow({ candidate, disabled, onToggle, onChange }: NewPairRowProps
         title={t('memory.acceptCandidateLabel')}
         onClick={onToggle}
         disabled={disabled}
-        className="mt-5 shrink-0"
+        className="shrink-0"
       >
         <CircleCheck size={14} />
       </IconButton>
-      <div className="min-w-0 flex-1 space-y-2">
-        {candidate.origin === 'ai' && (
-          <span className="font-mono text-xs text-editorial-muted">{Math.round(candidate.confidence * 100)}%</span>
-        )}
-        <FieldLabel htmlFor={sourceId} block>{t('memory.sourcePhraseLabel')}</FieldLabel>
-        <textarea
-          id={sourceId}
-          ref={autoResizeTextarea}
-          rows={1}
-          value={candidate.sourcePhrase}
-          disabled={disabled}
-          placeholder={t('memory.manualSourcePlaceholder')}
-          onChange={(e) => { onChange({ sourcePhrase: e.target.value }); autoResizeTextarea(e.target); }}
-          className={`${FIELD_CLASSNAME} resize-none overflow-hidden leading-relaxed`}
-        />
-        <FieldLabel htmlFor={targetId} block>{t('glossary.translation')}</FieldLabel>
-        <textarea
-          id={targetId}
-          ref={autoResizeTextarea}
-          rows={1}
-          value={candidate.targetPhrase}
-          disabled={disabled}
-          placeholder={t('memory.manualTargetPlaceholder')}
-          onChange={(e) => { onChange({ targetPhrase: e.target.value }); autoResizeTextarea(e.target); }}
-          className={`${FIELD_CLASSNAME} resize-none overflow-hidden leading-relaxed`}
-        />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <span className="block text-xs text-editorial-muted">
+          {candidate.origin === 'ai' ? <span className="font-mono text-editorial-ink">{Math.round(candidate.confidence * 100)}%</span> : t('memory.manualPair')}
+        </span>
+        <PhraseLine {...languages.source}>
+          <textarea
+            ref={autoResizeTextarea}
+            rows={1}
+            value={candidate.sourcePhrase}
+            disabled={disabled}
+            aria-label={t('memory.sourcePhraseLabel')}
+            placeholder={t('memory.manualSourcePlaceholder')}
+            onChange={(e) => { onChange({ sourcePhrase: e.target.value }); autoResizeTextarea(e.target); }}
+            className={`${FIELD_CLASSNAME} resize-none overflow-hidden px-2 py-1 font-display text-base leading-snug text-editorial-charcoal`}
+          />
+        </PhraseLine>
+        <PhraseLine {...languages.target}>
+          <textarea
+            ref={autoResizeTextarea}
+            rows={1}
+            value={candidate.targetPhrase}
+            disabled={disabled}
+            aria-label={t('glossary.translation')}
+            placeholder={t('memory.manualTargetPlaceholder')}
+            onChange={(e) => { onChange({ targetPhrase: e.target.value }); autoResizeTextarea(e.target); }}
+            className={`${FIELD_CLASSNAME} resize-none overflow-hidden px-2 py-1 leading-snug`}
+          />
+        </PhraseLine>
       </div>
     </div>
   );

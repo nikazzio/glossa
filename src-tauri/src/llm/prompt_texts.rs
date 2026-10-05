@@ -267,7 +267,12 @@ pub(crate) fn system_text<'a>(config: &'a PipelineConfig, id: &str) -> &'a str {
         .get(id)
         .map(String::as_str)
         .filter(|custom| !custom.trim().is_empty())
-        .filter(|custom| entry.required.iter().all(|name| has_placeholder(custom, name)))
+        .filter(|custom| {
+            entry
+                .required
+                .iter()
+                .all(|name| has_placeholder(custom, name))
+        })
         .unwrap_or(entry.default)
 }
 
@@ -342,16 +347,23 @@ mod tests {
 
     #[test]
     fn override_without_required_placeholder_falls_back_to_default() {
-        let mut config = PipelineConfig::default();
-        config.prompt_composition = PromptComposition {
-            texts: [("translation.user-message".to_string(), "No placeholder".to_string())]
+        let mut config = PipelineConfig {
+            prompt_composition: PromptComposition {
+                texts: [(
+                    "translation.user-message".to_string(),
+                    "No placeholder".to_string(),
+                )]
                 .into_iter()
                 .collect(),
-            disabled: vec![],
+                disabled: vec![],
+            },
+            ..PipelineConfig::default()
         };
         assert_eq!(
             system_text(&config, "translation.user-message"),
-            spec("translation.user-message").map(|entry| entry.default).unwrap_or_default()
+            spec("translation.user-message")
+                .map(|entry| entry.default)
+                .unwrap_or_default()
         );
         config
             .prompt_composition
@@ -364,7 +376,11 @@ mod tests {
     fn every_default_contains_its_required_placeholders() {
         for entry in SYSTEM_TEXTS {
             for name in entry.required {
-                assert!(has_placeholder(entry.default, name), "{} lacks {name}", entry.id);
+                assert!(
+                    has_placeholder(entry.default, name),
+                    "{} lacks {name}",
+                    entry.id
+                );
             }
         }
     }

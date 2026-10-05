@@ -25,9 +25,11 @@ fn db(error: rusqlite::Error) -> EmbeddingError {
 fn label(code: Option<String>, variety: Option<String>, note: Option<String>) -> LanguageLabel {
     let code = code.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
     LanguageLabel {
-        variety: code
-            .as_ref()
-            .and(variety.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())),
+        variety: code.as_ref().and(
+            variety
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty()),
+        ),
         code: code.unwrap_or_else(|| UNDETERMINED_LANGUAGE.to_string()),
         note: note.unwrap_or_default().trim().to_string(),
     }
@@ -55,7 +57,10 @@ pub fn project_languages(
     .ok_or_else(|| EmbeddingError::Parse("Translation not found".into()))
 }
 
-pub fn revision_language(conn: &Connection, revision: &str) -> Result<LanguageLabel, EmbeddingError> {
+pub fn revision_language(
+    conn: &Connection,
+    revision: &str,
+) -> Result<LanguageLabel, EmbeddingError> {
     conn.query_row(
         "SELECT language, language_variety, language_note FROM text_unit_revisions WHERE id=?1",
         [revision],
@@ -149,14 +154,23 @@ pub fn relabel_project(conn: &mut Connection, project: &str) -> Result<u32, Embe
     let (source, target) = project_languages(&tx, project)?;
     let pairs = pairs_to_relabel(&tx, project, &source, &target)?;
     for pair in &pairs {
-        let source_revision = relabel_revision(&tx, &pair.unit, &pair.source_revision, &source, true)?;
-        let target_revision = relabel_revision(&tx, &pair.unit, &pair.target_revision, &target, false)?;
+        let source_revision =
+            relabel_revision(&tx, &pair.unit, &pair.source_revision, &source, true)?;
+        let target_revision =
+            relabel_revision(&tx, &pair.unit, &pair.target_revision, &target, false)?;
         tx.execute(
             "UPDATE phrase_memory SET source_revision_id=?1, target_revision_id=?2 WHERE id=?3",
             params![source_revision, target_revision, pair.id],
         )
         .map_err(db)?;
-        record_fact(&tx, "text.language.changed", "text_unit", &pair.unit, None, None)?;
+        record_fact(
+            &tx,
+            "text.language.changed",
+            "text_unit",
+            &pair.unit,
+            None,
+            None,
+        )?;
     }
     tx.commit().map_err(db)?;
     u32::try_from(pairs.len()).map_err(|_| EmbeddingError::Parse("Too many phrases".into()))

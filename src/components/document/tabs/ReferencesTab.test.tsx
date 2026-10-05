@@ -40,7 +40,7 @@ describe('ReferencesTab', () => {
   it('mostra i match trovati con la spunta «usa nella traduzione»', async () => {
     const toggleEnabled = vi.fn();
     mockUseMatches.mockReturnValue({
-      matches: [{ id: 'm1', sourcePhrase: 'ciao', targetPhrase: 'hello', score: 0.9, confidence: 0.9, createdAt: '2026-01-01', workspaceId: null, projectId: null, chunkId: null }],
+      matches: [{ id: 'm1', sourcePhrase: 'ciao', targetPhrase: 'hello', score: 0.9, confidence: 0.9, createdAt: '2026-01-01', sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null }],
       enabledMatchIds: new Set(),
       selectedMatches: [],
       hasMatches: true,
@@ -52,6 +52,9 @@ describe('ReferencesTab', () => {
 
     expect(screen.getByText('ciao')).toBeInTheDocument();
     expect(screen.getByText('hello')).toBeInTheDocument();
+    expect(screen.getByText('90%')).toBeInTheDocument();
+    expect(screen.getByText('lat')).toBeInTheDocument();
+    expect(screen.getByText('ita')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'memory.useInTranslation' }));
     expect(toggleEnabled).toHaveBeenCalledWith('m1');
   });

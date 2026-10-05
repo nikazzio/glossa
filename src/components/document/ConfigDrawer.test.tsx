@@ -17,8 +17,6 @@ const pipeline: Pipeline = {
   id: 'pipe-1',
   projectId: 'proj-1',
   name: 'Draft A',
-  sourceLanguage: 'it',
-  targetLanguage: 'en',
   mode: 'standard',
   runStatus: 'idle',
   lastRunConfig: null,

@@ -774,6 +774,9 @@ export type PhraseMatch = {
   workspaceId: string | null;
   projectId: string | null;
   chunkId: string | null;
+  /** Codici ISO 639-3 delle due revisioni («und» = non indicata). */
+  sourceLanguage: string;
+  targetLanguage: string;
   provenance?: TextProvenance;
   embeddingModel?: string;
   dimensions?: number;

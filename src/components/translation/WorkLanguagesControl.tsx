@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogCancelButton, DialogConfirmButton, Tooltip } from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, Tooltip } from '../ui';
 import { WorkLanguagesFields } from '../languages/WorkLanguagesFields';
 import { useLanguageCatalog } from '../../hooks/useLanguageCatalog';
 import { useWorkLanguageSuggestions } from '../../hooks/useWorkLanguageSuggestions';
-import { describeLanguageChoice } from '../../languages/catalog';
+import { describeLanguageChoice, languageNameOf } from '../../languages/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -33,6 +33,8 @@ export function WorkLanguagesControl({ disabledReason }: { disabledReason: strin
   const [draft, setDraft] = useState<WorkLanguages | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Nella riga solo i nomi; varietà e note stanno nel suggerimento.
+  const shortName = (choice: LanguageChoice) => (choice.code ? languageNameOf(catalog, choice.code, i18n.language) : t('workLanguages.notSpecified'));
   const describe = (choice: LanguageChoice) => describeLanguageChoice(catalog, choice, i18n.language) ?? t('workLanguages.notSpecified');
   const sideHint = (label: string, choice: LanguageChoice) =>
     `${label}: ${describe(choice)}${choice.note.trim() ? ` — ${choice.note.trim()}` : ''}`;
@@ -91,19 +93,16 @@ export function WorkLanguagesControl({ disabledReason }: { disabledReason: strin
 
   return (
     <>
-      <Tooltip label={disabledReason ? t('transcription.commandBlocked', { command: hint, reason: disabledReason }) : hint} side="bottom">
-        <button
-          type="button"
-          onClick={open}
-          disabled={Boolean(disabledReason)}
-          aria-label={t('workLanguages.edit')}
-          className="flex min-w-0 shrink items-center text-sm text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed"
-        >
-          <span className="max-w-[min(22vw,18rem)] truncate font-display italic text-editorial-ink">
-            {describe(workLanguages.source)} → {describe(workLanguages.target)}
-          </span>
-        </button>
+      {/* La coppia si legge, l'icona si clicca: stesso gesto di ogni altro comando della riga. */}
+      <Tooltip label={hint} side="bottom" className="min-w-0">
+        <span className="block max-w-[min(20vw,16rem)] truncate font-display text-sm italic text-editorial-muted">
+          {shortName(workLanguages.source)} → {shortName(workLanguages.target)}
+        </span>
       </Tooltip>
+      <IconButton size="sm" onClick={open} disabled={Boolean(disabledReason)} tooltipSide="bottom"
+        title={disabledReason ? t('transcription.commandBlocked', { command: t('workLanguages.edit'), reason: disabledReason }) : t('workLanguages.edit')}>
+        <Languages size={14} />
+      </IconButton>
       <Dialog
         open={draft !== null}
         onOpenChange={(isOpen) => { if (!isOpen && !saving) setDraft(null); }}

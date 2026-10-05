@@ -10,7 +10,7 @@ const makeMatch = (id: string): PhraseMemoryMatch => ({
   targetPhrase: `target ${id}`,
   score: 0.9,
   confidence: 0.8,
-  createdAt: new Date().toISOString(), workspaceId: null, projectId: null, chunkId: null,
+  createdAt: new Date().toISOString(), sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null,
 });
 
 vi.mock('../stores/phraseMemoryStore', () => ({

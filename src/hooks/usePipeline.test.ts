@@ -241,7 +241,7 @@ describe('usePipeline', () => {
         sourcePhrase: 'stored source',
         targetPhrase: 'stored target',
         distance: 0.1,
-        confidence: 0.9, workspaceId: null, projectId: null, chunkId: null },
+        confidence: 0.9, sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null },
     ]);
     usePhraseMemoryStore.getState().setEnabledMatchIds('chunk-1', new Set(['pm-1']));
     llmMocks.runStage.mockResolvedValue({ content: 'Translated without memory' });
@@ -272,7 +272,7 @@ describe('usePipeline', () => {
         sourcePhrase: 'stored source',
         targetPhrase: 'stored target',
         distance: 0.1,
-        confidence: 0.9, workspaceId: null, projectId: null, chunkId: null },
+        confidence: 0.9, sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null },
     ]);
     usePhraseMemoryStore.getState().setEnabledMatchIds('chunk-1', new Set(['pm-1']));
     llmMocks.runStage.mockResolvedValue({ content: 'Translated with memory' });
@@ -314,7 +314,7 @@ describe('usePipeline', () => {
           targetPhrase: 'stored target',
           score: 0.9,
           confidence: 0.9,
-          createdAt: '2026-06-13T00:00:00.000Z', workspaceId: null, projectId: null, chunkId: null },
+          createdAt: '2026-06-13T00:00:00.000Z', sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null },
       ]);
     });
 

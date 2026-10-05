@@ -191,6 +191,8 @@ describe('phrase memory entry management', () => {
       sourcePhrase: 'ciao',
       targetPhrase: 'hello',
       confidence: 0.88,
+      sourceLanguage: 'Italian',
+      targetLanguage: 'English',
     });
   });
 
@@ -259,8 +261,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.93 }],
     });
 
@@ -270,8 +270,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [
         {
           sourcePhrase: 'Ciao mondo',
@@ -282,6 +280,10 @@ describe('saveApprovedPhrasePairs', () => {
       ],
     });
     expect(savedCount).toBe(1);
+    // Le lingue le legge il backend dalla lingua dell'opera: il frontend non le manda.
+    const payload = mockInvoke.mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty('sourceLanguage');
+    expect(payload).not.toHaveProperty('targetLanguage');
   });
 
   it('throws when called with no pairs, instead of silently doing nothing', async () => {
@@ -290,8 +292,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [],
     })).rejects.toThrow();
 
@@ -304,8 +304,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [{ sourcePhrase: '   ', targetPhrase: 'Hello world', confidence: 1 }],
     })).rejects.toThrow();
 
@@ -316,7 +314,7 @@ describe('saveApprovedPhrasePairs', () => {
     mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2], []]);
     await expect(saveApprovedPhrasePairs({
       workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c1', embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it', targetLanguage: 'en', pairs: [
+      pairs: [
         { sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 },
         { sourcePhrase: 'Buona notte', targetPhrase: 'Good night', confidence: 0.9 },
       ],
@@ -333,8 +331,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }],
     })).rejects.toThrow('db locked');
   });

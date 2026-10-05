@@ -47,14 +47,12 @@ describe('WorkspaceSettingsModal', () => {
     });
     expect(onClose).toHaveBeenCalledOnce();
   });
-  it('saves the explicit permission to search other workspaces from the memory tab', async () => {
+  it('no longer offers a search-all-workspaces switch in the memory tab and never saves it', async () => {
     const user = userEvent.setup();
     render(<WorkspaceSettingsModal open onClose={vi.fn()} />);
     await user.click(screen.getByRole('tab', { name: 'workspace.settings.memoryTab' }));
-    const toggle = screen.getByRole('switch', { name: 'workspace.memorySearchAllWorkspaces' });
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
-    await user.click(toggle);
+    expect(screen.queryByRole('switch', { name: 'workspace.memorySearchAllWorkspaces' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'common.save' }));
-    expect(updateActiveWorkspace).toHaveBeenCalledWith(expect.objectContaining({ memorySearchAllWorkspaces: true }));
+    expect(updateActiveWorkspace).toHaveBeenCalledWith(expect.not.objectContaining({ memorySearchAllWorkspaces: expect.anything() }));
   });
 });

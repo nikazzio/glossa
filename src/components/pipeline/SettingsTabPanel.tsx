@@ -1,4 +1,4 @@
-import { FileText, Languages, Layers, Network, ShieldCheck, Wand2, type LucideIcon } from 'lucide-react';
+import { FileText, Languages, Layers, Network, ScrollText, ShieldCheck, Wand2, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,7 @@ import { PipelinePromptEditor } from './PipelinePromptEditor';
 import { DeeplLanguagePair } from './DeeplLanguagePair';
 
 const MODE_ICON: Record<PipelineMode, LucideIcon> = {
-  standard: Languages,
+  standard: ScrollText,
   editorial: Layers,
   'deepl-hybrid': Network,
 };

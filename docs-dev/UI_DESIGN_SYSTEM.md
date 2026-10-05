@@ -328,8 +328,17 @@ testo nel suggerimento e per chi legge con la voce.
 - Lingue di un'opera: `WorkLanguagesFields`, due sezioni (Partenza, Arrivo) di
   `SettingRow`: Lingua e Varietà con valore in `font-display`, codice mono
   piccolo, `SearchPicker` e «x»; Nota con campo in linea. Nella riga in cima
-  allo Studio la coppia è testo corsivo cliccabile; la modifica sta in una
-  finestra con Annulla/Conferma, mai salvata all'uscita.
+  allo Studio la coppia sta a destra, prima dei comandi dell'opera: testo
+  corsivo muted (solo i nomi; varietà e note nel suggerimento) e un
+  `IconButton` lingue che apre la finestra con Annulla/Conferma, mai salvata
+  all'uscita; poi `CommandRule`. Il tipo di pipeline è solo un'icona con nome e
+  spiegazione nel suggerimento.
+- Riferimenti della memoria: una sola riga di comandi (soglia con − cursore +
+  e valore, filetto, globo, aggiorna) senza titolo ripetuto; ogni risultato:
+  percentuale e cerchio, originale in `font-display` e traduzione in sans con
+  il codice lingua a margine, una riga di provenienza e i dettagli in un `Hint`.
+  Le coppie della Memoria del frammento (salvate, estratte, scritte a mano)
+  usano la stessa forma (`PhraseLine`), con campi modificabili al posto del testo.
 
 - Finestre modali tramite `Dialog`; conferme distruttive tramite `AlertDialog`.
 - Conferma e annullamento usano i pulsanti dialog condivisi.

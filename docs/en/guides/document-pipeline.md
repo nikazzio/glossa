@@ -60,9 +60,9 @@ list ships with the app and works offline; there is no in-app command to update
 it yet.
 
 Where to set them: in the import window and in the top row of the Studio.
-There, next to the pipeline name and mode, the pair appears in short form
-(“Latino (Medieval Latin) → Italiano”) and the tooltip shows the notes. One
-click opens the **Languages of the work** window with the same fields, Cancel
+There, on the right before the commands, the pair appears in short form
+(“Latin → Italian”) and the tooltip shows varieties and notes. The languages
+icon next to it opens the **Languages of the work** window with the same fields, Cancel
 and Confirm: nothing is saved unless you confirm. While the pipeline is
 running the control is visible but blocked, with the reason in the tooltip. If
 the work has no source language and comes from a Library book whose language

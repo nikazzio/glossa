@@ -2484,7 +2484,7 @@
           {
             "title": "Configurare le fasi",
             "paragraphs": [
-              "La barra dello Studio mostra opera / pipeline e tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano e il suggerimento mostra il nome completo. Il nome della pipeline apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. Accanto compare in breve la coppia di lingue dell’opera, uguale per tutte le sue pipeline. Durante l’elaborazione le operazioni sulla pipeline sono bloccate.",
+              "La barra dello Studio mostra opera / pipeline e, come icona, il tipo Semplice, Editoriale o DeepL (nome nel suggerimento). I nomi lunghi si troncano e il suggerimento mostra il nome completo. Il nome della pipeline apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. A destra, prima dei comandi, compare in breve la coppia di lingue dell’opera, uguale per tutte le sue pipeline. Durante l’elaborazione le operazioni sulla pipeline sono bloccate.",
               "L’icona rossa in fondo alla finestra azzera tutte le traduzioni e i loro audit, dopo una conferma. È spenta, con il motivo, mentre la pipeline lavora o quando non c’è niente da azzerare.",
               "Accanto al titolo di ogni prompt vedi da dove viene il testo: Predefinito, Personalizzato o il nome del template salvato che stai usando."
             ],
@@ -2527,7 +2527,7 @@
             "title": "Lo Studio di traduzione",
             "paragraphs": [
               "La barra principale resta a sinistra: da lì passi a un’altra area, e la traduzione si chiude. Mentre la pipeline lavora le voci sono spente.",
-              "La riga in cima riporta al catalogo e mostra il nome della traduzione e la pipeline aperta, la modalità e, in breve, la coppia di lingue dell’opera (un clic apre «Lingue dell’opera»): un clic sul nome dell’opera lo rinomina, il nome della pipeline apre il menu per sceglierla, rinominarla, crearne o eliminarne una, l’ingranaggio ne apre le opzioni. A destra trovi importa, esporta, risorse linguistiche del workspace, configurazione ed elimina.",
+              "La riga in cima riporta al catalogo e mostra il nome della traduzione, la pipeline aperta e l’icona della modalità: un clic sul nome dell’opera lo rinomina, il nome della pipeline apre il menu per sceglierla, rinominarla, crearne o eliminarne una, l’ingranaggio ne apre le opzioni. A destra trovi la coppia di lingue dell’opera in breve con l’icona che apre «Lingue dell’opera», poi importa, esporta, risorse linguistiche del workspace ed elimina.",
               "La colonna Strumenti a destra tiene in cima traduci, Blocchi multipli con il numero di frammenti e i costi. Sotto trovi Glossario, Memoria (frasi simili ed estrazione), Anteprima, Revisione (Audit, Note, Note del testo e Storico) e Documento (Indice, Statistiche e Coerenza). Chiusa, lascia in vista il solo pulsante traduci."
             ]
           },
@@ -2538,7 +2538,7 @@
               "Controlla l’anteprima prima di confermare. La segmentazione automatica divide il testo secondo una lunghezza obiettivo in parole. Per Markdown sono disponibili opzioni dedicate ai titoli.",
               "La finestra di importazione si apre larga. A sinistra trovi Lingue dell’opera, Modello e Suddivisione in frammenti; a destra i conteggi, la vista a schede o a segmenti (due piccole icone tonde) e l’anteprima dei frammenti a tutta altezza. In fondo ci sono il controllo delle parole, Annulla e Importa.",
               "Le Lingue dell’opera valgono per tutte le sue pipeline. Per ogni lato, Partenza e Arrivo, puoi scegliere la Lingua (anche storica, cercandola per nome italiano, inglese o codice), la Varietà (solo quelle della lingua scelta, per esempio latino medievale; resta spenta finché non scegli la lingua) e una Nota libera su epoca, area o mano. Tutto è facoltativo e la x svuota il campo. Una nuova opera parte con partenza non specificata e arrivo italiano; se la Biblioteca conosce la lingua del libro, viene proposta come partenza.",
-              "Puoi cambiarle anche dopo, dalla riga in cima allo Studio: clicca la coppia accanto a pipeline e modalità, modifica e premi Conferma (non si salva altrimenti). Non si può farlo mentre la pipeline è in esecuzione. Se ci sono frasi salvate da questa opera con altre lingue, Glossa chiede se aggiornarle: testo e misure non cambiano e la versione precedente resta nello storico.",
+              "Puoi cambiarle anche dopo, dalla riga in cima allo Studio: clicca l’icona delle lingue a destra, accanto alla coppia, modifica e premi Conferma (non si salva altrimenti). Non si può farlo mentre la pipeline è in esecuzione. Se ci sono frasi salvate da questa opera con altre lingue, Glossa chiede se aggiornarle: testo e misure non cambiano e la versione precedente resta nello storico.",
               "Scegli una dimensione adatta al testo e rivedi i confini dei frammenti. Un file di testo con codifica diversa da UTF-8 deve essere convertito prima dell’importazione."
             ]
           },
@@ -2625,8 +2625,8 @@
           {
             "title": "Usare frasi già salvate",
             "paragraphs": [
-              "Apri Memoria → Riferimenti nel frammento. Glossa filtra solo per la lingua di arrivo e confronta testi con un embedding dello stesso modello, dimensione e tipo di input del workspace. Regola la soglia e spunta soltanto i riferimenti pertinenti.",
-              "Ogni riferimento mostra l’origine («questo documento», «altra opera del workspace» o «altro workspace»), il libro quando noto, la traduzione e il frammento di origine, insieme al modello usato. In elenco vengono prima i risultati di questo documento, poi quelli del workspace, poi gli altri. La spunta decide se usarlo nella successiva traduzione; non modifica la raccolta. Le coppie già salvate nel frammento restano nella sottolinguetta Memoria: non vengono inserite automaticamente fra i risultati della ricerca.",
+              "Apri Memoria → Riferimenti nel frammento. Glossa filtra solo per la lingua di arrivo e confronta testi con un embedding dello stesso modello, dimensione e tipo di input del workspace. Regola la soglia con il cursore o, per un centesimo alla volta, con − e +; poi spunta soltanto i riferimenti pertinenti.",
+              "Ogni riferimento mostra somiglianza e origine («questo documento», «altra opera del workspace» o «altro workspace»), poi l’originale in carattere da libro e la traduzione sotto, con il codice della lingua a margine; una riga dice opera e frammento, e l’icona «i» apre workspace, libro e modello. In elenco vengono prima i risultati di questo documento, poi quelli del workspace, poi gli altri. La spunta decide se usarlo nella successiva traduzione; non modifica la raccolta. Le coppie già salvate nel frammento restano nella sottolinguetta Memoria: non vengono inserite automaticamente fra i risultati della ricerca.",
               "Il globo accanto all’aggiornamento estende la ricerca agli altri workspace e alle frasi senza workspace; la scelta si ricorda per ogni workspace e non è più nelle impostazioni del workspace. Restano validi la lingua di arrivo e la compatibilità degli embedding. Consultare una frase non la collega al workspace."
             ]
           },
@@ -3433,6 +3433,16 @@
     "dismiss": "Ignora"
   },
   "memory": {
+    "threshold": "Soglia",
+    "thresholdHint": "Somiglianza minima perché una frase compaia fra i Riferimenti. Spunta poi le frasi da usare per la traduzione di questo frammento.",
+    "thresholdDown": "Abbassa la soglia di 0,01",
+    "thresholdUp": "Alza la soglia di 0,01",
+    "reference": {
+      "original": "Originale",
+      "translation": "Traduzione",
+      "chunk": "frammento {{number}}",
+      "details": "Provenienza completa"
+    },
     "searchAllWorkspacesOff": "Cerca anche negli altri workspace: ora i Riferimenti vengono solo da questo documento e dal suo workspace",
     "searchAllWorkspacesOn": "Cerca solo in questo workspace: ora i Riferimenti vengono anche dagli altri workspace",
     "searchScopeSaveFailed": "Impossibile cambiare dove cercano i Riferimenti",
@@ -3464,7 +3474,6 @@
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} match",
     "matchBadge": "{{count}} match",
-    "similarityThreshold": "Soglia di similarità",
     "extractButton": "Estrai frasi",
     "extracting": "Estrazione delle frasi in corso…",
     "extractFailed": "Estrazione delle frasi non riuscita",
@@ -3489,11 +3498,11 @@
     "toggleSavedListHide": "Nascondi frasi già salvate",
     "referencesGlossaryHint": "L'intero glossario del progetto viene sempre incluso nella traduzione di questo frammento.",
     "referencesMemorySectionTitle": "Frasi simili in memoria",
-    "selectionHint": "Seleziona le frasi da usare per la traduzione di questo frammento.",
     "addCheckedToMemory": "Aggiungi alla memoria le coppie spuntate",
     "reasonNoNewChecked": "nessuna coppia nuova spuntata",
     "reasonNotVerified": "traduzione non verificata",
     "inMemoryBadge": "In memoria",
+    "manualPair": "scritta a mano",
     "inMemoryCount_one": "coppia in memoria",
     "inMemoryCount_other": "coppie in memoria",
     "removeFromMemory": "Togli dalla memoria",

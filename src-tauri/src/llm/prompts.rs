@@ -100,7 +100,9 @@ pub(crate) fn build_ocr_prompt(resolved_prompt: &str, image: ImageAttachment) ->
 }
 
 #[cfg(test)]
-pub(crate) fn format_glossary_table_for_tests(glossary: &[crate::llm::types::GlossaryEntry]) -> String {
+pub(crate) fn format_glossary_table_for_tests(
+    glossary: &[crate::llm::types::GlossaryEntry],
+) -> String {
     format_glossary_table(glossary)
 }
 
@@ -121,7 +123,6 @@ fn work_brief(config: &PipelineConfig) -> Option<&str> {
         .filter(|s| !s.is_empty())
 }
 
-
 pub(crate) fn build_stage_prompts(
     text: &str,
     stage: &StageConfig,
@@ -141,11 +142,7 @@ fn sys(config: &PipelineConfig, sep: &str, id: &'static str, values: &[(&str, &s
 /// Whether a switchable part is on for a phase (`phase:part` in the disabled list turns it off).
 fn on(config: &PipelineConfig, phase: &str, part: &str) -> bool {
     let key = format!("{phase}:{part}");
-    !config
-        .prompt_composition
-        .disabled
-        .iter()
-        .any(|entry| *entry == key)
+    !config.prompt_composition.disabled.contains(&key)
 }
 
 /// The text when the part is on, nothing when it is switched off.
@@ -159,7 +156,14 @@ fn when_on(config: &PipelineConfig, phase: &str, part: &str, text: String) -> St
 
 fn context_part(config: &PipelineConfig) -> String {
     work_brief(config)
-        .map(|brief| sys(config, "\n\n", "context-frame", &[("TRANSLATION_CONTEXT", brief)]))
+        .map(|brief| {
+            sys(
+                config,
+                "\n\n",
+                "context-frame",
+                &[("TRANSLATION_CONTEXT", brief)],
+            )
+        })
         .unwrap_or_default()
 }
 
@@ -184,14 +188,22 @@ pub(crate) fn compose_stage_prompts(
     };
     let glossary_table = format_glossary_table(&config.glossary);
     let (glossary_id, glossary_text) = if glossary_table.is_empty() {
-        ("translation.glossary-empty", render(config, "translation.glossary-empty", &[]))
+        (
+            "translation.glossary-empty",
+            render(config, "translation.glossary-empty", &[]),
+        )
     } else {
         (
             "translation.glossary-rules",
-            render(config, "translation.glossary-rules", &[("GLOSSARY_TABLE", &glossary_table)]),
+            render(
+                config,
+                "translation.glossary-rules",
+                &[("GLOSSARY_TABLE", &glossary_table)],
+            ),
         )
     };
-    let markdown = if config.markdown_aware.unwrap_or(false) && on(config, phase, "markdown-rules") {
+    let markdown = if config.markdown_aware.unwrap_or(false) && on(config, phase, "markdown-rules")
+    {
         sys(config, "\n\n", "translation.markdown-rules", &[])
     } else {
         String::new()
@@ -200,16 +212,30 @@ pub(crate) fn compose_stage_prompts(
     let examples = if examples_list.is_empty() || !on(config, phase, "examples") {
         String::new()
     } else {
-        sys(config, "\n\n", "translation.examples", &[("EXAMPLES", &examples_list)])
+        sys(
+            config,
+            "\n\n",
+            "translation.examples",
+            &[("EXAMPLES", &examples_list)],
+        )
     };
 
     let mut system = vec![Parts::default()
         .push_from(
             "role",
             Some("translation.role"),
-            when_on(config, phase, "role", render(config, "translation.role", &[])),
+            when_on(
+                config,
+                phase,
+                "role",
+                render(config, "translation.role", &[]),
+            ),
         )
-        .push_from("translation-context", Some("context-frame"), context_part(config))
+        .push_from(
+            "translation-context",
+            Some("context-frame"),
+            context_part(config),
+        )
         .push_from(
             "structural-rules",
             Some("translation.structural-rules"),
@@ -223,9 +249,18 @@ pub(crate) fn compose_stage_prompts(
         .push_from(
             "glossary-rules",
             Some(glossary_id),
-            when_on(config, phase, "glossary-rules", format!("\n\n{glossary_text}")),
+            when_on(
+                config,
+                phase,
+                "glossary-rules",
+                format!("\n\n{glossary_text}"),
+            ),
         )
-        .push_from("markdown-rules", Some("translation.markdown-rules"), markdown)
+        .push_from(
+            "markdown-rules",
+            Some("translation.markdown-rules"),
+            markdown,
+        )
         .push_from("examples", Some("translation.examples"), examples)
         .block(true)];
 
@@ -245,7 +280,11 @@ pub(crate) fn compose_stage_prompts(
                 .push_from(
                     "neighbour-chunks",
                     Some("translation.neighbours"),
-                    render(config, "translation.neighbours", &[("NEIGHBOUR_CHUNKS", blob)]),
+                    render(
+                        config,
+                        "translation.neighbours",
+                        &[("NEIGHBOUR_CHUNKS", blob)],
+                    ),
                 )
                 .block(true),
         );
@@ -265,12 +304,21 @@ pub(crate) fn compose_stage_prompts(
             .push_from(
                 "stage-prompt",
                 Some("translation.stage-frame"),
-                render(config, "translation.stage-frame", &[("STAGE_PROMPT", &stage.prompt)]),
+                render(
+                    config,
+                    "translation.stage-frame",
+                    &[("STAGE_PROMPT", &stage.prompt)],
+                ),
             )
             .push_from(
                 "output-contract",
                 Some(contract_id),
-                when_on(config, phase, "output-contract", sys(config, "\n\n", contract_id, &[])),
+                when_on(
+                    config,
+                    phase,
+                    "output-contract",
+                    sys(config, "\n\n", contract_id, &[]),
+                ),
             )
             .block(false),
     );
@@ -292,7 +340,10 @@ pub(crate) fn compose_stage_prompts(
                     config,
                     user_sep,
                     "refine.user-message",
-                    &[("TEXT", text), ("PREVIOUS_RESULT", previous_result.unwrap_or_default())],
+                    &[
+                        ("TEXT", text),
+                        ("PREVIOUS_RESULT", previous_result.unwrap_or_default()),
+                    ],
                 ),
             )
             .push_from(
@@ -300,7 +351,14 @@ pub(crate) fn compose_stage_prompts(
                 Some("refine.audit-findings"),
                 audit_context
                     .filter(|s| !s.trim().is_empty())
-                    .map(|ctx| sys(config, "\n\n", "refine.audit-findings", &[("AUDIT_FINDINGS", ctx)]))
+                    .map(|ctx| {
+                        sys(
+                            config,
+                            "\n\n",
+                            "refine.audit-findings",
+                            &[("AUDIT_FINDINGS", ctx)],
+                        )
+                    })
                     .unwrap_or_default(),
             )
     } else {
@@ -309,7 +367,12 @@ pub(crate) fn compose_stage_prompts(
             .push_from(
                 "user-message",
                 Some("translation.user-message"),
-                sys(config, user_sep, "translation.user-message", &[("TEXT", text)]),
+                sys(
+                    config,
+                    user_sep,
+                    "translation.user-message",
+                    &[("TEXT", text)],
+                ),
             )
     };
 
@@ -325,7 +388,11 @@ fn chunk_id_part(config: &PipelineConfig, id: Option<&str>) -> String {
         .unwrap_or_default()
 }
 
-fn compose_format_stage_prompts(text: &str, stage: &StageConfig, config: &PipelineConfig) -> ComposedPrompt {
+fn compose_format_stage_prompts(
+    text: &str,
+    stage: &StageConfig,
+    config: &PipelineConfig,
+) -> ComposedPrompt {
     let system = vec![
         Parts::default()
             .push_from(
@@ -338,7 +405,11 @@ fn compose_format_stage_prompts(text: &str, stage: &StageConfig, config: &Pipeli
             .push_from(
                 "stage-prompt",
                 Some("format.stage-frame"),
-                render(config, "format.stage-frame", &[("STAGE_PROMPT", &stage.prompt)]),
+                render(
+                    config,
+                    "format.stage-frame",
+                    &[("STAGE_PROMPT", &stage.prompt)],
+                ),
             )
             .push_from(
                 "output-contract",
@@ -390,13 +461,19 @@ pub(crate) fn compose_judge_prompts(
     let glossary = if glossary_table.is_empty() || !on(config, "audit", "glossary-table") {
         String::new()
     } else {
-        sys(config, "\n\n", "audit.glossary", &[("GLOSSARY_TABLE", &glossary_table)])
+        sys(
+            config,
+            "\n\n",
+            "audit.glossary",
+            &[("GLOSSARY_TABLE", &glossary_table)],
+        )
     };
-    let markdown = if config.markdown_aware.unwrap_or(false) && on(config, "audit", "markdown-rules") {
-        sys(config, "\n\n", "audit.markdown-rules", &[])
-    } else {
-        String::new()
-    };
+    let markdown =
+        if config.markdown_aware.unwrap_or(false) && on(config, "audit", "markdown-rules") {
+            sys(config, "\n\n", "audit.markdown-rules", &[])
+        } else {
+            String::new()
+        };
 
     // One cacheable block: the source text and translation are in the user turn so this
     // block is constant for the whole project run, enabling near-100% cache hit rate
@@ -407,11 +484,20 @@ pub(crate) fn compose_judge_prompts(
             Some("audit.role"),
             when_on(config, "audit", "role", render(config, "audit.role", &[])),
         )
-        .push_from("translation-context", Some("context-frame"), context_part(config))
+        .push_from(
+            "translation-context",
+            Some("context-frame"),
+            context_part(config),
+        )
         .push_from(
             "stage-prompt",
             Some("audit.stage-frame"),
-            sys(config, "\n\n", "audit.stage-frame", &[("STAGE_PROMPT", &config.judge_prompt)]),
+            sys(
+                config,
+                "\n\n",
+                "audit.stage-frame",
+                &[("STAGE_PROMPT", &config.judge_prompt)],
+            ),
         )
         .push_from("glossary-table", Some("audit.glossary"), glossary)
         .push_from("markdown-rules", Some("audit.markdown-rules"), markdown)
@@ -428,7 +514,12 @@ pub(crate) fn compose_judge_prompts(
         .push_from(
             "response-format",
             Some("audit.response-format"),
-            sys(config, "\n\n", "audit.response-format", &[("UI_LANGUAGE", ui_language(config))]),
+            sys(
+                config,
+                "\n\n",
+                "audit.response-format",
+                &[("UI_LANGUAGE", ui_language(config))],
+            ),
         )
         .block(true)];
 
@@ -478,7 +569,12 @@ pub(crate) fn compose_coherence_prompts(
     let glossary = if glossary_table.is_empty() || !on(config, "coherence", "glossary-table") {
         String::new()
     } else {
-        sys(config, "\n", "coherence.glossary", &[("GLOSSARY_TABLE", &glossary_table)])
+        sys(
+            config,
+            "\n",
+            "coherence.glossary",
+            &[("GLOSSARY_TABLE", &glossary_table)],
+        )
     };
     // The glossary table ends with a line break of its own: after it one more blank line.
     let response_sep = if glossary.is_empty() { "\n" } else { "\n\n" };
@@ -489,9 +585,18 @@ pub(crate) fn compose_coherence_prompts(
         .push_from(
             "role",
             Some("coherence.role"),
-            when_on(config, "coherence", "role", render(config, "coherence.role", &[])),
+            when_on(
+                config,
+                "coherence",
+                "role",
+                render(config, "coherence.role", &[]),
+            ),
         )
-        .push_from("translation-context", Some("context-frame"), context_part(config))
+        .push_from(
+            "translation-context",
+            Some("context-frame"),
+            context_part(config),
+        )
         .push_from(
             "review-method",
             Some("coherence.review-method"),
@@ -551,7 +656,10 @@ pub(crate) fn compose_coherence_prompts(
                 config,
                 user_sep,
                 "coherence.user-message",
-                &[("TEXT", &input.original), ("TRANSLATION", &input.translation)],
+                &[
+                    ("TEXT", &input.original),
+                    ("TRANSLATION", &input.translation),
+                ],
             ),
         );
 

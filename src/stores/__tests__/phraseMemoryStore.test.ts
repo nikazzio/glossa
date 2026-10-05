@@ -9,6 +9,8 @@ const makeRaw = (id: string, distance = 0.1): PhraseMatch => ({
   targetPhrase: `tgt-${id}`,
   distance,
   confidence: 0.85,
+  sourceLanguage: 'lat',
+  targetLanguage: 'ita',
   workspaceId: null,
   projectId: null,
   chunkId: null,

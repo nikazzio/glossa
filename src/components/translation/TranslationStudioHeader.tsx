@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { BookOpenText, FileOutput, Languages, Layers, LibraryBig, Network, Trash2, Upload } from 'lucide-react';
+import { BookOpenText, FileOutput, Layers, LibraryBig, Network, ScrollText, Trash2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { IconButton, PageHeader, RenameField, Tooltip } from '../ui';
+import { CommandRule, Hint, IconButton, PageHeader, RenameField, Tooltip } from '../ui';
 import { confirm } from '../../stores/confirmStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useLibraryStore } from '../../stores/libraryStore';
@@ -17,7 +17,7 @@ interface TranslationStudioHeaderProps {
   onImportDocument: () => void;
 }
 
-const MODE_ICONS = { standard: Languages, editorial: Layers, 'deepl-hybrid': Network };
+const MODE_ICONS = { standard: ScrollText, editorial: Layers, 'deepl-hybrid': Network };
 
 /** Nome della traduzione, rinominabile sul posto con un clic. */
 function TranslationName() {
@@ -121,17 +121,16 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
         <span className="flex min-w-0 items-center gap-2">
           <span className="shrink-0 font-display text-lg text-editorial-muted" aria-hidden="true">/</span>
           <PipelineSwitch />
-          <Tooltip label={t(`pipeline.modeDesc.${mode}`)} side="bottom">
-            <span className="flex shrink-0 items-center gap-1.5 text-sm text-editorial-muted">
-              <ModeIcon size={13} aria-hidden="true" />
-              <span className="font-display italic">{t(`pipeline.modeShort.${mode}`)}</span>
-            </span>
-          </Tooltip>
-          <WorkLanguagesControl disabledReason={running} />
+          {/* Il tipo di pipeline è un segno: nome e spiegazione nel suggerimento. */}
+          <Hint label={`${t(`pipeline.modeShort.${mode}`)} — ${t(`pipeline.modeDesc.${mode}`)}`}>
+            <ModeIcon size={14} className="shrink-0 text-editorial-muted" aria-label={t(`pipeline.modeShort.${mode}`)} />
+          </Hint>
         </span>
       }
       actions={
         <>
+          <WorkLanguagesControl disabledReason={running} />
+          <CommandRule />
           <IconButton
             size="sm"
             onClick={onImportDocument}

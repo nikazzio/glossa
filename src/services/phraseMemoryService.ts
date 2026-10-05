@@ -18,6 +18,8 @@ type RawPhraseMatch = {
   workspace_id: string | null;
   project_id: string | null;
   chunk_id: string | null;
+  source_language: string;
+  target_language: string;
   provenance: TextProvenance;
   embedding_model: string;
   dimensions: number;
@@ -156,6 +158,8 @@ function toPhraseMatch(raw: RawPhraseMatch): PhraseMatch {
     workspaceId: raw.workspace_id,
     projectId: raw.project_id,
     chunkId: raw.chunk_id,
+    sourceLanguage: raw.source_language,
+    targetLanguage: raw.target_language,
     provenance: raw.provenance,
     embeddingModel: raw.embedding_model,
     dimensions: raw.dimensions,

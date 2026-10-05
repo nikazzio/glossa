@@ -4,8 +4,6 @@ import type { PipelineConfig } from '../types';
 
 const baseConfig: PipelineConfig = {
   pipelineId: '',
-  sourceLanguage: 'English',
-  targetLanguage: 'Italian',
   stages: [
     { id: 'stg-1', name: 'Draft', prompt: 'Translate literally.', model: 'gpt-5.4-nano', provider: 'openai', enabled: true },
   ],

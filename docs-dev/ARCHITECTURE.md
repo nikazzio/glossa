@@ -1033,7 +1033,10 @@ provenienza (workspace di casa = quello della traduzione o dell'importazione,
 globo nei Riferimenti (`ReferencesTab`, `updateActiveWorkspace`), non più nelle
 impostazioni workspace. `ReferencesTab` ordina con `orderByCircle`
 (`utils/memoryCircles.ts`): documento corrente, poi workspace, poi altrove,
-dentro ogni cerchio per somiglianza; ogni riga porta l'etichetta del cerchio.
+dentro ogni cerchio per somiglianza; ogni riga (`ReferenceMatchRow`) porta
+l'etichetta del cerchio e le lingue delle revisioni (`vec_search_phrase_memory`
+restituisce `source_language`/`target_language`). La soglia ha passi di 0,01
+con − e +.
 Cambiare workspace, modello di misura, lingua di arrivo dell'opera o ambito
 invalida i riferimenti selezionati anche a ricerca automatica spenta; con
 ricerca automatica attiva ne avvia una nuova.
@@ -1142,7 +1145,7 @@ linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hi
 «Azzera tutte le traduzioni» (`resetAllChunks`, conferma), spento con motivo.
 
 Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
-`RenameField`, accessorio `titleAccessory`: separatore /, `PipelineSwitch` con menu scelta/creazione/rinomina/eliminazione e ⚙, tipo Semplice/Editoriale/DeepL, poi `WorkLanguagesControl` (coppia dell'opera; la coppia DeepL resta nelle opzioni della fase); a destra importa, esporta,
+`RenameField`, accessorio `titleAccessory`: separatore /, `PipelineSwitch` con menu scelta/creazione/rinomina/eliminazione e ⚙, tipo Semplice/Editoriale/DeepL come sola icona con `Hint`; a destra `WorkLanguagesControl` (coppia dell'opera e icona che apre la finestra; la coppia DeepL resta nelle opzioni della fase), `CommandRule`, poi importa, esporta,
 risorse linguistiche del workspace, elimina), al centro `DocumentView` invariato salvo la fila
 `ChunkStrip` («nn/nn», poi una finestra di 7 `ChunkDot` con il frammento
 aperto fisso al centro: la fila intera trasla di `SLOT_PX` per posto, i

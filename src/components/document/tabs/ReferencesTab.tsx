@@ -1,4 +1,4 @@
-import { BookPlus, CircleCheck, Globe, Layers, Loader2, RefreshCcw } from 'lucide-react';
+import { Globe, Layers, Loader2, Minus, Plus, RefreshCcw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -8,19 +8,20 @@ import { usePhraseMemoryStore } from '../../../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../../../stores/phraseMemoryStore';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { classifyError } from '../../../utils/retry';
-import { CopyButton, EmptyState, IconButton, PanelSection, SettingRow, StatRow } from '../../ui';
-import { PhraseProvenance } from '../../library/PhraseProvenance';
-import { usePhraseProvenanceLookup, type PhraseProvenanceLookup } from '../../../hooks/usePhraseProvenanceLookup';
+import { CommandRule, EmptyState, Hint, IconButton } from '../../ui';
+import { usePhraseProvenanceLookup } from '../../../hooks/usePhraseProvenanceLookup';
+import { ReferenceMatchRow } from './ReferenceMatchRow';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { reportUiError } from '../../../utils/reportUiError';
-import { memoryCircle, orderByCircle, type MemoryCircle } from '../../../utils/memoryCircles';
+import { memoryCircle, orderByCircle } from '../../../utils/memoryCircles';
 import { ExtractTermDialog } from '../ExtractTermDialog';
 import type { TranslationChunk } from '../../../types';
 
 const MIN_THRESHOLD = 0.5;
 const MAX_THRESHOLD = 1;
 const DEFAULT_THRESHOLD = 0.75;
+const THRESHOLD_STEP = 0.01;
 
 // classifyError() drives the pipeline's retry logic too; here we only use it
 // to pick which reason to show — a memory search never retries on its own.
@@ -75,6 +76,11 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
   const handleThresholdChange = (value: number) => {
     setConfig((prev) => ({ ...prev, phraseMemorySimilarityThreshold: value }));
   };
+  // Un passo di +/- per arrivare preciso dove il cursore salta: arrotondato al centesimo.
+  const stepThreshold = (delta: number) => {
+    const next = Math.round((effectiveThreshold + delta) * 100) / 100;
+    handleThresholdChange(Math.min(MAX_THRESHOLD, Math.max(MIN_THRESHOLD, next)));
+  };
 
   const handleRefresh = async () => {
     if (!currentChunkId) return;
@@ -87,66 +93,62 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 border-b border-editorial-border px-4 py-4">
-        <PanelSection
-          icon={Layers}
-          label={t('memory.referencesMemorySectionTitle')}
-          hint={t('memory.selectionHint')}
-          actions={
-            <>
-            <IconButton
-              size="md"
-              tone={searchAllWorkspaces ? 'accent' : 'default'}
-              ariaPressed={searchAllWorkspaces}
-              title={t(searchAllWorkspaces ? 'memory.searchAllWorkspacesOn' : 'memory.searchAllWorkspacesOff')}
-              onClick={() => void toggleAllWorkspaces()}
-              disabled={!activeWorkspaceId || searchStatus === 'searching'}
-              tooltipSide="left"
-            >
-              <Globe size={13} />
-            </IconButton>
-            <IconButton
-              size="md"
-              tone={searchStatus === 'searching' ? 'running' : 'default'}
-              title={searchStatus === 'searching' ? t('memory.searching') : t('memory.refreshButton')}
-              onClick={() => void handleRefresh()}
-              disabled={!currentChunkId || searchStatus === 'searching'}
-              tooltipSide="left"
-            >
-              {searchStatus === 'searching'
-                ? <Loader2 size={13} className="animate-spin" />
-                : <RefreshCcw size={13} />}
-            </IconButton>
-            </>
-          }
+      {/* Una sola riga di comandi: il nome della scheda dice già cosa c'è sotto. */}
+      <div className="flex shrink-0 items-center gap-1 border-b border-editorial-border px-4 py-2">
+        <Hint label={t('memory.thresholdHint')}>
+          <span className="mr-1 text-sm text-editorial-ink">{t('memory.threshold')}</span>
+        </Hint>
+        <IconButton size="sm" title={t('memory.thresholdDown')} onClick={() => stepThreshold(-THRESHOLD_STEP)}
+          disabled={effectiveThreshold <= MIN_THRESHOLD}><Minus size={13} /></IconButton>
+        <input
+          type="range"
+          min={MIN_THRESHOLD}
+          max={MAX_THRESHOLD}
+          step={THRESHOLD_STEP}
+          value={effectiveThreshold}
+          onChange={(e) => handleThresholdChange(parseFloat(e.target.value))}
+          className="min-w-12 flex-1 accent-editorial-accent"
+          aria-label={t('memory.threshold')}
+        />
+        <IconButton size="sm" title={t('memory.thresholdUp')} onClick={() => stepThreshold(THRESHOLD_STEP)}
+          disabled={effectiveThreshold >= MAX_THRESHOLD}><Plus size={13} /></IconButton>
+        <span className="w-9 text-right font-mono text-xs text-editorial-ink">{effectiveThreshold.toFixed(2)}</span>
+        <CommandRule />
+        <IconButton
+          size="sm"
+          tone={searchAllWorkspaces ? 'accent' : 'default'}
+          ariaPressed={searchAllWorkspaces}
+          title={t(searchAllWorkspaces ? 'memory.searchAllWorkspacesOn' : 'memory.searchAllWorkspacesOff')}
+          onClick={() => void toggleAllWorkspaces()}
+          disabled={!activeWorkspaceId || searchStatus === 'searching'}
+          tooltipSide="left"
         >
-          <SettingRow label={t('memory.similarityThreshold')}>
-            <input
-              type="range"
-              min={MIN_THRESHOLD}
-              max={MAX_THRESHOLD}
-              step="0.01"
-              value={effectiveThreshold}
-              onChange={(e) => handleThresholdChange(parseFloat(e.target.value))}
-              className="w-32 accent-editorial-accent"
-              aria-label={t('memory.similarityThreshold')}
-            />
-            <span className="w-10 text-right font-mono text-xs text-editorial-ink">{effectiveThreshold.toFixed(2)}</span>
-          </SettingRow>
-        </PanelSection>
+          <Globe size={13} />
+        </IconButton>
+        <IconButton
+          size="sm"
+          tone={searchStatus === 'searching' ? 'running' : 'default'}
+          title={searchStatus === 'searching' ? t('memory.searching') : t('memory.refreshButton')}
+          onClick={() => void handleRefresh()}
+          disabled={!currentChunkId || searchStatus === 'searching'}
+          tooltipSide="left"
+        >
+          {searchStatus === 'searching'
+            ? <Loader2 size={13} className="animate-spin" />
+            : <RefreshCcw size={13} />}
+        </IconButton>
       </div>
 
       {hasMatches ? (
         <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
           <div className="divide-y divide-rule">
             {orderedMatches.map((match) => (
-              <MatchRow
+              <ReferenceMatchRow
                 key={match.id}
                 match={match}
                 circle={memoryCircle(match, currentProjectId, activeWorkspaceId)}
                 enabled={enabledMatchIds.has(match.id)}
                 lookup={lookup}
-                currentWorkspaceId={activeWorkspaceId}
                 onToggle={() => toggleEnabled(match.id)}
                 onExtractTerm={() => setExtractingMatch(match)}
               />
@@ -165,57 +167,6 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
           onSuccess={() => setExtractingMatch(null)}
         />
       )}
-    </div>
-  );
-}
-
-interface MatchRowProps {
-  match: PhraseMemoryMatch;
-  circle: MemoryCircle;
-  enabled: boolean;
-  lookup: PhraseProvenanceLookup;
-  currentWorkspaceId: string | null;
-  onToggle: () => void;
-  onExtractTerm: () => void;
-}
-
-function MatchRow({ match, circle, enabled, lookup, currentWorkspaceId, onToggle, onExtractTerm }: MatchRowProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-start gap-3 py-3">
-      <IconButton
-        size="sm"
-        tone={enabled ? 'accent' : 'default'}
-        ariaPressed={enabled}
-        title={t('memory.useInTranslation')}
-        onClick={onToggle}
-        className="shrink-0"
-      >
-        <CircleCheck size={14} />
-      </IconButton>
-      <div className="min-w-0 flex-1 space-y-2">
-        <span className="flex items-baseline gap-2 text-xs text-editorial-muted">
-          <span className="font-mono">{Math.round(match.score * 100)}%</span>
-          <span className={circle === 'document' ? 'text-editorial-accent' : ''}>{t(`memory.circle.${circle}`)}</span>
-        </span>
-        <p className="text-sm leading-relaxed text-editorial-charcoal">{match.sourcePhrase}</p>
-        <p className="text-sm leading-relaxed text-editorial-ink">{match.targetPhrase}</p>
-        {match.embeddingModel && <dl><StatRow label={t('library.embeddingModel')} value={match.embeddingModel} /></dl>}
-        <PhraseProvenance
-          workspaceId={match.workspaceId}
-          projectId={match.projectId}
-          chunkId={match.chunkId}
-          lookup={lookup}
-          currentWorkspaceId={currentWorkspaceId}
-          provenance={match.provenance} sourcePhrase={match.sourcePhrase}
-        />
-      </div>
-      <div className="flex shrink-0 flex-col items-center gap-1">
-        <CopyButton text={match.targetPhrase} size="sm" />
-        <IconButton size="sm" title={t('memory.extractTermButton')} onClick={onExtractTerm} tooltipSide="left">
-          <BookPlus size={13} />
-        </IconButton>
-      </div>
     </div>
   );
 }

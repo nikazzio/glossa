@@ -16,6 +16,8 @@ pub struct PhraseMatchResult {
     pub project_id: Option<String>,
     pub chunk_id: Option<String>,
     pub source_id: Option<String>,
+    pub source_language: String,
+    pub target_language: String,
     pub provenance: serde_json::Value,
     pub embedding_model: String,
     pub dimensions: usize,
@@ -59,11 +61,11 @@ pub fn search(
         ), ranked AS (
             SELECT *,vec_distance_cosine(embedding,:query) AS distance FROM compatible
         ) SELECT id,source_phrase,target_phrase,distance,confidence,workspace_id,project_id,chunk_id,source_id,
-            provenance
+            provenance,source_language,target_language
             FROM ranked WHERE distance<:threshold ORDER BY distance,id LIMIT :limit").map_err(db)?;
     let rows=query.query_map(rusqlite::named_params! {":ws":workspace_id,":all":all_workspaces,":model":embedding_model,":dim":query_embedding.len(),":profile":PROFILE,
             ":src":source_language,":tgt":target_language,":query":floats_to_blob(&query_embedding),":threshold":threshold,":limit":max_results},|r|Ok(PhraseMatchResult {
-            phrase_memory_id:r.get(0)?,source_phrase:r.get(1)?,target_phrase:r.get(2)?,distance:r.get(3)?,confidence:r.get(4)?,workspace_id:r.get(5)?,project_id:r.get(6)?,chunk_id:r.get(7)?,source_id:r.get(8)?,
+            phrase_memory_id:r.get(0)?,source_phrase:r.get(1)?,target_phrase:r.get(2)?,distance:r.get(3)?,confidence:r.get(4)?,workspace_id:r.get(5)?,project_id:r.get(6)?,chunk_id:r.get(7)?,source_id:r.get(8)?,source_language:r.get(10)?,target_language:r.get(11)?,
             provenance:serde_json::from_str(&r.get::<_,String>(9)?).map_err(|e|rusqlite::Error::FromSqlConversionFailure(9,rusqlite::types::Type::Text,Box::new(e)))?,embedding_model:embedding_model.clone(),dimensions:query_embedding.len(),
         })).map_err(db)?.collect::<Result<Vec<_>,_>>().map_err(db)?;
     Ok(rows)

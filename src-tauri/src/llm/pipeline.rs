@@ -3,13 +3,13 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
 use crate::llm::blobs::{compute_blob_assignments, BlobAssignment, ChunkForBlob};
-use crate::llm::custom_profiles;
 use crate::llm::composition::{ComposedPrompt, PreviewPart};
+use crate::llm::custom_profiles;
 use crate::llm::prompts::{
     build_coherence_prompts, build_judge_prompts, build_stage_prompts, compose_coherence_prompts,
-    compose_judge_prompts, compose_stage_prompts, escape_prompt_markers,
-    minimal_pipeline_config, parse_judge_rating, sanitize_llm_json_output,
-    REFINE_AUDIT_SYSTEM_PROMPT, REFINE_STAGE_SYSTEM_PROMPT,
+    compose_judge_prompts, compose_stage_prompts, escape_prompt_markers, minimal_pipeline_config,
+    parse_judge_rating, sanitize_llm_json_output, REFINE_AUDIT_SYSTEM_PROMPT,
+    REFINE_STAGE_SYSTEM_PROMPT,
 };
 use crate::llm::provider::{LlmProvider, LlmRequest};
 use crate::llm::providers::{get_provider, with_retry_after};

@@ -17,8 +17,12 @@ When enabled, Glossa searches for matches for the document’s segments using
 resources available to the workspace. This search changes neither translations
 nor saved phrases.
 
-The **References** sub-tab of the **Memory** tab displays matches and lets you adjust the similarity
-threshold. Each result says where it comes from: “this document”
+The **References** sub-tab of the **Memory** tab displays matches. At the top
+there is a single row: the similarity threshold (slider, or − and + one
+hundredth at a time), the globe and refresh. Each result shows the original in
+book type and the translation below, with the language code in the margin, and
+one line with work and chunk; the “i” icon adds workspace, book and model.
+Each result says where it comes from: “this document”
 (highlighted), “another work in the workspace” or “another workspace”. The
 order is this document first, then the workspace, then the rest; within each
 group the highest similarity comes first. Only selected pairs are included in the next request for that

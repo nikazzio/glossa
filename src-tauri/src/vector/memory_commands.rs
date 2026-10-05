@@ -89,15 +89,7 @@ pub async fn vec_save_locked_phrases(
     let _guard = write_coordinator.lock().await;
     run_blocking(
         database.connection().map_err(EmbeddingError::Http)?,
-        move |conn| {
-            text_units::save_pairs(
-                conn,
-                &project_id,
-                &chunk_id,
-                &embedding_model,
-                pairs,
-            )
-        },
+        move |conn| text_units::save_pairs(conn, &project_id, &chunk_id, &embedding_model, pairs),
     )
     .await
 }

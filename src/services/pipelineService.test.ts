@@ -23,8 +23,6 @@ const basePipelineRow = {
   id: 'pipeline-1',
   project_id: 'proj-1',
   name: 'Default',
-  source_language: 'Latin',
-  target_language: 'English',
   pipeline_mode: 'standard',
   stages: '[]',
   judge_prompt: 'Judge',
@@ -55,8 +53,6 @@ const basePipelineRow = {
 
 const baseConfig: PipelineConfig = {
   pipelineId: '',
-  sourceLanguage: 'Italian',
-  targetLanguage: 'English',
   stages: [],
   judgePrompt: 'Judge',
   judgeModel: 'gemini-3-flash-preview',
@@ -138,8 +134,6 @@ describe('pipelineService', () => {
       const result = await getPipelineConfig('pipeline-1');
 
       expect(result).not.toBeNull();
-      expect(result?.config.sourceLanguage).toBe('Latin');
-      expect(result?.config.targetLanguage).toBe('English');
       expect(result?.config.wordsPerChunk).toBe(5);
       expect(result?.config.reviewProviderOptions).toEqual({
         ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },

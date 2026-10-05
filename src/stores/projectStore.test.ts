@@ -6,7 +6,7 @@ import { useUiStore } from './uiStore';
 import { useConfigStore } from './configStore';
 import { useOperationLogStore } from './operationLogStore';
 import type { SavedTranslation } from '../services/projectService';
-import type { Pipeline } from '../types';
+import type { Pipeline, WorkLanguages } from '../types';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
 // ── workspaceStore mock ───────────────────────────────────────────────
@@ -53,6 +53,7 @@ const projectServiceMocks = vi.hoisted(() => ({
   createProject: vi.fn(),
   deleteProject: vi.fn(),
   getProjectSource: vi.fn(),
+  saveWorkLanguages: vi.fn(),
   saveProjectSource: vi.fn(),
 }));
 
@@ -91,8 +92,6 @@ const makePipeline = (overrides: Partial<Pipeline> = {}): Pipeline => ({
   id: 'pipeline-1',
   projectId: 'proj-1',
   name: 'Default',
-  sourceLanguage: 'Latin',
-  targetLanguage: 'Italian',
   mode: 'standard',
   runStatus: 'idle',
   lastRunConfig: null,
@@ -100,6 +99,11 @@ const makePipeline = (overrides: Partial<Pipeline> = {}): Pipeline => ({
   updatedAt: '2026-01-01T00:00:00Z',
   ...overrides,
 });
+
+const WORK_LANGUAGES: WorkLanguages = {
+  source: { code: 'eng', variety: null, note: '' },
+  target: { code: 'ita', variety: null, note: '' },
+};
 
 describe('projectStore', () => {
   beforeEach(() => {
@@ -150,13 +154,12 @@ describe('projectStore', () => {
 
     usePipelineStore.setState((state) => ({
       ...state,
+      workLanguages: WORK_LANGUAGES,
       inputText: '',
       inputProcessingText: '',
       sourceFootnotes: [],
       config: {
         ...state.config,
-        sourceLanguage: 'English',
-        targetLanguage: 'Italian',
         stages: [
           {
             id: 'default-stage',
@@ -177,6 +180,19 @@ describe('projectStore', () => {
     }));
   });
 
+  it('updateWorkLanguages saves the languages on the open work and updates the pipeline store', async () => {
+    useProjectStore.setState({ currentProjectId: 'proj-1' });
+    const next: WorkLanguages = {
+      source: { code: 'lat', variety: 'medieval', note: '' },
+      target: { code: 'ita', variety: null, note: '' },
+    };
+
+    await useProjectStore.getState().updateWorkLanguages(next);
+
+    expect(projectServiceMocks.saveWorkLanguages).toHaveBeenCalledWith('proj-1', next);
+    expect(usePipelineStore.getState().workLanguages).toEqual(next);
+  });
+
   it('opens a project and restores chunks plus document mode', async () => {
     const pipeline = makePipeline();
 
@@ -188,13 +204,12 @@ describe('projectStore', () => {
       renderProfile: 'markdown',
       markdownAware: true,
       experimentalImport: 'docx-markdown',
+      workLanguages: { source: { code: 'lat', variety: null, note: '' }, target: { code: 'ita', variety: null, note: '' } },
     });
     pipelineServiceMocks.listPipelines.mockResolvedValue([pipeline]);
     pipelineServiceMocks.getPipelineConfig.mockResolvedValue({
       pipeline,
       config: {
-        sourceLanguage: 'Latin',
-        targetLanguage: 'Italian',
         mode: 'standard',
         stages: [
           {
@@ -242,7 +257,8 @@ describe('projectStore', () => {
     await useProjectStore.getState().openProject('proj-1');
 
     expect(useProjectStore.getState().currentProjectId).toBe('proj-1');
-    expect(usePipelineStore.getState().config.sourceLanguage).toBe('Latin');
+    expect(usePipelineStore.getState().workLanguages.source.code).toBe('lat');
+    expect(usePipelineStore.getState().workLanguages.target.code).toBe('ita');
     expect(usePipelineStore.getState().config.documentFormat).toBe('markdown');
     expect(usePipelineStore.getState().config.markdownAware).toBe(true);
     expect(useChunksStore.getState().chunks[0]?.translationDisplayText).toBe('Translated paragraph');
@@ -260,13 +276,12 @@ describe('projectStore', () => {
       renderProfile: 'plain-text',
       markdownAware: false,
       experimentalImport: null,
+      workLanguages: WORK_LANGUAGES,
     });
     pipelineServiceMocks.listPipelines.mockResolvedValue([pipeline]);
     pipelineServiceMocks.getPipelineConfig.mockResolvedValue({
       pipeline,
       config: {
-        sourceLanguage: 'English',
-        targetLanguage: 'Italian',
         mode: 'standard',
         stages: [],
         judgePrompt: '',
@@ -303,12 +318,13 @@ describe('projectStore', () => {
       'Original source draft',
       'Original source draft',
       [],
-      expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
+      expect.any(Object),
+      WORK_LANGUAGES,
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
       'proj-1',
       'pipeline-1',
-      expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
+      expect.any(Object),
       [],
       expect.any(Function),
     );
@@ -324,13 +340,14 @@ describe('projectStore', () => {
 
     await useProjectStore.getState().saveCurrentProject('My Draft');
 
-    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('My Draft', 'English', 'Italian', 'ws-test');
+    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('My Draft', WORK_LANGUAGES, 'ws-test');
     expect(projectServiceMocks.saveProjectSource).toHaveBeenCalledWith(
       'proj-first-save',
       'Draft text',
       'Draft text',
       [],
-      expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
+      expect.any(Object),
+      WORK_LANGUAGES,
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
       'proj-first-save',
@@ -379,7 +396,8 @@ describe('projectStore', () => {
       'Unchunked text to preserve',
       'Unchunked text to preserve',
       [],
-      expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
+      expect.any(Object),
+      WORK_LANGUAGES,
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
       'proj-new',
@@ -406,8 +424,6 @@ describe('projectStore', () => {
         id: 'proj-new',
         name: 'Manoscritto',
         workspace_id: 'ws-test',
-        sourceLanguage: 'English',
-        targetLanguage: 'Italian',
         createdAt: '2026-08-14',
         updatedAt: '2026-08-14',
       } as never,
@@ -439,7 +455,7 @@ describe('projectStore', () => {
 
     await useProjectStore.getState().createAndOpen('New Project', 'ws-other');
 
-    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('New Project', 'English', 'Italian', 'ws-other', undefined);
+    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('New Project', WORK_LANGUAGES, 'ws-other', undefined);
     expect(workspaceState.setActive).toHaveBeenCalledWith(otherWorkspace);
   });
 
@@ -505,7 +521,7 @@ describe('projectStore', () => {
     await expect(useProjectStore.getState().leaveProject()).resolves.toBe(true);
 
     expect(projectServiceMocks.saveProjectSource).toHaveBeenCalledWith(
-      'proj-1', 'Last edit', 'Last edit', [], expect.anything(),
+      'proj-1', 'Last edit', 'Last edit', [], expect.anything(), expect.anything(),
     );
     expect(closeProject).toHaveBeenCalledTimes(1);
   });
