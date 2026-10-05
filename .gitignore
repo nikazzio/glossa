@@ -58,3 +58,6 @@ skills-lock.json
 
 #local backups
 *.glossa-backup
+
+# Istruzioni personali per agenti, solo locali
+CLAUDE.local.md
