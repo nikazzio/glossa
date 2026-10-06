@@ -410,6 +410,15 @@ precedente si accendeva solo entro trenta secondi dall'ultima risposta —
 contando anche le immagini lette dal disco — e su un libro tutto online restava
 spento quasi sempre.
 
+### Coppia di lingue
+
+Una coppia di lingue si scrive sempre con `LanguagePairLabel`
+(`components/languages`): «Italiano (Old Italian) → Inglese», `font-sans
+text-xs`, mai corsivo. Nomi in inchiostro, varietà fra parentesi e freccia in
+muted; tronca da sola e il testo intero va nel suggerimento. Accanto a un
+comando lascia `mr-2` di respiro. Nelle righe di frase sta nella riga di testa,
+non nel margine dei codici, così le frasi restano allineate.
+
 ### Completamento in una riga di elenco
 
 Quanto di una cosa è già disponibile si dice con una **riga di dati a

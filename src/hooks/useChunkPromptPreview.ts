@@ -8,6 +8,7 @@ import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
 import { llmService } from '../services/llmService';
 import { deeplService } from '../services/deeplService';
 import { getDeeplOptions } from '../pipeline/deeplConfig';
+import { errorMessage, logger } from '../utils/logger';
 import type { PipelineConfig, PipelineStageConfig, PromptInfo, TranslationChunk } from '../types';
 
 /** Selector values for the two review checks, next to the stage ids. */
@@ -115,7 +116,8 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
       setPreview(result);
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
-      setError(err instanceof Error ? err.message : String(err));
+      logger.warn('prompt_preview.failed', { message: errorMessage(err) });
+      setError(errorMessage(err));
     } finally {
       if (requestIdRef.current === requestId) setIsBuilding(false);
     }

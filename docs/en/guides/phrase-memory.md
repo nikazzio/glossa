@@ -20,8 +20,9 @@ nor saved phrases.
 The **References** sub-tab of the **Memory** tab displays matches. At the top
 there is a single row: the similarity threshold (slider, or − and + one
 hundredth at a time), the globe and refresh. Each result shows the original in
-book type and the translation below, with the language code in the margin, and
-one line with work and chunk; the “i” icon adds workspace, book and model.
+book type and the translation below, with the language code in the margin; at
+the top, next to the similarity, the phrase's language pair with its varieties
+(“Italian (Old Italian) → English”); below, one line with work and chunk; the “i” icon adds workspace, book and model.
 Each result says where it comes from: “this document”
 (highlighted), “another work in the workspace” or “another workspace”. The
 order is this document first, then the workspace, then the rest; within each
@@ -87,7 +88,7 @@ Open **Linguistic resources → Memories**. General resources start with all
 phrases; workspace resources start with its collection. Filter by workspace,
 **All**, **Unassigned** and tag, or search texts and tags.
 
-Each entry shows source and translation side by side. Languages, an origin
+Each entry shows source and translation side by side. Languages with varieties, an origin
 title and tags help identify it without opening details. **Provenance, tags and
 measurements** opens the full information for the selected entry: book,
 workspace, translation, chunk, date, tags and embedding models.

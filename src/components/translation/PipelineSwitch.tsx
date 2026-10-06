@@ -8,6 +8,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
 import { ClickPopover, IconButton, MenuActionRow, PopoverItem, RenameField, Tooltip } from '../ui';
+import { errorMessage, logger } from '../../utils/logger';
 
 /**
  * La pipeline aperta, nella riga in cima allo Studio: il nome apre il menu
@@ -50,12 +51,14 @@ export function PipelineSwitch() {
     setEditing(false);
     if (!activePipelineId) return;
     void renamePipeline(activePipelineId, name).catch((err: unknown) => {
-      toast.error(t('pipeline.renameFailed'), { description: err instanceof Error ? err.message : String(err) });
+      logger.warn('pipeline.rename_failed', { message: errorMessage(err) });
+      toast.error(t('pipeline.renameFailed'));
     });
   };
-  const reportError = (err: unknown) => toast.error(t('pipeline.operationFailed'), {
-    description: err instanceof Error ? err.message : String(err),
-  });
+  const reportError = (err: unknown) => {
+    logger.warn('pipeline.operation_failed', { message: errorMessage(err) });
+    toast.error(t('pipeline.operationFailed'));
+  };
 
   return (
     <span className="flex min-w-0 items-center gap-1">

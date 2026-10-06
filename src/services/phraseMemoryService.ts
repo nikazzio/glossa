@@ -20,6 +20,8 @@ type RawPhraseMatch = {
   chunk_id: string | null;
   source_language: string;
   target_language: string;
+  source_language_variety: string | null;
+  target_language_variety: string | null;
   provenance: TextProvenance;
   embedding_model: string;
   dimensions: number;
@@ -33,6 +35,8 @@ type RawPhraseMemoryEntry = {
   confidence: number | null;
   source_language: string;
   target_language: string;
+  source_language_variety: string | null;
+  target_language_variety: string | null;
   author: string | null;
   work: string | null;
   domain: string | null;
@@ -85,6 +89,8 @@ export interface PhraseMemoryEntry {
   confidence: number;
   sourceLanguage: string;
   targetLanguage: string;
+  sourceLanguageVariety: string | null;
+  targetLanguageVariety: string | null;
   author: string | null;
   work: string | null;
   domain: string | null;
@@ -160,6 +166,8 @@ function toPhraseMatch(raw: RawPhraseMatch): PhraseMatch {
     chunkId: raw.chunk_id,
     sourceLanguage: raw.source_language,
     targetLanguage: raw.target_language,
+    sourceLanguageVariety: raw.source_language_variety ?? null,
+    targetLanguageVariety: raw.target_language_variety ?? null,
     provenance: raw.provenance,
     embeddingModel: raw.embedding_model,
     dimensions: raw.dimensions,
@@ -175,6 +183,8 @@ function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
     confidence: raw.confidence ?? 1,
     sourceLanguage: raw.source_language,
     targetLanguage: raw.target_language,
+    sourceLanguageVariety: raw.source_language_variety ?? null,
+    targetLanguageVariety: raw.target_language_variety ?? null,
     author: raw.author,
     work: raw.work,
     domain: raw.domain,

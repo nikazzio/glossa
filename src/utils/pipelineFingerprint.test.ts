@@ -32,6 +32,17 @@ describe('buildPipelineFingerprint', () => {
     expect(buildPipelineFingerprint(config({ workBrief: 'Venetian, 17th century.' }))).not.toBe(buildPipelineFingerprint(config()));
   });
 
+  it('changes when an enabled stage switches custom provider profile with the same model', () => {
+    const withProfile = (customProviderId: string) => config({
+      stages: config().stages.map((stage) => stage.role === 'translation' ? { ...stage, customProviderId } : stage),
+    });
+    expect(buildPipelineFingerprint(withProfile('profile-b'))).not.toBe(buildPipelineFingerprint(withProfile('profile-a')));
+  });
+
+  it('changes when the coherence prompt changes', () => {
+    expect(buildPipelineFingerprint(config({ coherencePrompt: 'Check names.' }))).not.toBe(buildPipelineFingerprint(config()));
+  });
+
   it('ignores the prompt of a disabled stage', () => {
     const stages = config().stages.map((stage) => stage.role === 'refine' ? { ...stage, prompt: 'Other.' } : stage);
     expect(buildPipelineFingerprint(config({ stages }))).toBe(buildPipelineFingerprint(config()));

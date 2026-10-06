@@ -4,12 +4,12 @@ import { toast } from 'sonner';
 import { useMemoryExtractionDraft } from '../../../hooks/useMemoryExtractionDraft';
 import { confirm as confirmDialog } from '../../../stores/confirmStore';
 import { EmptyState, FIELD_CLASSNAME, IconButton, Spinner } from '../../ui';
-import { useLanguageLabel } from '../../../hooks/useLanguageLabel';
+import { useLanguageNames } from '../../../hooks/useLanguageLabel';
 import { UNDETERMINED_LANGUAGE } from '../../../languages/catalog';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { PhraseLine } from './ReferenceMatchRow';
 import type { PhraseCandidateDraft } from '../../../stores/phraseMemoryDraftStore';
-import type { TranslationChunk } from '../../../types';
+import type { LanguageChoice, TranslationChunk } from '../../../types';
 
 interface MemoryTabProps {
   panelId: string;
@@ -126,15 +126,15 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
 /** Lingue dell'opera per il margine delle righe: codice breve, nome e ruolo nel suggerimento. */
 function usePairLanguages() {
   const { t } = useTranslation();
-  const languageLabel = useLanguageLabel();
+  const languageNames = useLanguageNames();
   const workLanguages = usePipelineStore((s) => s.workLanguages);
-  const side = (code: string | null, role: string) => {
-    const value = code ?? UNDETERMINED_LANGUAGE;
-    return { code: value, label: languageLabel(value), role };
+  const side = (choice: LanguageChoice, role: string) => {
+    const value = choice.code ?? UNDETERMINED_LANGUAGE;
+    return { code: value, label: languageNames.describe(value, choice.variety), role };
   };
   return {
-    source: side(workLanguages.source.code, t('memory.reference.original')),
-    target: side(workLanguages.target.code, t('memory.reference.translation')),
+    source: side(workLanguages.source, t('memory.reference.original')),
+    target: side(workLanguages.target, t('memory.reference.translation')),
   };
 }
 

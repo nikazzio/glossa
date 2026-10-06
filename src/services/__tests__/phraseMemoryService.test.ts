@@ -169,6 +169,8 @@ describe('phrase memory entry management', () => {
         confidence: 0.88,
         source_language: 'Italian',
         target_language: 'English',
+        source_language_variety: 'oldi1245',
+        target_language_variety: null,
         author: null,
         work: null,
         domain: null,
@@ -193,6 +195,8 @@ describe('phrase memory entry management', () => {
       confidence: 0.88,
       sourceLanguage: 'Italian',
       targetLanguage: 'English',
+      sourceLanguageVariety: 'oldi1245',
+      targetLanguageVariety: null,
     });
   });
 

@@ -5,7 +5,8 @@ import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, Tooltip } 
 import { WorkLanguagesFields } from '../languages/WorkLanguagesFields';
 import { useLanguageCatalog } from '../../hooks/useLanguageCatalog';
 import { useWorkLanguageSuggestions } from '../../hooks/useWorkLanguageSuggestions';
-import { describeLanguageChoice, languageNameOf } from '../../languages/catalog';
+import { describeLanguageChoice } from '../../languages/catalog';
+import { LanguagePairLabel } from '../languages/LanguagePairLabel';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -33,8 +34,6 @@ export function WorkLanguagesControl({ disabledReason }: { disabledReason: strin
   const [draft, setDraft] = useState<WorkLanguages | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Nella riga solo i nomi; varietà e note stanno nel suggerimento.
-  const shortName = (choice: LanguageChoice) => (choice.code ? languageNameOf(catalog, choice.code, i18n.language) : t('workLanguages.notSpecified'));
   const describe = (choice: LanguageChoice) => describeLanguageChoice(catalog, choice, i18n.language) ?? t('workLanguages.notSpecified');
   const sideHint = (label: string, choice: LanguageChoice) =>
     `${label}: ${describe(choice)}${choice.note.trim() ? ` — ${choice.note.trim()}` : ''}`;
@@ -94,10 +93,11 @@ export function WorkLanguagesControl({ disabledReason }: { disabledReason: strin
   return (
     <>
       {/* La coppia si legge, l'icona si clicca: stesso gesto di ogni altro comando della riga. */}
+      {/* Nella riga nomi e varietà; le note stanno nel suggerimento. */}
       <Tooltip label={hint} side="bottom" className="min-w-0">
-        <span className="block max-w-[min(20vw,16rem)] truncate font-display text-sm italic text-editorial-muted">
-          {shortName(workLanguages.source)} → {shortName(workLanguages.target)}
-        </span>
+        <LanguagePairLabel className="mr-2 max-w-[min(28vw,24rem)]"
+          source={{ code: workLanguages.source.code ?? '', variety: workLanguages.source.variety }}
+          target={{ code: workLanguages.target.code ?? '', variety: workLanguages.target.variety }} />
       </Tooltip>
       <IconButton size="sm" onClick={open} disabled={Boolean(disabledReason)} tooltipSide="bottom"
         title={disabledReason ? t('transcription.commandBlocked', { command: t('workLanguages.edit'), reason: disabledReason }) : t('workLanguages.edit')}>

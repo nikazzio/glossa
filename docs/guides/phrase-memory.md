@@ -22,7 +22,9 @@ La sottolinguetta **Riferimenti** della scheda **Memoria** mostra i risultati.
 In alto, una sola riga: la soglia di somiglianza (cursore, oppure − e + per un
 centesimo alla volta), il globo e l’aggiornamento. Ogni risultato mostra
 l’originale in carattere da libro e la traduzione sotto, con il codice della
-lingua a margine, e una riga con opera e frammento; l’icona «i» aggiunge
+lingua a margine; in testa, accanto alla somiglianza, la coppia di lingue della
+frase con le varietà («Italiano (Old Italian) → Inglese»); sotto, una riga con
+opera e frammento; l’icona «i» aggiunge
 workspace, libro e modello. Ogni risultato dice da dove viene: «questo documento»
 (evidenziato), «altra opera del workspace» o «altro workspace». L’ordine è
 prima questo documento, poi il workspace, poi il resto; in ogni gruppo prima la
@@ -89,7 +91,7 @@ Apri **Risorse linguistiche → Memorie**. Le risorse generali partono da tutte
 le frasi; quelle del workspace dalla sua raccolta. Puoi filtrare per workspace,
 **Tutti**, **Senza workspace** ed etichetta, oppure cercare nei testi e nei tag.
 
-Ogni voce affianca originale e traduzione; lingue, titolo di provenienza e tag
+Ogni voce affianca originale e traduzione; lingue con varietà, titolo di provenienza e tag
 permettono di orientarsi senza aprire i dettagli. Il comando **Provenienza, tag
 e misure** apre le informazioni complete della sola voce scelta: libro,
 workspace, traduzione, frammento, data, etichette e modelli di misura.

@@ -411,3 +411,25 @@ fn relabelling_gives_saved_phrases_the_work_languages_keeping_text_and_measures(
     assert_eq!(super::text_languages::count_relabels(&conn, "project")?, 0);
     Ok(())
 }
+
+#[test]
+fn relabelling_only_the_target_keeps_the_source_revision_and_its_measures() -> TestResult {
+    let mut conn = connection()?;
+    save(&mut conn, SMALL)?;
+    conn.execute(
+        "UPDATE projects SET source_language='la', target_language='ita' WHERE id='project'",
+        [],
+    )?;
+    let before = list(&conn, Some("ws-a"), None)?.remove(0);
+    assert_eq!(
+        super::text_languages::relabel_project(&mut conn, "project")?,
+        1
+    );
+    let after = list(&conn, Some("ws-a"), None)?.remove(0);
+
+    assert_eq!(after.source_revision_id, before.source_revision_id);
+    assert_ne!(after.target_revision_id, before.target_revision_id);
+    assert_eq!(after.target_language, "ita");
+    assert_eq!(after.embeddings, before.embeddings);
+    Ok(())
+}

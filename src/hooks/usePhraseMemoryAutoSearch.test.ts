@@ -45,7 +45,7 @@ describe('usePhraseMemoryAutoSearch', () => {
           sourcePhrase: 'Ciao',
           targetPhrase: 'Hello',
           distance: 0.1,
-          confidence: 0.9, sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null },
+          confidence: 0.9, sourceLanguage: 'lat', targetLanguage: 'ita', sourceLanguageVariety: null, targetLanguageVariety: null, workspaceId: null, projectId: null, chunkId: null },
       ]],
     ]));
     mockSearchPhraseMemory.mockResolvedValue([
@@ -54,7 +54,7 @@ describe('usePhraseMemoryAutoSearch', () => {
         sourcePhrase: 'Mondo',
         targetPhrase: 'World',
         distance: 0.2,
-      confidence: 0.8, sourceLanguage: 'lat', targetLanguage: 'ita', workspaceId: null, projectId: null, chunkId: null },
+      confidence: 0.8, sourceLanguage: 'lat', targetLanguage: 'ita', sourceLanguageVariety: null, targetLanguageVariety: null, workspaceId: null, projectId: null, chunkId: null },
     ]);
     mockListPhraseMemoryEntries.mockResolvedValue([]);
 

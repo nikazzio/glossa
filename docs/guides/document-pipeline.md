@@ -62,8 +62,8 @@ lingua regionale + nota. L’elenco delle lingue è incluso nell’app e funzion
 senza rete; non c’è ancora un comando per aggiornarlo.
 
 Dove si impostano: nella finestra di importazione e nella riga in cima allo
-Studio. Lì, a destra prima dei comandi, la coppia compare in breve
-(«Latino → Italiano»); il suggerimento mostra varietà e note. L’icona delle
+Studio. Lì, a destra prima dei comandi, la coppia compare con le varietà
+(«Italiano (Old Italian) → Inglese»); il suggerimento aggiunge le note. L’icona delle
 lingue accanto apre la finestra **Lingue dell’opera** con gli stessi campi, Annulla e
 Conferma: senza conferma non si salva nulla. Mentre la pipeline lavora il
 comando è visibile ma bloccato, con il motivo nel suggerimento. Se l’opera non

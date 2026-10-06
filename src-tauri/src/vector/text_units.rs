@@ -42,6 +42,8 @@ pub struct MemoryEntry {
     pub confidence: f64,
     pub source_language: String,
     pub target_language: String,
+    pub source_language_variety: Option<String>,
+    pub target_language_variety: Option<String>,
     pub author: Option<String>,
     pub work: Option<String>,
     pub domain: Option<String>,
@@ -210,8 +212,12 @@ fn list_with_id(
 ) -> Result<Vec<MemoryEntry>, EmbeddingError> {
     let mut query=conn.prepare(&format!("SELECT pm.id, pm.unit_id, pm.source_revision_id, pm.target_revision_id, pm.workspace_id,
         pm.source_phrase, pm.target_phrase, pm.confidence, pm.source_language, pm.target_language, pm.author, pm.work, pm.domain,
-        pm.notes, pm.chunk_id, pm.project_id, pm.source_id, pm.source_version_id, pm.provenance, pm.created_at
-        FROM phrase_memory_entries pm WHERE {SCOPE} AND (:chunk IS NULL OR pm.chunk_id=:chunk) AND (:id IS NULL OR pm.id=:id) ORDER BY pm.created_at DESC, pm.id")).map_err(db)?;
+        pm.notes, pm.chunk_id, pm.project_id, pm.source_id, pm.source_version_id, pm.provenance, pm.created_at,
+        sr.language_variety, tr.language_variety
+        FROM phrase_memory_entries pm
+        JOIN text_unit_revisions sr ON sr.id=pm.source_revision_id
+        JOIN text_unit_revisions tr ON tr.id=pm.target_revision_id
+        WHERE {SCOPE} AND (:chunk IS NULL OR pm.chunk_id=:chunk) AND (:id IS NULL OR pm.id=:id) ORDER BY pm.created_at DESC, pm.id")).map_err(db)?;
     let mut entries = query
         .query_map(
             rusqlite::named_params! {":ws":workspace, ":chunk":chunk, ":id":id},
@@ -228,6 +234,8 @@ fn list_with_id(
                     confidence: row.get(7)?,
                     source_language: row.get(8)?,
                     target_language: row.get(9)?,
+                    source_language_variety: row.get(20)?,
+                    target_language_variety: row.get(21)?,
                     author: row.get(10)?,
                     work: row.get(11)?,
                     domain: row.get(12)?,

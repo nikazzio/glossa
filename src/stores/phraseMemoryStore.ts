@@ -19,6 +19,8 @@ export type PhraseMemoryMatch = {
   chunkId: string | null;
   sourceLanguage: string;
   targetLanguage: string;
+  sourceLanguageVariety: string | null;
+  targetLanguageVariety: string | null;
   provenance?: TextProvenance;
   embeddingModel?: string;
   dimensions?: number;
@@ -56,6 +58,8 @@ function toMemoryMatch(m: PhraseMatch): PhraseMemoryMatch {
     chunkId: m.chunkId,
     sourceLanguage: m.sourceLanguage,
     targetLanguage: m.targetLanguage,
+    sourceLanguageVariety: m.sourceLanguageVariety,
+    targetLanguageVariety: m.targetLanguageVariety,
     provenance: m.provenance,
     embeddingModel: m.embeddingModel,
     dimensions: m.dimensions,

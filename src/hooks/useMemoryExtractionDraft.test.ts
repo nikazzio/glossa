@@ -48,6 +48,8 @@ function makeSavedEntry(overrides: Partial<PhraseMemoryEntry>): PhraseMemoryEntr
     confidence: 1,
     sourceLanguage: 'it',
     targetLanguage: 'en',
+    sourceLanguageVariety: null,
+    targetLanguageVariety: null,
     author: null,
     work: null,
     domain: null,

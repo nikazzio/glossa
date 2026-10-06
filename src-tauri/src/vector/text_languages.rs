@@ -85,31 +85,36 @@ fn pairs_to_relabel(
 ) -> Result<Vec<SavedPair>, EmbeddingError> {
     let mut query = conn
         .prepare(
-            "SELECT id, unit_id, source_revision_id, target_revision_id FROM phrase_memory
-             WHERE project_id=?1 ORDER BY created_at, id",
+            "SELECT p.id, p.unit_id, p.source_revision_id, p.target_revision_id,
+                    s.language, s.language_variety, s.language_note,
+                    t.language, t.language_variety, t.language_note
+             FROM phrase_memory p
+             JOIN text_unit_revisions s ON s.id = p.source_revision_id
+             JOIN text_unit_revisions t ON t.id = p.target_revision_id
+             WHERE p.project_id=?1 ORDER BY p.created_at, p.id",
         )
         .map_err(db)?;
-    let pairs = query
+    let rows = query
         .query_map([project], |r| {
-            Ok(SavedPair {
-                id: r.get(0)?,
-                unit: r.get(1)?,
-                source_revision: r.get(2)?,
-                target_revision: r.get(3)?,
-            })
+            Ok((
+                SavedPair {
+                    id: r.get(0)?,
+                    unit: r.get(1)?,
+                    source_revision: r.get(2)?,
+                    target_revision: r.get(3)?,
+                },
+                label(r.get(4)?, r.get(5)?, r.get(6)?),
+                label(r.get(7)?, r.get(8)?, r.get(9)?),
+            ))
         })
         .map_err(db)?
         .collect::<Result<Vec<_>, _>>()
         .map_err(db)?;
-    let mut differing = Vec::new();
-    for pair in pairs {
-        if revision_language(conn, &pair.source_revision)? != *source
-            || revision_language(conn, &pair.target_revision)? != *target
-        {
-            differing.push(pair);
-        }
-    }
-    Ok(differing)
+    Ok(rows
+        .into_iter()
+        .filter(|(_, saved_source, saved_target)| saved_source != source || saved_target != target)
+        .map(|(pair, _, _)| pair)
+        .collect())
 }
 
 pub fn count_relabels(conn: &Connection, project: &str) -> Result<u32, EmbeddingError> {

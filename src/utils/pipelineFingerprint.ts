@@ -12,10 +12,12 @@ export function buildPipelineFingerprint(config: PipelineConfig): string {
       .map((s) => ({
         provider: s.provider,
         model: s.model,
+        ...(s.customProviderId ? { customProviderId: s.customProviderId } : {}),
         ...(s.provider === 'deepl' ? { deepl: s.providerOptions?.deepl } : { prompt: s.prompt }),
       })),
     judge: { provider: config.judgeProvider, model: config.judgeModel, prompt: config.judgePrompt },
     ...(config.workBrief?.trim() ? { workBrief: config.workBrief.trim() } : {}),
+    ...(config.coherencePrompt?.trim() ? { coherencePrompt: config.coherencePrompt.trim() } : {}),
     ...(config.promptComposition ? { promptComposition: config.promptComposition } : {}),
   });
 }

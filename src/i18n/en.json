@@ -511,6 +511,7 @@
       "keyRequired": "Needs the DeepL key, entered in Settings",
       "detectSource": "Detect language",
       "languagesUnavailable": "DeepL language lists are unavailable. The current selection is retained.",
+      "glossariesUnavailable": "DeepL glossary list is unavailable",
       "glossaryNeedsSource": "Choose a source language in the DeepL stage to upload the glossary.",
       "requestBody": "DeepL request",
       "languagePair": "DeepL · languages",
@@ -2380,7 +2381,8 @@
   "promptPreview": {
     "copiedToClipboard": "Copied to clipboard",
     "copyBlock": "Copy this block",
-    "translationRequired": "the chunk has no translation yet"
+    "translationRequired": "the chunk has no translation yet",
+    "unavailable": "Preview unavailable"
   },
   "help": {
     "title": "User guide",
@@ -2626,7 +2628,7 @@
             "title": "Using saved phrases",
             "paragraphs": [
               "Open Memory → References for the chunk. Glossa filters only by the target language and compares texts with an embedding matching the workspace model, dimensions and input profile. Adjust the threshold with the slider or, one hundredth at a time, with − and +; then select relevant references.",
-              "Each reference shows similarity and origin (“this document”, “another work in the workspace” or “another workspace”), then the original in book type and the translation below, with the language code in the margin; one line gives work and chunk, and the “i” icon shows workspace, book and model. Results from this document come first, then the workspace, then the rest. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
+              "Each reference shows similarity and origin (“this document”, “another work in the workspace” or “another workspace”), then the original in book type and the translation below, with the language code in the margin and, at the top, the language pair with its varieties; one line gives work and chunk, and the “i” icon shows workspace, book and model. Results from this document come first, then the workspace, then the rest. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
               "The globe next to refresh extends the search to other workspaces and unassigned phrases; the choice is remembered per workspace and is no longer in workspace settings. The target language and embedding compatibility still apply. Viewing a phrase does not link it to this workspace."
             ]
           },

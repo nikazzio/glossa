@@ -511,6 +511,7 @@
       "keyRequired": "Richiede la chiave DeepL, da inserire in Impostazioni",
       "detectSource": "Rileva lingua",
       "languagesUnavailable": "Elenco lingue DeepL non disponibile. La selezione attuale è conservata.",
+      "glossariesUnavailable": "Elenco dei glossari DeepL non disponibile",
       "glossaryNeedsSource": "Scegli una lingua sorgente nella fase DeepL per caricare il glossario.",
       "requestBody": "Richiesta DeepL",
       "languagePair": "DeepL · lingue",
@@ -2380,7 +2381,8 @@
   "promptPreview": {
     "copiedToClipboard": "Copiato negli appunti",
     "copyBlock": "Copia questo blocco",
-    "translationRequired": "manca la traduzione del frammento"
+    "translationRequired": "manca la traduzione del frammento",
+    "unavailable": "Anteprima non disponibile"
   },
   "help": {
     "title": "Guida utente",
@@ -2626,7 +2628,7 @@
             "title": "Usare frasi già salvate",
             "paragraphs": [
               "Apri Memoria → Riferimenti nel frammento. Glossa filtra solo per la lingua di arrivo e confronta testi con un embedding dello stesso modello, dimensione e tipo di input del workspace. Regola la soglia con il cursore o, per un centesimo alla volta, con − e +; poi spunta soltanto i riferimenti pertinenti.",
-              "Ogni riferimento mostra somiglianza e origine («questo documento», «altra opera del workspace» o «altro workspace»), poi l’originale in carattere da libro e la traduzione sotto, con il codice della lingua a margine; una riga dice opera e frammento, e l’icona «i» apre workspace, libro e modello. In elenco vengono prima i risultati di questo documento, poi quelli del workspace, poi gli altri. La spunta decide se usarlo nella successiva traduzione; non modifica la raccolta. Le coppie già salvate nel frammento restano nella sottolinguetta Memoria: non vengono inserite automaticamente fra i risultati della ricerca.",
+              "Ogni riferimento mostra somiglianza e origine («questo documento», «altra opera del workspace» o «altro workspace»), poi l’originale in carattere da libro e la traduzione sotto, con il codice della lingua a margine e, in testa, la coppia di lingue con le varietà; una riga dice opera e frammento, e l’icona «i» apre workspace, libro e modello. In elenco vengono prima i risultati di questo documento, poi quelli del workspace, poi gli altri. La spunta decide se usarlo nella successiva traduzione; non modifica la raccolta. Le coppie già salvate nel frammento restano nella sottolinguetta Memoria: non vengono inserite automaticamente fra i risultati della ricerca.",
               "Il globo accanto all’aggiornamento estende la ricerca agli altri workspace e alle frasi senza workspace; la scelta si ricorda per ogni workspace e non è più nelle impostazioni del workspace. Restano validi la lingua di arrivo e la compatibilità degli embedding. Consultare una frase non la collega al workspace."
             ]
           },

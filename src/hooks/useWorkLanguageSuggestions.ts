@@ -29,7 +29,9 @@ export function useWorkLanguageSuggestions(
 
   useEffect(() => {
     let active = true;
-    if (!projectId) { setBookLanguage(null); return () => { active = false; }; }
+    // Il libro dell'opera precedente non deve restare proposto mentre arriva quello nuovo.
+    setBookLanguage(null);
+    if (!projectId) return () => { active = false; };
     getWorkBookLanguage(projectId)
       .then((language) => { if (active) setBookLanguage(language); })
       .catch((error: unknown) => logger.warn('book language unavailable', { error: error instanceof Error ? error.message : String(error) }));

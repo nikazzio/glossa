@@ -3,10 +3,11 @@ import { BookPlus, CircleCheck, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { PhraseMemoryMatch } from '../../../stores/phraseMemoryStore';
 import type { PhraseProvenanceLookup } from '../../../hooks/usePhraseProvenanceLookup';
-import { useLanguageLabel } from '../../../hooks/useLanguageLabel';
+import { useLanguageNames } from '../../../hooks/useLanguageLabel';
+import { LanguagePairLabel } from '../../languages/LanguagePairLabel';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import type { MemoryCircle } from '../../../utils/memoryCircles';
-import { CopyButton, Hint, IconButton } from '../../ui';
+import { CopyButton, Hint, IconButton, Tooltip } from '../../ui';
 
 interface ReferenceMatchRowProps {
   match: PhraseMemoryMatch;
@@ -24,7 +25,9 @@ interface ReferenceMatchRowProps {
  */
 export function ReferenceMatchRow({ match, circle, enabled, lookup, onToggle, onExtractTerm }: ReferenceMatchRowProps) {
   const { t } = useTranslation();
-  const languageLabel = useLanguageLabel();
+  const languageNames = useLanguageNames();
+  const sourceLanguage = languageNames.describe(match.sourceLanguage, match.sourceLanguageVariety);
+  const targetLanguage = languageNames.describe(match.targetLanguage, match.targetLanguageVariety);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const translation = (match.projectId ? lookup.projectNames[match.projectId] : undefined) ?? match.provenance?.projectName;
   const position = (match.chunkId ? lookup.chunkPositions[match.chunkId] : undefined) ?? match.provenance?.chunkPosition;
@@ -55,11 +58,16 @@ export function ReferenceMatchRow({ match, circle, enabled, lookup, onToggle, on
         <div className="flex items-baseline gap-2 text-xs text-editorial-muted">
           <span className="font-mono text-editorial-ink">{Math.round(match.score * 100)}%</span>
           <span className={circle === 'document' ? 'text-editorial-accent' : ''}>{t(`memory.circle.${circle}`)}</span>
+          {/* La coppia sta in testa, così il margine dei codici resta stretto e le frasi allineate. */}
+          <Tooltip label={`${sourceLanguage} → ${targetLanguage}`} className="ml-auto min-w-0">
+            <LanguagePairLabel source={{ code: match.sourceLanguage, variety: match.sourceLanguageVariety }}
+              target={{ code: match.targetLanguage, variety: match.targetLanguageVariety }} />
+          </Tooltip>
         </div>
-        <PhraseLine code={match.sourceLanguage} label={languageLabel(match.sourceLanguage)} role={t('memory.reference.original')}>
+        <PhraseLine code={match.sourceLanguage} label={sourceLanguage} role={t('memory.reference.original')}>
           <p className="font-display text-base leading-snug text-editorial-charcoal">{match.sourcePhrase}</p>
         </PhraseLine>
-        <PhraseLine code={match.targetLanguage} label={languageLabel(match.targetLanguage)} role={t('memory.reference.translation')}>
+        <PhraseLine code={match.targetLanguage} label={targetLanguage} role={t('memory.reference.translation')}>
           <p className="text-sm leading-snug text-editorial-ink">{match.targetPhrase}</p>
         </PhraseLine>
         <div className="flex min-w-0 items-center gap-1.5 text-xs text-editorial-muted">

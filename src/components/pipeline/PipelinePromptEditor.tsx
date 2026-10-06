@@ -10,6 +10,7 @@ import { PromptCard } from './PromptCard';
 import { PromptTemplateMenus } from './PromptTemplateMenus';
 import { PromptSourceLabel } from './PromptSourceLabel';
 import { describePromptSource } from './promptSource';
+import { errorMessage, logger } from '../../utils/logger';
 
 interface PipelinePromptEditorProps {
   label: string;
@@ -74,7 +75,8 @@ export function PipelinePromptEditor({ label, hint, value, placeholder, template
       setDraft(await llmService.refinePrompt(draft, provider, model, templateContext));
       toast.success(t('pipeline.refined'));
     } catch (error: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: error instanceof Error ? error.message : String(error) });
+      logger.warn('pipeline.refine_failed', { message: errorMessage(error) });
+      toast.error(t('pipeline.refineFailed'));
     } finally { setRefining(false); }
   };
   const refineCommand = t('pipeline.refinePromptWithModel', { model: refineLabel });

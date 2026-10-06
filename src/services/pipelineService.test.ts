@@ -17,7 +17,9 @@ const {
   loadTranslations,
   restoreTranslations,
   deletePipeline,
+  duplicatePipeline,
 } = await import('./pipelineService');
+const { DEFAULT_WORK_BRIEF } = await import('../constants');
 
 const basePipelineRow = {
   id: 'pipeline-1',
@@ -339,6 +341,46 @@ describe('pipelineService', () => {
       await savePipelineConfig('pipeline-1', config);
       const [, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
       expect(params).toContain(0);
+    });
+  });
+
+  // ── work brief persistence ───────────────────────────────────────────
+
+  describe('work brief persistence', () => {
+    const brief = 'Translate seventeenth-century Venetian into contemporary Italian.';
+
+    it('savePipelineConfig persists the trimmed work brief in the work_brief column', async () => {
+      await savePipelineConfig('pipeline-1', { ...baseConfig, workBrief: `  ${brief}  ` });
+      const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+      const placeholder = /work_brief\s*=\s*\$(\d+)/.exec(query);
+      expect(placeholder).not.toBeNull();
+      expect(params[Number(placeholder?.[1]) - 1]).toBe(brief);
+    });
+
+    it('getPipelineConfig loads the stored work brief', async () => {
+      dbMocks.select
+        .mockResolvedValueOnce([{ ...basePipelineRow, work_brief: brief }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await getPipelineConfig('pipeline-1');
+      expect(result?.config.workBrief).toBe(brief);
+    });
+
+    it('getPipelineConfig falls back to the default brief when the column is blank', async () => {
+      dbMocks.select
+        .mockResolvedValueOnce([{ ...basePipelineRow, work_brief: '   ' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await getPipelineConfig('pipeline-1');
+      expect(result?.config.workBrief).toBe(DEFAULT_WORK_BRIEF);
+    });
+
+    it('duplicatePipeline copies the work brief into the new pipeline', async () => {
+      dbMocks.select.mockResolvedValueOnce([{ ...basePipelineRow, work_brief: brief }]);
+      await duplicatePipeline('pipeline-1', 'Copy');
+      const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+      const columns = query.slice(query.indexOf('(') + 1, query.indexOf(')')).split(',').map((column) => column.trim());
+      expect(params[columns.indexOf('work_brief')]).toBe(brief);
     });
   });
 

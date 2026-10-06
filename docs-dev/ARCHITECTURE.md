@@ -2105,8 +2105,13 @@ corretta è una revisione nuova con lo stesso testo: `text_languages::relabel_pr
 crea le revisioni per le frasi dell'opera con lingue diverse da quelle
 dell'opera, ricopia le misure dell'originale, sposta i puntatori di
 `phrase_memory` e registra `text.language.changed`, tutto in una transazione;
-`count_relabels` le conta. Comandi `vec_count_project_phrase_relabels`,
-`vec_relabel_project_phrases`.
+`count_relabels` le conta (una sola query con le due revisioni in join). Comandi
+`vec_count_project_phrase_relabels`, `vec_relabel_project_phrases`. Elenco e
+ricerca restituiscono anche `source_language_variety`/`target_language_variety`
+(join sulle revisioni, la vista `phrase_memory_entries` resta invariata); la UI
+le mostra con `LanguagePairLabel` («Italiano (Old Italian) → Inglese») in cima
+allo Studio, nelle voci di Risorse linguistiche → Memorie e in testa a ogni
+riferimento.
 
 Tag manuali in `text_unit_tags`, non proposte automatiche né vocabolario controllato.
 Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel

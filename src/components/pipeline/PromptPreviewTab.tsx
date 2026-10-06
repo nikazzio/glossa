@@ -14,6 +14,7 @@ import { CONDITIONAL_AT_RUN_TIME, PHASE_PARTS, SWITCHABLE_PARTS, isPartOff, with
 import { SystemTextCard } from './SystemTextCard';
 import { CommandRule } from '../ui/CommandRule';
 import type { ConfigSection } from './PipelineConfig';
+import { errorMessage, logger } from '../../utils/logger';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
@@ -147,7 +148,7 @@ function ChunkParts({ config, phase, previewId, chunk }: {
   }, [previewId, chunk.id, chunk.translationProcessingText, config, reviewBlocked]);
 
   if (reviewBlocked) return <p className="text-sm text-editorial-muted">{t('promptPreview.translationRequired')}</p>;
-  if (error) return <p role="alert" className="text-sm text-editorial-danger">{error}</p>;
+  if (error) return <PreviewError />;
   if (!preview) return <p className="text-sm text-editorial-muted">{t('common.loading')}</p>;
   if (isDeeplStage || !phase) {
     return <PromptMessage label={t('pipeline.promptParts.deepl-request.title')} hint={t('pipeline.promptParts.deepl-request.hint')} text={preview.userPrompt}
@@ -185,11 +186,14 @@ function PhaseParts({ config, phase, stage, edit }: { config: PipelineConfig; ph
     setError(null);
     void requestPreview(config, phase, stage)
       .then((info) => { if (active) setParts(info.parts ?? []); })
-      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : String(err)); });
+      .catch((err: unknown) => {
+        logger.warn('prompt_preview.failed', { message: errorMessage(err) });
+        if (active) setError(errorMessage(err));
+      });
     return () => { active = false; };
   }, [config, phase, stage]);
 
-  if (error) return <p role="alert" className="text-sm text-editorial-danger">{error}</p>;
+  if (error) return <PreviewError />;
   if (!parts) return <p className="text-sm text-editorial-muted">{t('common.loading')}</p>;
   const byId = new Map(parts.map((part) => [`${part.message}:${part.id}`, part]));
   const group = (message: 'system' | 'user') => PHASE_PARTS[phase]
@@ -210,21 +214,33 @@ function PhaseParts({ config, phase, stage, edit }: { config: PipelineConfig; ph
   );
 }
 
+function PreviewError() {
+  const { t } = useTranslation();
+  return <p role="alert" className="text-sm text-editorial-danger">{t('promptPreview.unavailable')}</p>;
+}
+
 function DeeplRequestPreview({ stage }: { stage: PipelineStageConfig }) {
   const { t } = useTranslation();
   const [body, setBody] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const deeplConfig = getDeeplOptions(stage);
+  const hasTarget = Boolean(deeplConfig.targetLang.trim());
   useEffect(() => {
     let active = true;
     setBody(null);
     setError(null);
+    if (!hasTarget) return () => { active = false; };
     void deeplService.previewDeeplStage({ text: '{{SOURCE_CHUNK_TEXT}}', deeplConfig: getDeeplOptions(stage) })
       .then((value) => { if (active) setBody(value); })
-      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : String(err)); });
+      .catch((err: unknown) => {
+        logger.warn('prompt_preview.deepl_failed', { message: errorMessage(err) });
+        if (active) setError(errorMessage(err));
+      });
     return () => { active = false; };
-  }, [stage]);
+  }, [stage, hasTarget]);
 
-  if (error) return <p role="alert" className="text-sm text-editorial-danger">{error}</p>;
+  if (!hasTarget) return <p className="text-sm text-editorial-muted">{t('pipeline.deepl.chooseTarget')}</p>;
+  if (error) return <PreviewError />;
   if (body === null) return <p className="text-sm text-editorial-muted">{t('common.loading')}</p>;
   return <PromptMessage label={t('pipeline.promptParts.deepl-request.title')} hint={t('pipeline.promptParts.deepl-request.hint')} text={body}
     metadata={<><Hint label={t('pipeline.promptParts.kind.auto')}><Braces size={13} className="text-editorial-muted" aria-hidden="true" /></Hint><CommandRule /></>} />;

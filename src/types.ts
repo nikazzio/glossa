@@ -777,6 +777,9 @@ export type PhraseMatch = {
   /** Codici ISO 639-3 delle due revisioni («und» = non indicata). */
   sourceLanguage: string;
   targetLanguage: string;
+  /** Varietà Glottolog delle due revisioni, se indicata. */
+  sourceLanguageVariety: string | null;
+  targetLanguageVariety: string | null;
   provenance?: TextProvenance;
   embeddingModel?: string;
   dimensions?: number;

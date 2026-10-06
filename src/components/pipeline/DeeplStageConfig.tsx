@@ -7,6 +7,7 @@ import type { DeeplGlossaryInfo } from '../../services/deeplService';
 import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../../constants';
 import { FIELD_CLASSNAME, FieldLabel, IconButton, SECTION_SETTING_LIST_CLASSNAME, Select, SettingRow, ToggleRow } from '../ui';
 import { confirm } from '../../stores/confirmStore';
+import { errorMessage, logger } from '../../utils/logger';
 
 interface DeeplStageConfigProps {
   value?: DeeplConfig;
@@ -50,11 +51,12 @@ export function DeeplStageConfig({
       .listGlossaries()
       .then(setGlossaries)
       .catch((error: unknown) => {
+        logger.warn('pipeline.deepl.glossaries_failed', { message: errorMessage(error) });
         setGlossaries([]);
-        setGlossaryError(error instanceof Error ? error.message : String(error));
+        setGlossaryError(t('pipeline.deepl.glossariesUnavailable'));
       })
       .finally(() => setGlossariesLoading(false));
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     reloadGlossaries();
@@ -85,9 +87,10 @@ export function DeeplStageConfig({
     deeplService
       .deleteGlossary(config.glossaryId)
       .then(() => { update({ glossaryId: undefined }); reloadGlossaries(); })
-      .catch((e: unknown) =>
-        setGlossaryError(e instanceof Error ? e.message : t('pipeline.deepl.deleteGlossaryFailed')),
-      );
+      .catch((error: unknown) => {
+        logger.warn('pipeline.deepl.delete_glossary_failed', { message: errorMessage(error) });
+        setGlossaryError(t('pipeline.deepl.deleteGlossaryFailed'));
+      });
   };
 
   return (
