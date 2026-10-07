@@ -313,8 +313,7 @@ testo nel suggerimento e per chi legge con la voce.
   scelta fatta. La larghezza si lascia al contenuto, senza numeri fissi, salvo
   un tetto per i testi lunghi.
 - Scelte esclusive con nome: `ChoiceDots` (o `SettingChoiceRow` nelle
-  impostazioni) e `Select`; `SegmentedControl` resta solo nella finestra di
-  creazione della trascrizione, da convertire.
+  impostazioni) e `Select`.
 - Ogni campo di ricerca usa `CatalogSearchField` (anche nei pannelli e nei
   fogli dello Studio): `onKeyDown` per Esc, `focusOnMount` quando si apre da un
   comando esplicito.

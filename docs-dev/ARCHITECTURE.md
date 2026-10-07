@@ -2148,7 +2148,7 @@ deduzioni dal file. Il collegamento non cambia né importa una trascrizione.
 Costi Studio: stima e consumi usano il Popover comune; eliminati posizionamento,
 portal e timer privati. Calcoli di stima e contatori del frammento invariati.
 Opzioni vista su SettingRow/IconButton; importazione nella schermata vuota con
-IconButton neutro. Dettagli futuri: PIANO_CORPUS_TESTUALE_EMBEDDING.md.
+IconButton neutro.
 
 
 ### Protezioni Studio e accessibilità

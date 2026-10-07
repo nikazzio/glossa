@@ -25,5 +25,5 @@ Piani e specifiche implementative completati non restano come documentazione:
 invarianti in architettura, regole visive nel design system, lavoro residuo
 nella roadmap.
 
-Piano aperto: [Corpus testuale, provenienza ed embedding](./PIANO_CORPUS_TESTUALE_EMBEDDING.md).
-Raccoglie le decisioni del 3 ottobre 2026; non descrive funzionalità consegnate.
+Piano aperto: [Ricerca federata e Dashboard](./PIANO_RICERCA_FEDERATA_DASHBOARD.md),
+riferimento per il lavoro sulla Dashboard; si toglie a lavoro concluso.

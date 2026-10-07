@@ -411,9 +411,8 @@ aggiungere una misura conserva le altre. Ricerca solo fra misure compatibili,
 senza confronto fra modelli diversi. La ricerca globale esplicita della memoria
 non sposta gli oggetti né estende implicitamente l'ambito di ogni corpus.
 
-Il piano [Corpus testuale, provenienza ed embedding](./PIANO_CORPUS_TESTUALE_EMBEDDING.md)
-definisce ordine, verifiche e solidificazione; issue #227, #391, #382, #380,
-#377, #209, #223 e #381. La base deve integrare revisioni e provenienza già
+Issue collegate: #227, #391, #382, #380, #377, #209, #223 e #381; i passi
+successivi sono nella roadmap. La base deve integrare revisioni e provenienza già
 esistenti, non creare un registro parallelo scollegato.
 
 ## 10. Scriptoria come riferimento principale

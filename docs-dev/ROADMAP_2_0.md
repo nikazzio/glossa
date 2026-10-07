@@ -1,18 +1,15 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 5 ottobre 2026.
+Aggiornata: 7 ottobre 2026.
 
 ## Prossimi passi concordati (7 ottobre 2026)
 
-- Fatti: Impostazioni generali (otto linguette, linguetta Lingue con «Aggiorna
-  elenco lingue» che conserva i codici ritirati) e barra di sinistra (#485 C:
-  menu generale in fondo, collasso fluido).
-- Integrazione: #490 → `feat/translation-studio-layout` (#488) → `main`. Il
-  consolidamento delle migrazioni 0004-0008 si fa insieme all'unione su `main`.
-- **Prossimo lavoro UI/UX: Dashboard.**
-- **Rimandati:** sblocco del prompt delle fasi quando esistono frammenti
-  tradotti (oggi si cambia solo il modello); scelta a cerchietti nella finestra
-  «Crea trascrizione».
+- **Dashboard**, insieme ai colori delle superfici (#485 D).
+- Unione di #488 su `main` con l'accorpamento delle migrazioni 0004-0008; poi
+  chiusura di #489.
+- Da chiudere dopo verifica: #481, #467, #469.
+- Futuro, senza data: sblocco del prompt delle fasi quando esistono frammenti
+  tradotti.
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 
@@ -321,15 +318,13 @@ L'addestramento resta esterno a Glossa.
 Il loro perimetro minimo per la prima beta completa va deciso sulla base dei
 casi reali: non dichiararli rimossi né prometterli tutti nel prossimo tag.
 
-Fondazione da strutturare ora: testo/versione/provenienza separati dalle misure,
-più embedding con modello/dimensione/input obbligatori; un modello attivo per
-workspace e nessuna cancellazione implicita degli altri. #391 va riallineata
-alla conservazione delle misure; #382 riusa questa base per originali e
-traduzioni. Backup/dataset conservano relazioni e revisioni. Ricerca ibrida,
-tag automatici, vocabolari multilingui e analisi di opere intere restano passi
-successivi, da valutare su testi medievali reali.
-
-Ordine e verifiche: [piano del corpus testuale](./PIANO_CORPUS_TESTUALE_EMBEDDING.md).
+La base del corpus testuale è consegnata (unità, revisioni, misure con
+modello/dimensioni/profilo, tag, provenienza; vedi architettura). #391 va
+riallineata alla conservazione delle misure; #382 riusa questa base per
+originali e traduzioni. Restano passi successivi, da valutare su testi
+medievali reali: selettore di pagine/sezioni, ricerca ibrida lessicale +
+semantica, tag automatici con conferma, vocabolari multilingui (SKOS),
+confronti fra testimoni e analisi di opere intere.
 
 ## Riferimenti e lavori trasversali
 
