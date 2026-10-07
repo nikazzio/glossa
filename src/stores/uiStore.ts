@@ -409,7 +409,7 @@ export const useUiStore = create<UiState>()(
       projectContextUserExpanded: true,
       dashboardSidebarCollapsed: false,
       dashboardSections: {},
-      dashboardSidebarWidth: 240,
+      dashboardSidebarWidth: 198, // = RAIL_MIN_WIDTH: la barra larga quanto il menu generale
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       librarySourceInspectorWidth: 400,

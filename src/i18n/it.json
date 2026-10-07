@@ -196,7 +196,9 @@
     "backToAnalysis": "Torna ad Analisi",
     "resize": "Ridimensiona la barra",
     "collapse": "Comprimi barra",
-    "expand": "Espandi barra"
+    "expand": "Espandi barra",
+    "generalMenu": "Menu generale",
+    "navigation": "Navigazione"
   },
   "projectShell": {
     "railLabel": "Pannelli progetto",
@@ -2912,6 +2914,7 @@
             "paragraphs": [
               "La Dashboard mostra attività recenti, elementi da controllare e lavori in corso. Le altre due schede permettono di cercare fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
               "La Biblioteca contiene le opere che hai aggiunto al catalogo. Traduzioni mostra i progetti di tutti i workspace. Aprendo un workspace trovi i progetti e le risorse che gli appartengono.",
+              "La barra di sinistra porta Dashboard, aree nell’ordine del lavoro e workspace; in fondo il menu generale: salva tutto, risorse linguistiche, impostazioni, guida e lingua. Chiusa, restano le icone e un clic porta alla pagina senza riaprirla.",
               "Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio: petrolio, seppia e indaco. Lo vedi nell'icona dell'area nella barra di sinistra, nel filetto sotto il titolo grande e in una carta di fondo appena diversa. I colori di stato non cambiano: il verde segna sempre ciò che è scelto o attivo.",
               "Passa il puntatore sui comandi a icona, oppure raggiungili con la tastiera, per leggerne la funzione. Le barre laterali si possono ridimensionare o richiudere.",
               "I riquadri della Dashboard si spostano: prendi la maniglia a sinistra del titolo e trascina il riquadro più in alto, più in basso o nell'altra colonna. La disposizione resta come l'hai lasciata."

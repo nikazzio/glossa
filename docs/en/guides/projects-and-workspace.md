@@ -90,6 +90,21 @@ translation stays open with the error in view: no edit is lost by leaving. One
 limit remains: closing the Glossa window an instant after the last edit can
 lose it.
 
+## Left bar
+
+The left bar holds navigation: at the top the Dashboard with Overview and
+Search, then the areas in working order (Library, Transcriptions, Translations,
+Analysis) and finally the workspaces, with the plus to create one. A rule
+separates each group; an item’s explanation appears on hover.
+
+At the bottom is the general menu: save all, general language resources,
+settings, help and interface language. It is always available, even without
+an active workspace.
+
+The icon at the top collapses the bar: the item icons and the general menu
+remain, and a click opens the page without expanding it. The Glossa mark at
+the top expands it again.
+
 ## Areas and their ink
 
 Library, Transcriptions and Translations each have their own ink — petrol,

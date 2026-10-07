@@ -94,6 +94,22 @@ fallisce, la traduzione resta aperta con l’errore in vista: nessuna modifica
 si perde uscendo. Resta un limite: chiudere la finestra di Glossa entro un
 istante dall’ultima modifica può perderla.
 
+## Barra di sinistra
+
+La barra di sinistra raccoglie la navigazione: in alto la Dashboard con
+Panoramica e Ricerca, poi le aree nell’ordine del lavoro (Biblioteca,
+Trascrizioni, Traduzioni, Analisi) e infine i workspace, con il più per
+crearne uno. Ogni gruppo è separato da un filetto; la spiegazione di una voce
+compare passando il puntatore.
+
+In fondo c’è il menu generale: salva tutto, risorse linguistiche generali,
+impostazioni, guida e lingua dell’interfaccia. È sempre disponibile, anche
+senza un workspace attivo.
+
+L’icona in alto chiude la barra: restano le icone delle voci e del menu
+generale, e un clic porta alla pagina senza riaprirla. Il segno di Glossa in
+alto la riapre.
+
 ## Aree e loro inchiostro
 
 Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio —

@@ -592,6 +592,19 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
 - Grip sempre visibile; stato hover, drag e focus riconoscibile.
 - Animazioni usano i token di motion condivisi.
 - Fly-out non coprono il controllo che li ha aperti e si chiudono con Escape.
+- Barra di sinistra (`WorkspaceRailNext`): solo navigazione (Dashboard con le
+  sue viste, aree nell'ordine del lavoro, workspace), gruppi aperti da un
+  filetto (`ShellNavSection`), una riga per voce con la spiegazione nel
+  suggerimento. Voce scelta: velatura `bg-editorial-accent/6`, nome e
+  cerchietto in accento, nessuna barretta. Due misure di cerchietto, uguali aperta e chiusa: voci
+  principali `h-7` icona 14, viste della Dashboard `h-5` icona 11. In fondo il
+  menu generale (`ShellNavFooter`): salva, risorse linguistiche, impostazioni,
+  guida, lingua; in fila da aperta, in colonna da chiusa. Chiusa: restano le
+  icone, niente titoli di gruppo; una voce porta alla pagina senza riaprire.
+- Collasso: entrambi i pannelli hanno `PANEL_FLEX_TRANSITION_CLASS`; il
+  contenuto della barra ha subito la larghezza finale (64 px chiusa, minimo
+  198 aperta, cioè la larghezza esatta del menu generale, che è anche quella
+  iniziale; massimo 420) e il pannello `overflow-hidden` lo scopre senza ricomporlo.
 
 ### Impostazioni
 

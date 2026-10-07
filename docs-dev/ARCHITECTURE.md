@@ -78,7 +78,8 @@ sempre visibile in Generale, abilitata soltanto in DeepL.
 
 Le due viste vivono nella Dashboard (`DashboardArea`): `overview` e ricerca
 (`view: 'search'`). Si scelgono dalla barra a sinistra,
-come voci sotto la Dashboard (`WorkspaceRailNext`), non da una fila di linguette
+come voci sotto la Dashboard (`WorkspaceRailNext`, che in fondo porta anche il
+menu generale `ShellNavFooter`, tolto dalla testata), non da una fila di linguette
 dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
 continua a leggere. Contratto di navigazione: la variante `dashboard` di
 `AppLocation` porta `view` e `searchId`; la variante `library` porta solo
