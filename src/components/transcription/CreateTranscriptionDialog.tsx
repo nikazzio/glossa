@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
-import { BookOpenText, FilePen, FileText, Images, X } from 'lucide-react';
+import { useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { FilePen, FileText, Images } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { createDocument } from '../../services/transcriptionService';
 import { getLibrarySourceDetail, listLibraryCatalog } from '../../services/libraryService';
 import { versionInventory } from '../../services/inventoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, DialogCancelButton, DialogConfirmButton, FIELD_CLASSNAME, IconButton, PopoverItem, SegmentedControl, Select } from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, FIELD_CLASSNAME, FieldLabel, LinkChip, SegmentedControl, Select } from '../ui';
 import type { LibraryCatalogEntry } from '../../types';
+
+const MAX_SOURCE_RESULTS = 8;
 
 interface ReadableVersionOption {
   id: string;
@@ -58,6 +60,13 @@ export function CreateTranscriptionDialog({
   const [catalog, setCatalog] = useState<LibraryCatalogEntry[]>([]);
   const [sourceQuery, setSourceQuery] = useState('');
   const [pickedSource, setPickedSource] = useState<LibraryCatalogEntry | null>(null);
+  /** Voce evidenziata da tastiera nell'elenco delle opere; -1 = nessuna. */
+  const [activeResultIndex, setActiveResultIndex] = useState(-1);
+  const fieldId = useId();
+  const titleInputId = `${fieldId}-title`;
+  const sourceInputId = `${fieldId}-source`;
+  const sourceListId = `${fieldId}-source-list`;
+  const optionId = (index: number) => `${fieldId}-source-option-${index}`;
   const effectiveSourceId = sourceId ?? pickedSource?.source.id;
 
   useEffect(() => {
@@ -143,7 +152,10 @@ export function CreateTranscriptionDialog({
   };
 
   const handleCreate = async () => {
-    if (!title.trim() || !selectedWorkspaceId) return;
+    // Invio nel titolo e click sul pulsante possono arrivare prima che
+    // `creating` disattivi il pulsante: senza questa guardia il documento
+    // veniva creato due volte.
+    if (creating || !title.trim() || !selectedWorkspaceId) return;
     setCreating(true);
     try {
       const document = await createDocument(selectedWorkspaceId, title.trim(), chosenVersionId);
@@ -162,8 +174,35 @@ export function CreateTranscriptionDialog({
     !sourceId && !pickedSource && sourceQuery.trim()
       ? catalog
           .filter((entry) => entry.source.title.toLowerCase().includes(sourceQuery.trim().toLowerCase()))
-          .slice(0, 8)
+          .slice(0, MAX_SOURCE_RESULTS)
       : [];
+  const isSourceListOpen = !sourceId && !pickedSource && sourceQuery.trim() !== '';
+
+  const pickSource = (entry: LibraryCatalogEntry) => {
+    setPickedSource(entry);
+    // Subito, non solo quando arriva la lista delle copie leggibili: creando
+    // prima che arrivi, il documento restava senza collegamento nonostante
+    // la scelta visibile.
+    setChosenVersionId(entry.versionId);
+    setSourceQuery('');
+    setActiveResultIndex(-1);
+    if (!title.trim()) setTitle(entry.source.title);
+  };
+
+  const handleSourceKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (sourceResults.length === 0) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveResultIndex((index) => (index + 1) % sourceResults.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveResultIndex((index) => (index <= 0 ? sourceResults.length - 1 : index - 1));
+    } else if (event.key === 'Enter' && activeResultIndex >= 0) {
+      event.preventDefault();
+      const entry = sourceResults[activeResultIndex];
+      if (entry) pickSource(entry);
+    }
+  };
 
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
 
@@ -193,10 +232,8 @@ export function CreateTranscriptionDialog({
     >
       <div className="space-y-4">
         {!workspaceId && (
-          <label className="block space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-              {t('projects.chooseWorkspace')}
-            </span>
+          <div className="space-y-1.5">
+            <FieldLabel block>{t('projects.chooseWorkspace')}</FieldLabel>
             <Select
               value={selectedWorkspaceId ?? ''}
               onChange={setSelectedWorkspaceId}
@@ -204,50 +241,73 @@ export function CreateTranscriptionDialog({
               ariaLabel={t('projects.chooseWorkspace')}
               className="w-full"
             />
-          </label>
+          </div>
         )}
         {!sourceId && (
           <div className="space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
+            <FieldLabel block htmlFor={pickedSource ? undefined : sourceInputId}>
               {t('transcription.linkToSource')}
-            </span>
+            </FieldLabel>
             {pickedSource ? (
-              <div className="flex items-center justify-between gap-2 rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-2.5">
-                <span className="flex min-w-0 items-center gap-2 text-sm text-editorial-ink">
-                  <BookOpenText size={14} className="shrink-0 text-editorial-muted" aria-hidden="true" />
-                  <span className="truncate">{pickedSource.source.title}</span>
-                </span>
-                <IconButton size="xs" onClick={() => setPickedSource(null)} title={t('common.cancel')}>
-                  <X size={12} />
-                </IconButton>
+              <div className="flex">
+                <LinkChip
+                  label={pickedSource.source.title}
+                  hint={t('transcription.unlinkSource')}
+                  onClick={() => setPickedSource(null)}
+                />
               </div>
             ) : (
               <div className="relative">
                 <input
+                  id={sourceInputId}
                   value={sourceQuery}
-                  onChange={(e) => setSourceQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSourceQuery(e.target.value);
+                    setActiveResultIndex(-1);
+                  }}
+                  onKeyDown={handleSourceKeyDown}
                   placeholder={t('transcription.linkToSourcePlaceholder')}
-                  aria-label={t('transcription.linkToSource')}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={isSourceListOpen}
+                  aria-controls={sourceListId}
+                  aria-activedescendant={activeResultIndex >= 0 ? optionId(activeResultIndex) : undefined}
                   className={FIELD_CLASSNAME}
                 />
-                {sourceResults.length > 0 && (
-                  <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-editorial-border bg-editorial-page shadow-lg custom-scrollbar">
-                    {sourceResults.map((entry) => (
-                      <li key={entry.source.id}>
-                        <PopoverItem
-                          label={entry.source.title}
-                          onSelect={() => {
-                            setPickedSource(entry);
-                            // Subito, non solo quando arriva la lista delle copie
-                            // leggibili: creando prima che arrivi, il documento
-                            // restava senza collegamento nonostante la scelta visibile.
-                            setChosenVersionId(entry.versionId);
-                            setSourceQuery('');
-                            if (!title.trim()) setTitle(entry.source.title);
-                          }}
-                        />
+                {isSourceListOpen && (
+                  <ul
+                    id={sourceListId}
+                    role="listbox"
+                    aria-label={t('transcription.linkToSource')}
+                    className="custom-scrollbar absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-editorial-border bg-surface-elevated py-1 shadow-warm-md"
+                  >
+                    {sourceResults.length === 0 ? (
+                      <li role="option" aria-selected={false} aria-disabled="true" className="px-3 py-1.5 text-sm text-editorial-muted">
+                        {t('transcription.noSourceFound')}
                       </li>
-                    ))}
+                    ) : (
+                      sourceResults.map((entry, index) => (
+                        // Il focus resta nel campo (aria-activedescendant): le voci
+                        // non sono pulsanti, il mouse sceglie senza togliere il focus.
+                        // eslint-disable-next-line jsx-a11y/click-events-have-key-events -- frecce e Invio li gestisce il campo
+                        <li
+                          key={entry.source.id}
+                          id={optionId(index)}
+                          role="option"
+                          aria-selected={index === activeResultIndex}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onMouseEnter={() => setActiveResultIndex(index)}
+                          onClick={() => pickSource(entry)}
+                          className={`cursor-pointer truncate px-3 py-1.5 text-sm transition-colors ${
+                            index === activeResultIndex
+                              ? 'bg-editorial-accent/10 text-editorial-accent'
+                              : 'text-editorial-ink'
+                          }`}
+                        >
+                          {entry.source.title}
+                        </li>
+                      ))
+                    )}
                   </ul>
                 )}
               </div>
@@ -256,9 +316,7 @@ export function CreateTranscriptionDialog({
         )}
         {readableVersions.length > 1 && (
           <div className="space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-              {t('transcription.chooseStartingCopy')}
-            </span>
+            <FieldLabel block>{t('transcription.chooseStartingCopy')}</FieldLabel>
             <SegmentedControl
               value={chosenVersionId ?? readableVersions[0].id}
               onChange={setChosenVersionId}
@@ -271,23 +329,21 @@ export function CreateTranscriptionDialog({
             />
           </div>
         )}
-        <label className="block space-y-1.5">
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-            {t('transcription.titleLabel')}
-          </span>
+        <div className="space-y-1.5">
+          <FieldLabel block htmlFor={titleInputId}>{t('transcription.titleLabel')}</FieldLabel>
           <input
+            id={titleInputId}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') void handleCreate();
-              if (e.key === 'Escape') close();
             }}
             placeholder={t('transcription.titlePlaceholder')}
-            className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className={FIELD_CLASSNAME}
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (nuovo documento)
             autoFocus
           />
-        </label>
+        </div>
       </div>
     </Dialog>
   );

@@ -1,13 +1,15 @@
-import { Brain, Database, Loader2, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Brain, CircleCheck, Database, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useMemoryExtractionDraft } from '../../../hooks/useMemoryExtractionDraft';
-import { useWorkspaceStore } from '../../../stores/workspaceStore';
-import { listPhraseMemoryEntries } from '../../../services/phraseMemoryService';
-import { EmptyState, IconButton, Spinner } from '../../ui';
+import { confirm as confirmDialog } from '../../../stores/confirmStore';
+import { EmptyState, FIELD_CLASSNAME, IconButton, Spinner } from '../../ui';
+import { useLanguageNames } from '../../../hooks/useLanguageLabel';
+import { UNDETERMINED_LANGUAGE } from '../../../languages/catalog';
+import { usePipelineStore } from '../../../stores/pipelineStore';
+import { PhraseLine } from './ReferenceMatchRow';
 import type { PhraseCandidateDraft } from '../../../stores/phraseMemoryDraftStore';
-import type { TranslationChunk } from '../../../types';
+import type { LanguageChoice, TranslationChunk } from '../../../types';
 
 interface MemoryTabProps {
   panelId: string;
@@ -15,45 +17,16 @@ interface MemoryTabProps {
   currentChunk: TranslationChunk | null;
 }
 
+/** La memoria del frammento: le coppie già salvate (si tolgono una a una) e
+ *  quelle nuove, estratte o scritte a mano, da spuntare e aggiungere. Si apre
+ *  solo a traduzione verificata: lo decide la sottolinguetta. */
 export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps) {
   const { t } = useTranslation();
-  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const [chunkMemoryCount, setChunkMemoryCount] = useState<number | null>(null);
-  const [isCountLoading, setIsCountLoading] = useState(false);
   const {
     status, candidates, canExtract, isLoadingSaved, extract, addManualCandidate,
-    updateCandidate, toggleAccepted, confirm,
+    updateCandidate, toggleAccepted, confirm, removeSaved, savedCount, savedLoadFailed,
   } = useMemoryExtractionDraft(currentChunk);
-  const isLocked = Boolean(currentChunk?.translationLocked);
-
-  const currentChunkId = currentChunk?.id ?? null;
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadCount(): Promise<void> {
-      if (!activeWorkspace || !currentChunkId) {
-        if (!cancelled) { setChunkMemoryCount(null); setIsCountLoading(false); }
-        return;
-      }
-      setIsCountLoading(true);
-      try {
-        const entries = await listPhraseMemoryEntries(activeWorkspace.id);
-        if (!cancelled) {
-          setChunkMemoryCount(entries.filter((e) => e.chunkId === currentChunkId).length);
-        }
-      } catch {
-        if (!cancelled) setChunkMemoryCount(null);
-      } finally {
-        if (!cancelled) setIsCountLoading(false);
-      }
-    }
-    void loadCount();
-    return () => { cancelled = true; };
-    // Depending on the id (not the whole activeWorkspace object) on purpose:
-    // this only needs to refetch when the workspace actually changes, not on
-    // every re-render that happens to produce a new object reference.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeWorkspace?.id, currentChunkId]);
+  const busy = status === 'extracting' || status === 'saving';
 
   const handleExtract = async () => {
     try {
@@ -65,101 +38,131 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
 
   const handleConfirm = async () => {
     try {
-      const savedCount = await confirm();
-      if (savedCount === 0) {
+      const added = await confirm();
+      if (added === 0) {
         toast.message(t('memory.nothingToSave'));
         return;
       }
-      if (activeWorkspace && currentChunkId) {
-        const entries = await listPhraseMemoryEntries(activeWorkspace.id);
-        setChunkMemoryCount(entries.filter((e) => e.chunkId === currentChunkId).length);
-      }
-      toast.success(t('memory.savedToMemory', { count: savedCount }));
+      toast.success(t('memory.savedToMemory', { count: added }));
     } catch {
       toast.error(t('memory.saveToMemoryFailed'));
     }
   };
 
-  const hasAcceptedCandidate = candidates.some((c) => c.accepted && c.sourcePhrase.trim() && c.targetPhrase.trim());
-  const canUpdateMemory = hasAcceptedCandidate && status !== 'saving' && status !== 'extracting' && isLocked;
-  const showList = status !== 'idle';
+  const handleRemove = async (candidate: PhraseCandidateDraft) => {
+    const ok = await confirmDialog({
+      title: t('memory.removeConfirmTitle'),
+      message: t('memory.removeConfirmMessage'),
+      confirmLabel: t('memory.removeFromMemory'),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await removeSaved(candidate);
+    } catch {
+      toast.error(t('memory.removeFailed'));
+    }
+  };
+
+  const hasNewChecked = candidates.some(
+    (c) => c.origin !== 'saved' && c.accepted && c.sourcePhrase.trim() && c.targetPhrase.trim(),
+  );
+  const addLabel = t('memory.addCheckedToMemory');
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 border-b border-editorial-border px-4 py-3">
-        <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border px-4 py-3">
+        <IconButton size="md" title={t('memory.extractButton')} onClick={() => void handleExtract()} disabled={!canExtract}>
+          {status === 'extracting' ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+        </IconButton>
+        <IconButton size="md" title={t('memory.addPair')} onClick={addManualCandidate} disabled={busy}>
+          <Plus size={13} />
+        </IconButton>
+        <span className="font-display text-sm italic text-editorial-ink tabular-nums">{savedCount}</span>
+        <span className="text-xs text-editorial-muted">{t('memory.inMemoryCount', { count: savedCount })}</span>
+        <span className="ml-auto">
           <IconButton
             size="md"
-            title={!currentChunk?.translationLocked ? t('memory.extractDisabledLockHint') : t('memory.extractButton')}
-            onClick={() => void handleExtract()}
-            disabled={!canExtract}
-            tooltipSide="right"
+            title={hasNewChecked ? addLabel : t('transcription.commandBlocked', { command: addLabel, reason: t('memory.reasonNoNewChecked') })}
+            onClick={() => void handleConfirm()}
+            disabled={!hasNewChecked || busy}
           >
-            {status === 'extracting' ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+            {status === 'saving' ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           </IconButton>
-          {isCountLoading ? (
-            <Loader2 size={14} className="animate-spin text-editorial-muted" aria-label={t('memory.loadingMemories')} />
-          ) : chunkMemoryCount !== null && (
-            <>
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-editorial-success/35 bg-editorial-success/10 font-display text-sm italic text-editorial-success">
-                {chunkMemoryCount}
-              </div>
-              <p className="text-xs text-editorial-muted">{t('memory.memoriesLabel')}</p>
-            </>
-          )}
-          {showList && (
-            <div className="ml-auto">
-              <IconButton
-                size="md"
-                title={t('memory.confirmSaveButton')}
-                onClick={() => void handleConfirm()}
-                disabled={!canUpdateMemory}
-                tooltipSide="left"
-              >
-                {status === 'saving' ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              </IconButton>
-            </div>
-          )}
-        </div>
+        </span>
       </div>
 
-      {showList ? (
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 custom-scrollbar">
-          <fieldset disabled={status === 'extracting' || status === 'saving'} className="m-0 min-w-0 space-y-3 border-0 p-0">
-            {candidates.map((candidate) => (
-              <CandidateCard
-                key={candidate.id}
-                candidate={candidate}
-                onToggle={() => toggleAccepted(candidate.id)}
-                onChange={(changes) => updateCandidate(candidate.id, changes)}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={addManualCandidate}
-              disabled={!isLocked}
-              className="text-xs font-medium text-editorial-accent hover:underline disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {t('memory.addManualPairButton')}
-            </button>
-          </fieldset>
-        </div>
-      ) : isLoadingSaved ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-          <Spinner size={28} label={t('memory.loadingMemories')} className="flex flex-col items-center gap-3 text-sm font-medium text-editorial-muted" />
-        </div>
+      {savedLoadFailed && (
+        <p role="alert" className="shrink-0 px-4 pt-3 text-xs text-editorial-danger">{t('memory.savedLoadFailed')}</p>
+      )}
+
+      {isLoadingSaved ? (
+        <Spinner size={20} label={t('memory.loadingMemories')} className="flex flex-1 items-center justify-center gap-2 text-sm text-editorial-muted" />
+      ) : candidates.length === 0 ? (
+        <EmptyState icon={<Brain size={28} />} message={t('memory.chunkEmpty')} />
       ) : (
-        <EmptyState
-          icon={<Brain size={28} />}
-          message={currentChunk?.translationLocked ? undefined : t('memory.extractDisabledLockHint')}
-        />
+        <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
+          <div className="divide-y divide-rule">
+            {candidates.map((candidate) => (
+              candidate.origin === 'saved' ? (
+                <SavedPairRow key={candidate.id} candidate={candidate} onRemove={() => void handleRemove(candidate)} />
+              ) : (
+                <NewPairRow
+                  key={candidate.id}
+                  candidate={candidate}
+                  disabled={busy}
+                  onToggle={() => toggleAccepted(candidate.id)}
+                  onChange={(changes) => updateCandidate(candidate.id, changes)}
+                />
+              )
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-interface CandidateCardProps {
+/** Lingue dell'opera per il margine delle righe: codice breve, nome e ruolo nel suggerimento. */
+function usePairLanguages() {
+  const { t } = useTranslation();
+  const languageNames = useLanguageNames();
+  const workLanguages = usePipelineStore((s) => s.workLanguages);
+  const side = (choice: LanguageChoice, role: string) => {
+    const value = choice.code ?? UNDETERMINED_LANGUAGE;
+    return { code: value, label: languageNames.describe(value, choice.variety), role };
+  };
+  return {
+    source: side(workLanguages.source, t('memory.reference.original')),
+    target: side(workLanguages.target, t('memory.reference.translation')),
+  };
+}
+
+// Stessa forma dei Riferimenti: originale in carattere da libro, traduzione sotto, lingua a margine.
+function SavedPairRow({ candidate, onRemove }: { candidate: PhraseCandidateDraft; onRemove: () => void }) {
+  const { t } = useTranslation();
+  const languages = usePairLanguages();
+  return (
+    <div className="flex items-start gap-2.5 py-3">
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <span className="text-xs text-editorial-success">{t('memory.inMemoryBadge')}</span>
+        <PhraseLine {...languages.source}>
+          <p className="font-display text-base leading-snug text-editorial-charcoal">{candidate.sourcePhrase}</p>
+        </PhraseLine>
+        <PhraseLine {...languages.target}>
+          <p className="text-sm leading-snug text-editorial-ink">{candidate.targetPhrase}</p>
+        </PhraseLine>
+      </div>
+      <IconButton size="sm" title={t('memory.removeFromMemory')} onClick={onRemove} className="shrink-0">
+        <Trash2 size={13} />
+      </IconButton>
+    </div>
+  );
+}
+
+interface NewPairRowProps {
   candidate: PhraseCandidateDraft;
+  disabled: boolean;
   onToggle: () => void;
   onChange: (changes: Partial<Pick<PhraseCandidateDraft, 'sourcePhrase' | 'targetPhrase'>>) => void;
 }
@@ -170,53 +173,51 @@ function autoResizeTextarea(el: HTMLTextAreaElement | null) {
   el.style.height = `${el.scrollHeight}px`;
 }
 
-function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
+function NewPairRow({ candidate, disabled, onToggle, onChange }: NewPairRowProps) {
   const { t } = useTranslation();
+  const languages = usePairLanguages();
   return (
-    <article className={`space-y-3 rounded-lg border bg-editorial-bg p-3 transition-colors ${candidate.accepted ? 'border-editorial-accent/70' : 'border-editorial-border'}`}>
-      <label className="flex min-w-0 cursor-pointer items-center gap-2">
-        <input
-          type="checkbox"
-          checked={candidate.accepted}
-          onChange={onToggle}
-          className="h-4 w-4 shrink-0 rounded border-editorial-border accent-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('memory.acceptCandidateLabel')}
-        />
-        {candidate.origin === 'ai' && (
-          <span className="shrink-0 font-mono text-xs font-bold text-editorial-accent">
-            {Math.round(candidate.confidence * 100)}%
-          </span>
-        )}
-        {candidate.origin === 'saved' && (
-          <span className="shrink-0 text-xs font-medium text-editorial-muted">
-            {t('memory.savedCandidateLabel')}
-          </span>
-        )}
-      </label>
-      <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-        <p className="mb-1 text-xs uppercase tracking-[0.1em] text-editorial-muted">
-          {t('memory.sourcePhraseLabel')}
-        </p>
-        <textarea
-          ref={autoResizeTextarea}
-          rows={1}
-          value={candidate.sourcePhrase}
-          onChange={(e) => { onChange({ sourcePhrase: e.target.value }); autoResizeTextarea(e.target); }}
-          className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-editorial-charcoal outline-none"
-        />
+    <div className="flex items-start gap-2.5 py-3">
+      <IconButton
+        size="sm"
+        tone={candidate.accepted ? 'accent' : 'default'}
+        ariaPressed={candidate.accepted}
+        title={t('memory.acceptCandidateLabel')}
+        onClick={onToggle}
+        disabled={disabled}
+        className="shrink-0"
+      >
+        <CircleCheck size={14} />
+      </IconButton>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <span className="block text-xs text-editorial-muted">
+          {candidate.origin === 'ai' ? <span className="font-mono text-editorial-ink">{Math.round(candidate.confidence * 100)}%</span> : t('memory.manualPair')}
+        </span>
+        <PhraseLine {...languages.source}>
+          <textarea
+            ref={autoResizeTextarea}
+            rows={1}
+            value={candidate.sourcePhrase}
+            disabled={disabled}
+            aria-label={t('memory.sourcePhraseLabel')}
+            placeholder={t('memory.manualSourcePlaceholder')}
+            onChange={(e) => { onChange({ sourcePhrase: e.target.value }); autoResizeTextarea(e.target); }}
+            className={`${FIELD_CLASSNAME} resize-none overflow-hidden px-2 py-1 font-display text-base leading-snug text-editorial-charcoal`}
+          />
+        </PhraseLine>
+        <PhraseLine {...languages.target}>
+          <textarea
+            ref={autoResizeTextarea}
+            rows={1}
+            value={candidate.targetPhrase}
+            disabled={disabled}
+            aria-label={t('glossary.translation')}
+            placeholder={t('memory.manualTargetPlaceholder')}
+            onChange={(e) => { onChange({ targetPhrase: e.target.value }); autoResizeTextarea(e.target); }}
+            className={`${FIELD_CLASSNAME} resize-none overflow-hidden px-2 py-1 leading-snug`}
+          />
+        </PhraseLine>
       </div>
-      <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-        <p className="mb-1 text-xs uppercase tracking-[0.1em] text-editorial-muted">
-          {t('glossary.translation')}
-        </p>
-        <textarea
-          ref={autoResizeTextarea}
-          rows={1}
-          value={candidate.targetPhrase}
-          onChange={(e) => { onChange({ targetPhrase: e.target.value }); autoResizeTextarea(e.target); }}
-          className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-editorial-ink outline-none"
-        />
-      </div>
-    </article>
+    </div>
   );
 }

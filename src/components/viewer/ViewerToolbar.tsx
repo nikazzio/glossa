@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft,
@@ -13,8 +13,41 @@ import {
   Focus,
   MoreHorizontal,
 } from 'lucide-react';
-import { ClickPopover, IconButton, IconLink, MenuActionRow, Tooltip } from '../ui';
+import { ClickPopover, IconButton, IconLink, MenuActionRow, Tooltip, useOpenExternal } from '../ui';
 import type { ImageSource } from '../../services/cacheService';
+import { useNarrowWidth } from './useNarrowWidth';
+
+/** Sotto questa larghezza i comandi secondari passano nel menu «altri
+ *  comandi» e la provenienza resta il solo pallino: in barra restano
+ *  sfoglio, campo della pagina e zoom. */
+const NARROW_TOOLBAR_WIDTH = 560;
+
+/** Un comando di chi ospita il visore: icona in barra, voce del menu quando
+ *  la barra è stretta. `pressed` per i comandi che accendono o spengono. */
+export interface ViewerCommand {
+  key: string;
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  pressed?: boolean;
+}
+
+const DIVIDER = <span className="h-4 w-px shrink-0 bg-editorial-border" aria-hidden="true" />;
+
+/** Un `ViewerCommand` in barra: neutro, verde solo quando è acceso. */
+export function ViewerCommandButton({ command }: { command: ViewerCommand }) {
+  return (
+    <IconButton
+      size="sm"
+      tone={command.pressed ? 'accent' : 'default'}
+      ariaPressed={command.pressed}
+      onClick={command.onClick}
+      title={command.label}
+    >
+      {command.icon}
+    </IconButton>
+  );
+}
 
 /**
  * La barra del visore: sfoglio, provenienza di ciò che si guarda, zoom.
@@ -53,8 +86,9 @@ export interface ViewerToolbarProps {
   onToggleThumbnails?: () => void;
   shownPageUrl?: string | null;
   /** Comandi di chi ospita il visore (es. cambio fonte immagini/PDF nello
-   *  Studio di trascrizione): stessa barra, non una riga a parte. */
-  extraControls?: ReactNode;
+   *  Studio di trascrizione): stessa barra, non una riga a parte; nel menu
+   *  quando la barra è stretta. */
+  extraControls?: ViewerCommand[];
 }
 
 /**
@@ -73,10 +107,13 @@ function ConnectionBadge({
   fromDisk,
   origin,
   shownEdge,
+  compact,
 }: {
   fromDisk: boolean;
   origin: { source: ImageSource | null; size: string } | null;
   shownEdge: number | null;
+  /** Solo il pallino: la parola resta per chi legge con la voce. */
+  compact: boolean;
 }) {
   const { t } = useTranslation();
   const source = origin?.source ?? (fromDisk ? 'vault' : null);
@@ -113,7 +150,7 @@ function ConnectionBadge({
         className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${fromLibrary ? 'text-editorial-success' : 'text-editorial-muted'}`}
       >
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true" />
-        {label}
+        <span className={compact ? 'sr-only' : undefined}>{label}</span>
       </span>
     </Tooltip>
   );
@@ -140,12 +177,49 @@ export function ViewerToolbar({
   thumbnailsOpen,
   onToggleThumbnails,
   shownPageUrl,
-  extraControls,
+  extraControls = [],
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
-  const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
+  const openExternal = useOpenExternal();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [toolbarRef, narrow] = useNarrowWidth<HTMLDivElement>(NARROW_TOOLBAR_WIDTH);
+
+  const localOnlyCommand: ViewerCommand | null = onToggleLocalOnly
+    ? {
+        key: 'local-only',
+        icon: <HardDrive size={14} />,
+        label: t(localOnly ? 'areas.library.viewerLocalOnlyOff' : 'areas.library.viewerLocalOnly'),
+        onClick: onToggleLocalOnly,
+        pressed: localOnly,
+      }
+    : null;
+  // In barra restano fuori dal menu; stretta, li raccoglie il menu, a gruppi:
+  // comandi di chi ospita, lettura e uscite, zoom.
+  const menuGroups: ViewerCommand[][] = [
+    ...(narrow
+      ? [
+          extraControls,
+          [
+            ...(localOnlyCommand ? [localOnlyCommand] : []),
+            ...(shownPageUrl
+              ? [{
+                  key: 'shown-page',
+                  icon: <ExternalLink size={14} />,
+                  label: t('areas.library.openShownPage'),
+                  onClick: () => openExternal(shownPageUrl),
+                }]
+              : []),
+          ],
+        ]
+      : []),
+    [
+      { key: 'zoom-fit', icon: <Maximize size={14} />, label: t('areas.library.viewerZoomToFit'), onClick: onZoomToFit },
+      { key: 'zoom-actual', icon: <Focus size={14} />, label: t('areas.library.viewerZoomActualSize'), onClick: onZoomToActualSize },
+    ],
+  ].filter((group) => group.length > 0);
+
   return (
-    <div className="flex h-12 shrink-0 items-center gap-3 border-b border-editorial-border px-3">
+    <div ref={toolbarRef} className="flex h-12 shrink-0 items-center gap-3 border-b border-editorial-border px-3">
       {onToggleThumbnails && (
         <>
           <IconButton
@@ -156,7 +230,7 @@ export function ViewerToolbar({
           >
             {thumbnailsOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
           </IconButton>
-          <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
+          {DIVIDER}
         </>
       )}
 
@@ -199,36 +273,30 @@ export function ViewerToolbar({
       {/* La provenienza è uno stato, non un comando: sta in mezzo, fra il
           contesto a sinistra e i comandi a destra. */}
       <div className="mx-auto shrink-0">
-        <ConnectionBadge fromDisk={fromDisk} origin={origin} shownEdge={shownEdge} />
+        <ConnectionBadge fromDisk={fromDisk} origin={origin} shownEdge={shownEdge} compact={narrow} />
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        {extraControls}
-        {extraControls && <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />}
-        {onToggleLocalOnly && (
-          <IconButton
-            size="sm"
-            tone={localOnly ? 'accent' : 'default'}
-            ariaPressed={localOnly}
-            onClick={onToggleLocalOnly}
-            title={t(localOnly ? 'areas.library.viewerLocalOnlyOff' : 'areas.library.viewerLocalOnly')}
-          >
-            <HardDrive size={14} />
-          </IconButton>
+        {!narrow && (
+          <>
+            {extraControls.map((command) => <ViewerCommandButton key={command.key} command={command} />)}
+            {extraControls.length > 0 && DIVIDER}
+            {localOnlyCommand && <ViewerCommandButton command={localOnlyCommand} />}
+            {/* Due uscite diverse, accanto al comando che salva: questa pagina
+                com'è servita dalla biblioteca, e l'opera intera sul loro sito. */}
+            {shownPageUrl && (
+              <IconLink
+                size="sm"
+                href={shownPageUrl}
+                title={t('areas.library.openShownPage')}
+                tooltipSide="bottom"
+              >
+                <ExternalLink size={14} />
+              </IconLink>
+            )}
+            {(localOnlyCommand || shownPageUrl) && DIVIDER}
+          </>
         )}
-        {/* Due uscite diverse, accanto al comando che salva: questa pagina
-            com'è servita dalla biblioteca, e l'opera intera sul loro sito. */}
-        {shownPageUrl && (
-          <IconLink
-            size="sm"
-            href={shownPageUrl}
-            title={t('areas.library.openShownPage')}
-            tooltipSide="bottom"
-          >
-            <ExternalLink size={14} />
-          </IconLink>
-        )}
-        <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
         <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
           <ZoomOut size={14} />
         </IconButton>
@@ -236,40 +304,39 @@ export function ViewerToolbar({
           <ZoomIn size={14} />
         </IconButton>
         <ClickPopover
-          open={zoomMenuOpen}
-          onOpenChange={setZoomMenuOpen}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
           trigger={
             <IconButton
               size="sm"
-              ariaPressed={zoomMenuOpen}
-              title={t('areas.library.viewerZoomMore')}
+              ariaPressed={menuOpen}
+              title={t(narrow ? 'areas.library.moreActions' : 'areas.library.viewerZoomMore')}
             >
               <MoreHorizontal size={14} />
             </IconButton>
           }
         >
           <div className="min-w-44 py-1">
-            <MenuActionRow
-              icon={<Maximize size={14} />}
-              label={t('areas.library.viewerZoomToFit')}
-              onClick={() => {
-                setZoomMenuOpen(false);
-                onZoomToFit();
-              }}
-            />
-            <MenuActionRow
-              icon={<Focus size={14} />}
-              label={t('areas.library.viewerZoomActualSize')}
-              onClick={() => {
-                setZoomMenuOpen(false);
-                onZoomToActualSize();
-              }}
-            />
+            {menuGroups.map((group, groupIndex) => (
+              <Fragment key={group[0]?.key ?? groupIndex}>
+                {groupIndex > 0 && <div className="my-1 border-t border-rule" />}
+                {group.map((command) => (
+                  <MenuActionRow
+                    key={command.key}
+                    icon={command.icon}
+                    label={command.label}
+                    pressed={command.pressed}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      command.onClick();
+                    }}
+                  />
+                ))}
+              </Fragment>
+            ))}
           </div>
         </ClickPopover>
       </div>
     </div>
   );
 }
-
-

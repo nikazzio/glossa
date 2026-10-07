@@ -20,7 +20,6 @@ import {
   type GlobalArea,
 } from '../../navigation/appLocation';
 import { EASE_EDITORIAL } from './motion';
-import { ShellNavFooter } from './ShellNav';
 import { Tooltip } from '../ui';
 import { WorkspaceIcon } from '../workspace/WorkspaceIdentity';
 
@@ -62,11 +61,11 @@ export function Header() {
       navigate: state.navigate,
     })),
   );
-  const { currentProjectId, currentProject, closeProject } = useProjectStore(
+  const { currentProjectId, currentProject, leaveProject } = useProjectStore(
     useShallow((state) => ({
       currentProjectId: state.currentProjectId,
       currentProject: state.projects.find((p) => p.id === state.currentProjectId),
-      closeProject: state.closeProject,
+      leaveProject: state.leaveProject,
     })),
   );
   const { activeWorkspace, workspaces } = useWorkspaceStore(
@@ -138,8 +137,8 @@ export function Header() {
    * chiudeva il progetto e basta, lasciando l'utente nella posizione
    * precedente — dalla dashboard si tornava in dashboard.
    */
-  const handleContextClick = () => {
-    if (currentProjectId) closeProject();
+  const handleContextClick = async () => {
+    if (currentProjectId && !(await leaveProject())) return;
     if (globalArea) {
       navigate(GLOBAL_AREA_LOCATIONS[globalArea]());
       return;
@@ -170,7 +169,7 @@ export function Header() {
                   <Tooltip label={backToContextLabel}>
                     <button
                       type="button"
-                      onClick={handleContextClick}
+                      onClick={() => void handleContextClick()}
                       disabled={isProcessing}
                       className="flex min-w-0 items-baseline gap-2 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
                     >
@@ -260,7 +259,6 @@ export function Header() {
           </div>
         </div>
 
-        {activeWorkspace ? <ShellNavFooter variant="header" /> : null}
       </div>
 
       {helpLoaded.current && (

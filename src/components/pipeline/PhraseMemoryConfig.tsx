@@ -1,6 +1,9 @@
-import { Brain, RefreshCcw, Search } from 'lucide-react';
+import { Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SectionLabel, ToggleRow } from '../ui';
+import { PanelSection, SECTION_SETTING_LIST_CLASSNAME, ToggleRow } from '../ui';
+import { NumberSettingRow } from './NumberSettingRow';
+
+const MAX_RESULTS_LIMIT = 50;
 
 interface PhraseMemoryConfigValue {
   usePhraseMemory: boolean;
@@ -36,58 +39,40 @@ export function PhraseMemoryConfig({
     });
 
   return (
-    <div className="space-y-3">
-      <SectionLabel icon={Brain} label={t('settings.phraseMemoryTab')} />
-
-      <div className="space-y-3 border-l-4 border-l-editorial-success/35 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
-        <ToggleRow
-          icon={<Brain size={13} />}
-          label={t('settings.phraseMemoryToggle')}
-          checked={usePhraseMemory}
-          disabled={disabled}
-          onChange={() => emit({ usePhraseMemory: !usePhraseMemory })}
-        />
-
+    <PanelSection icon={Brain} label={t('settings.phraseMemoryTab')}>
+      <div className={SECTION_SETTING_LIST_CLASSNAME}>
+        <div className="py-2.5">
+          <ToggleRow
+            icon={null}
+            label={t('settings.phraseMemoryToggle')}
+            checked={usePhraseMemory}
+            disabled={disabled}
+            onChange={() => emit({ usePhraseMemory: !usePhraseMemory })}
+          />
+        </div>
         {usePhraseMemory && (
           <>
-            <ToggleRow
-              icon={<Search size={13} />}
-              label={t('settings.phraseMemoryAutoSearch')}
-              checked={autoSearchPhraseMemory}
-              disabled={disabled}
-              onChange={() => emit({ autoSearchPhraseMemory: !autoSearchPhraseMemory })}
-            />
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="pm-max-results"
-                className="block text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted"
-              >
-                {t('settings.phraseMemoryMaxResults')}
-              </label>
-              <input
-                id="pm-max-results"
-                type="number"
-                min={1}
-                max={50}
-                value={effectiveMaxResults}
-                onChange={(e) =>
-                  emit({ phraseMemoryMaxResults: Math.max(1, parseInt(e.target.value, 10) || 1) })
-                }
+            <div className="py-2.5">
+              <ToggleRow
+                icon={null}
+                label={t('settings.phraseMemoryAutoSearch')}
+                hint={t('settings.phraseMemoryManualRefreshHint')}
+                checked={autoSearchPhraseMemory}
                 disabled={disabled}
-                className="w-32 rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                onChange={() => emit({ autoSearchPhraseMemory: !autoSearchPhraseMemory })}
               />
             </div>
-
-            {!autoSearchPhraseMemory && (
-              <div className="flex items-center gap-2 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/50 bg-editorial-bg/60 px-3 py-2 text-xs leading-relaxed text-editorial-muted">
-                <RefreshCcw size={13} className="shrink-0 text-editorial-accent" />
-                <span>{t('settings.phraseMemoryManualRefreshHint')}</span>
-              </div>
-            )}
+            <NumberSettingRow
+              label={t('settings.phraseMemoryMaxResults')}
+              value={effectiveMaxResults}
+              min={1}
+              max={MAX_RESULTS_LIMIT}
+              disabled={disabled}
+              onChange={(raw) => emit({ phraseMemoryMaxResults: Math.max(1, parseInt(raw, 10) || 1) })}
+            />
           </>
         )}
       </div>
-    </div>
+    </PanelSection>
   );
 }

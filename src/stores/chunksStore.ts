@@ -289,9 +289,12 @@ export const useChunksStore = create<ChunksState>((set) => ({
 
   toggleChunkTranslationLock: (chunkId) =>
     set((state) => ({
+      // Verificare dice «l'ho controllata sull'originale di adesso»: toglie
+      // anche il «da aggiornare» lasciato da una modifica dell'originale.
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
         ...chunk,
         translationLocked: !chunk.translationLocked,
+        ...(chunk.translationLocked ? {} : { translationStale: false }),
       })),
     })),
 

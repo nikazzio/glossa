@@ -160,7 +160,7 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
 
   return (
     <div className={`flex min-w-0 items-baseline gap-3 ${wide ? 'sm:col-span-2' : ''}`}>
-      <span className="w-28 shrink-0 text-[11px] uppercase leading-5 tracking-wide text-editorial-muted">
+      <span className="w-28 shrink-0 text-caption uppercase leading-5 tracking-wide text-editorial-muted">
         {label}
       </span>
       <span
@@ -314,7 +314,7 @@ function FieldGroup({ title, fields, singleColumn }: {
 }) {
   return (
     <section>
-      <h4 className="mb-1.5 border-b border-editorial-border pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-editorial-accent">
+      <h4 className="mb-1.5 border-b border-editorial-border pb-1 text-caption font-semibold uppercase tracking-section text-editorial-accent">
         {title}
       </h4>
       <div className={`grid grid-cols-1 gap-x-8 gap-y-0.5 ${singleColumn ? '' : 'sm:grid-cols-2'}`}>

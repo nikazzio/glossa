@@ -117,7 +117,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
             <BookMarked size={14} />
           </IconButton>
           <span
-            className="font-mono text-[11px] text-editorial-muted"
+            className="font-mono text-caption text-editorial-muted"
             aria-label={t('memory.fewShotCountLabel', { count: fewShotExamples.length, max: MAX_FEW_SHOT_EXAMPLES })}
           >
             {fewShotExamples.length}/{MAX_FEW_SHOT_EXAMPLES}
@@ -126,7 +126,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
       </div>
 
       {currentChunk.judgeResult.status === 'error' && (
-        <div className="mt-4 border-t border-editorial-danger/25 pt-3 text-sm leading-relaxed text-editorial-danger">
+        <div className="mt-4 border-t border-rule pt-3 text-sm leading-relaxed text-editorial-danger">
           {currentChunk.judgeResult.error || t('audit.auditFailed')}
         </div>
       )}

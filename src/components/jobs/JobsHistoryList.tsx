@@ -256,7 +256,7 @@ export function JobsHistoryList() {
             <button
               type="button"
               onClick={() => void load(jobs.length)}
-              className="text-xs uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="text-xs uppercase tracking-section text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {t('jobsHistory.loadMore')}
             </button>

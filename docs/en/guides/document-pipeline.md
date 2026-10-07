@@ -4,6 +4,10 @@ title: Translating a document
 
 # Translating a document
 
+During execution you cannot switch pipelines or create a new one. Memory,
+Review and Document remember the selected subtab when you visit another tab;
+if that view is unavailable, an available view is shown instead.
+
 Translation operates on text segments, also called *chunks* in the interface.
 Each segment retains its source text, stage outputs, editable translation,
 assessment and annotations. A document containing only one segment uses the
@@ -19,16 +23,70 @@ Check the boundaries before confirming: they define the units used for
 translation and review. See the [import and export reference](../reference/import-export)
 for formats, size limits and imported footnotes.
 
+## Languages of the work
+
+Languages belong to the translated work, not to its pipelines: they apply to
+every pipeline of the work, which no longer have a language pair. The
+translation prompt is guided by the **Translation context**; only DeepL keeps
+its own pair in the options of its stage, because the service requires codes.
+
+Source and Target each have three optional fields:
+
+- **Language**: an ISO 639-3 code from the official SIL register, the one used
+  by library catalogues, including historical languages (Latin, Ancient Greek,
+  Old and Middle French, Old Provençal/Occitan, Old Spanish, Old and Middle
+  English, Old and Middle High German, Anglo-Norman and others). Search by
+  Italian name, English name or code; with an empty search the list shows
+  “Already used in the workspace” and “Historical languages”, and typing
+  searches all roughly 7,900 languages. Names are in Italian where a standard
+  Italian name exists, otherwise the official English name.
+- **Variety**: a Glottolog variety, offered only among the varieties of the
+  chosen language (Latin: Late Latin, Medieval Latin, Vulgar Latin; Italian:
+  Old Italian, Fiorentino, Laziale, Cicolano-Reatino-Aquilano). It stays
+  disabled until you choose a language.
+- **Note**: free text for what codes cannot say (period, area, hand), for
+  example “Po Valley vernacular, 15th c.”.
+
+Every field can be left empty (“not specified”) and has an X to clear it. A new
+work starts with the source not specified and the target Italian.
+
+Limits: the standards have no code for Medieval Latin, Old Italian or Old
+Catalan as languages; Glottolog lists no “classical Latin” variety; regional
+Italo-Romance languages (Venetian, Lombard, Ligurian, Neapolitan, Sicilian…)
+are separate languages with modern varieties only; there are no medieval area
+varieties, so use the note. For a 15th-century vernacular fencing treatise:
+Italian + Old Italian + note, or the regional language + note. The language
+list ships with the app and works offline; **Settings → Languages** shows the
+list in use and downloads it again from the official sources, keeping languages
+that are gone as retired.
+
+Where to set them: in the import window and in the top row of the Studio.
+There, on the right before the commands, the pair appears with its varieties
+(“Italian (Old Italian) → English”) and the tooltip adds the notes. The languages
+icon next to it opens the **Languages of the work** window with the same fields, Cancel
+and Confirm: nothing is saved unless you confirm. While the pipeline is
+running the control is visible but blocked, with the reason in the tooltip. If
+the work has no source language and comes from a Library book whose language
+matches a known language, the source is proposed pre-filled (still to be
+confirmed); the import window pre-fills it the same way.
+
+After every Confirm, if memory holds phrases saved from this work with
+different languages, the app asks whether to give them the work’s languages:
+text and similarity measures stay the same and the previous version stays in
+the history. This also aligns phrases saved earlier. See
+[phrase memory](./phrase-memory).
+
 ## Configuration
 
-Open pipeline configuration and set the languages, mode, providers, models
-and instructions. Pipeline modes define these sequences:
+Open the pipeline configuration (the gear in the Studio's top row) and set the
+Translation context, mode, providers, models and instructions; languages belong to the work (see below) and only DeepL has a pair of its own: its tabs are described in
+[pipeline configuration](../reference/pipeline-config). Pipeline modes define these sequences:
 
 | Mode | Processing |
 | --- | --- |
 | Standard | Translation and automated assessment |
 | Editorial | Translation, draft revision (*Refine*), formatting (*Format*) and assessment |
-| DeepL Hybrid | DeepL translation, optional LLM revision and LLM assessment |
+| DeepL Hybrid | DeepL translation, LLM refinement and LLM assessment |
 
 Each LLM stage has an independent provider and model selection. DeepL requires
 its own API key and does not act as the evaluator. The pipeline mode cannot
@@ -44,24 +102,95 @@ count limits the group to process.
 Processing advances through the segments and updates their states. Cancelling
 stops the current work without removing completed results. Resuming and rerunning
 serve different purposes: resuming processes outstanding work, while rerunning
-recalculates the unlocked segments covered by the selected action.
+recalculates the unverified segments covered by the selected action.
+If models, stage or audit prompts, the Translation context or DeepL options change after the
+interruption, resuming warns that the configuration is no longer the one the
+work started with.
+
+While a segment is being translated, its translation text is covered by a gold
+veil, “Translation in progress…”, and cannot be edited: the text does not
+appear as it is generated, it arrives when the stage finishes. The stage column
+in the margin stays usable; the original is read-only and the pencil says why.
 
 ## Reading and review
 
-The document view places source and translation side by side. The segment
-sidebar contains **References**, **Preview**, **Audit**, **Memory** and **Notes**.
-The **Insight** panel provides the document index, search, statistics,
-consistency review and glossary.
+The translation studio opens inside the application frame: the main bar on
+the left stays visible and leads to any area, closing the translation. While
+the pipeline is running its entries are off, like the way back to the
+catalogue.
+
+At the top, the bar shows work / pipeline and Simple, Editorial or DeepL mode. Long names are truncated; hover reveals the full name. Click the work name to rename it. The pipeline name, with its small arrow, opens the menu to select, create, rename or delete; the gear opens options. Next to them the languages of the work appear in short form (see [Languages of the work]). Import, export, language resources and deletion are on the right.
+
+In the middle the two sheets place source and translation side by side. Above
+them, on the left, the number of the open segment; in the middle a window of
+seven dots, one per segment with its state: the open segment stays still under
+the central mark while the others slide to the sides. The single arrows move
+to the neighbouring segment, the double ones jump by seven; the mouse wheel
+over the dots also scrolls through segments, and clicking a dot opens it. To
+the right of the dots, the stage indicators show where the open segment stands
+(translation, revision, formatting, audit): a click opens that stage's detail.
+The magnifier next to them opens the whole-document search below the row; a
+result leads to its segment, Esc closes it.
+
+On the right, the **Tools** column starts with execution — translate, the **Multiple chunks** switch with the number of
+segments to process (always visible, off when translating a single segment) —
+and costs, then the tabs, in this order: **Glossary**,
+**Memory**, **Preview**, **Review** and **Document**, which gathers the
+whole-document summaries as three sub-tabs: **Index**, **Statistics** and
+**Coherence**. Memory gathers two sub-tabs: **similar phrases
+in memory**, to use while translating, and **Extract phrases**, which saves the
+segment's pairs; extraction turns on once the segment is translated. Review gathers three sub-tabs,
+**Audit**, **Notes** and **Source notes** (the footnotes imported with the
+source, shown only when the segment has some): icon tabs with name and count
+in the tooltip, each with its own list; it opens on the audit when it has open findings,
+otherwise on the notes. Audit turns on once the segment is translated,
+Glossary once a glossary is assigned; the reason stays in the
+tooltip. Collapsed to icons, the column
+keeps only the translate button visible, or stop while running.
 
 Intermediate stage outputs help identify where a change was introduced.
+Their controls sit in a column in the right margin of the translation page,
+next to the scrollbar: at the top the stages in pipeline order, then
+comparison and the pairs to compare; the one you are viewing is highlighted.
 After a manual edit, **Re-evaluate** runs the quality assessment alone.
-**Lock translation** protects an approved result from reprocessing. If the
-source text changes, the interface flags the translation for updating.
+If you correct the source with the pencil, the ochre **Source changed** label
+appears next to the translation title and the segment’s circle gets an ochre
+mark: the translation needs updating.
+
+The check next to the **Candidate translation** title marks the translation as
+verified: it turns green, the text locks and rerunning unverified segments
+skips it. Verifying also clears “needs updating”, because it means you checked
+it against the current source; the same control returns it to draft. The check
+is off while the segment is being translated or when there is no translation
+yet. Every disabled control gives its reason in the tooltip.
+
+Current limit: “needs updating” is not kept when the translation is closed;
+reopening it, the mark is gone.
+
+### Segment history
+
+**Review → History** lists the open segment’s versions, newest first, with the
+author (**Pipeline** or **Manual**), date and time, and the **Current** and
+**Verified** marks. A version is written at every pipeline pass (including the
+rewrite after the audit), at every save with the disk or `Ctrl + S` if the
+segment’s text changed since its last version, and on verification when the
+verified text differs. Automatic saving writes no versions, so the history does
+not fill up at every pause.
+
+Restore puts a version’s text back on the page and writes it as a new version:
+the earlier ones stay. It is off on a verified translation (return it to draft
+first) and while the segment is being translated. Current limits: versions
+cannot be deleted or named, and the history does not show the model used,
+because a pipeline uses more than one. History is per pipeline and is lost if
+the document is split again into different segments.
 
 ## Request previews
 
-Pipeline configuration shows the structure of the prompts. The segment’s
-**Preview** tab builds the selected stage’s request for the current text.
+The **Prompt preview** in pipeline options has two modes. **Structure** shows
+the pieces of each request with placeholders where data goes. **Open chunk**
+fills them with the chunk open in the Studio: text, neighbouring chunks,
+checked memory phrases, previous translation. Audit and Coherence use the
+chunk’s current translation and say so when there is none.
 This action does not call a model or generate a translation.
 
 ## Export
@@ -70,3 +199,24 @@ Check incomplete segments before exporting: standard formats may use the
 source text where a segment has no translation. Bilingual export explicitly
 distinguishes the source from a missing translation. See
 [export formats and contents](../reference/import-export).
+
+
+## Saving, navigation and cost details
+
+While translation is running, the Studio remains open. Wait until it finishes
+or stop processing before leaving. The save icon and Ctrl/⌘+S save changes;
+after a failure the command offers **Retry**. User feedback is translated;
+technical details remain in the log. History loading and restoration follow the same rule.
+
+Unavailable tabs remain reachable with Tab so their labels explain why they
+cannot be opened. Arrow keys skip them. Circular selectors remain reachable
+even when the currently selected option is unavailable.
+
+In the Tools column, under the commands, one line shows the next run estimate
+and what was spent on the open segment. A click opens the cost panel: two tables
+with one row per stage (model, tokens, cost). The estimate follows the selected
+mode and block count and is indicative. The spent table also shows model
+**calls** per stage: a re-translated segment or a review loop adds calls, so the
+number does not count runs. The block count does not represent repeated
+translations. The Statistics tab shows the same per-stage table for the whole
+document.

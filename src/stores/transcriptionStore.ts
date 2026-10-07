@@ -2,6 +2,16 @@ import { create } from 'zustand';
 import { getDocument, type TranscriptionDocument } from '../services/transcriptionService';
 import { errorMessage as getErrorMessage, logger } from '../utils/logger';
 
+export type TextSaveState = 'saved' | 'pending' | 'saving' | 'error';
+
+/** Lo stato del salvataggio del testo nello Studio aperto, per la barra di
+ *  stato (stesso posto dell'indicatore delle traduzioni). */
+export interface TextSaveStatus {
+  state: TextSaveState;
+  lastSavedAt: number | null;
+  error: string | null;
+}
+
 interface TranscriptionState {
   /** Il documento aperto in Studio: serve anche al breadcrumb dell'header,
    *  che non conosce lo Studio e legge solo questo negozio (stesso schema
@@ -14,6 +24,9 @@ interface TranscriptionState {
   /** Aggiornamento locale dopo una scrittura già fatta sul database (#220):
    *  evita di rileggere l'intero documento per un campo cambiato. */
   patchDetail: (patch: Partial<TranscriptionDocument>) => void;
+  /** `null` a Studio chiuso. */
+  textSave: TextSaveStatus | null;
+  setTextSave: (status: TextSaveStatus | null) => void;
 }
 
 // Ultimo documentId richiesto: una risposta asincrona di una richiesta
@@ -25,6 +38,8 @@ export const useTranscriptionStore = create<TranscriptionState>((set) => ({
   detail: null,
   loading: false,
   error: null,
+  textSave: null,
+  setTextSave: (status) => set({ textSave: status }),
   loadDetail: async (documentId) => {
     latestRequestId = documentId;
     set({ loading: true, error: null });

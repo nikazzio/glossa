@@ -37,7 +37,8 @@ export function OcrStartButton({
   const { t } = useTranslation();
   const resolved = resolveOcrSettings(document, workspace);
   const reason = ocrUnavailableReason(viewerRef, resolved.provider, resolved.model);
-  const title = reading
+  const busy = starting || reading;
+  const title = busy
     ? t('transcription.assist.readingThisPage', { page: pageLabel })
     : reason
       ? t(UNAVAILABLE_REASON_KEYS[reason])
@@ -46,13 +47,13 @@ export function OcrStartButton({
   return (
     <IconButton
       size="sm"
-      tone="accent"
+      tone={busy ? 'running' : 'default'}
       onClick={onStart}
-      disabled={starting || reading || reason !== null}
+      disabled={busy || reason !== null}
       title={title}
       tooltipSide={tooltipSide}
     >
-      {starting || reading ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
+      {busy ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
     </IconButton>
   );
 }

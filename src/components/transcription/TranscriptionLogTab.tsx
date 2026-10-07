@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RotateCw } from 'lucide-react';
+import { ChevronRight, ListTree, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { loadTranscriptionOperationLogs, type PersistedLogEntry } from '../../services/dbService';
 import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
 import { Tooltip } from '../ui';
+import { errorMessage, logger } from '../../utils/logger';
 import { ConsoleChrome } from '../console/ConsoleChrome';
 import { ConsoleToolbar } from '../console/ConsoleToolbar';
 import { usePricingStore } from '../../stores/pricingStore';
-import { costForEntry, formatDurationMs } from '../../utils/operationLogStats';
+import { costForEntry, formatDurationMs, formatUsd } from '../../utils/operationLogStats';
 
 const LEVEL_COLOR: Record<string, string> = {
   error: 'text-terminal-error',
@@ -23,6 +24,19 @@ type LogPhase = (typeof PHASES)[number];
 
 const LEVELS = ['info', 'success', 'warn', 'error'] as const;
 type LogLevel = (typeof LEVELS)[number];
+
+/** Comando a sola icona della console: stessi token `terminal-*` delle altre
+ *  console, `IconButton` usa la tavolozza editoriale e qui stonerebbe. */
+const CONSOLE_COMMAND_CLASSNAME =
+  'shrink-0 rounded-sm transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent disabled:cursor-not-allowed disabled:text-terminal-dim';
+
+/** `at` arriva da SQLite come "AAAA-MM-GG HH:MM:SS" in UTC, oppure già ISO. */
+function formatLogTime(at: string, locale: string): string {
+  const iso = at.includes('T') ? at : `${at.replace(' ', 'T')}Z`;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return at;
+  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(date);
+}
 
 function phaseOf(entry: PersistedLogEntry): LogPhase {
   return (PHASES as readonly string[]).includes(entry.phase ?? '') ? (entry.phase as LogPhase) : 'end';
@@ -51,6 +65,7 @@ export function TranscriptionLogTab({
   const pricingOverrides = usePricingStore((state) => state.overrides);
   const [entries, setEntries] = useState<PersistedLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [search, setSearch] = useState('');
   const [phaseFilter, setPhaseFilter] = useState<Set<LogPhase>>(new Set(PHASES));
   const [levelFilter, setLevelFilter] = useState<Set<LogLevel>>(new Set(LEVELS));
@@ -62,6 +77,10 @@ export function TranscriptionLogTab({
     try {
       const rows = await loadTranscriptionOperationLogs(documentId);
       setEntries([...rows].reverse());
+      setLoadFailed(false);
+    } catch (error: unknown) {
+      logger.error('transcriptionLog.loadFailed', { documentId, reason: errorMessage(error) });
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -116,19 +135,6 @@ export function TranscriptionLogTab({
       <ConsoleChrome
         title={t('transcription.log.title')}
         rowCount={filtered.length}
-        status={
-          <Tooltip label={t('systemLog.reload')} side="top">
-            <button
-              type="button"
-              onClick={() => void load()}
-              aria-label={t('systemLog.reload')}
-              disabled={loading}
-              className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent disabled:text-terminal-dim"
-            >
-              <RotateCw size={13} className={loading ? 'animate-spin' : undefined} />
-            </button>
-          </Tooltip>
-        }
       />
 
       <ConsoleToolbar
@@ -155,17 +161,31 @@ export function TranscriptionLogTab({
             })),
           },
         ]}
-        inlineToggles={
-          <button
-            type="button"
-            onClick={() => setGrouped((value) => !value)}
-            aria-pressed={grouped}
-            className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
-              grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
-            }`}
-          >
-            {t('log.grouped')}
-          </button>
+        actions={
+          <>
+            <Tooltip label={t(grouped ? 'transcription.log.groupedOn' : 'transcription.log.groupedOff')} side="top">
+              <button
+                type="button"
+                onClick={() => setGrouped((value) => !value)}
+                aria-label={t('log.grouped')}
+                aria-pressed={grouped}
+                className={`${CONSOLE_COMMAND_CLASSNAME} ${grouped ? 'text-terminal-accent' : 'text-terminal-secondary'}`}
+              >
+                <ListTree size={14} aria-hidden="true" />
+              </button>
+            </Tooltip>
+            <Tooltip label={loading ? t('common.loading') : t('systemLog.reload')} side="top">
+              <button
+                type="button"
+                onClick={() => void load()}
+                aria-label={t('systemLog.reload')}
+                disabled={loading}
+                className={`${CONSOLE_COMMAND_CLASSNAME} text-terminal-secondary`}
+              >
+                <RotateCw size={14} className={loading ? 'animate-spin' : undefined} aria-hidden="true" />
+              </button>
+            </Tooltip>
+          </>
         }
       />
 
@@ -173,7 +193,24 @@ export function TranscriptionLogTab({
         ref={scrollRef}
         className="terminal-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-2 font-mono text-xs"
       >
-        {filtered.length === 0 && !loading && (
+        {loadFailed && (
+          <div role="alert" className="flex items-center justify-center gap-3 py-6 text-terminal-error">
+            <span>{t('transcription.log.loadFailed')}</span>
+            <Tooltip label={t('transcription.log.retry')} side="top">
+              <button
+                type="button"
+                onClick={() => void load()}
+                aria-label={t('transcription.log.retry')}
+                disabled={loading}
+                className={`${CONSOLE_COMMAND_CLASSNAME} text-terminal-secondary`}
+              >
+                <RotateCw size={14} aria-hidden="true" />
+              </button>
+            </Tooltip>
+          </div>
+        )}
+
+        {!loadFailed && filtered.length === 0 && !loading && (
           <p className="py-6 text-center text-terminal-secondary">
             {entries.length > 0 ? t('transcription.log.emptyFiltered') : t('transcription.log.empty')}
           </p>
@@ -181,9 +218,12 @@ export function TranscriptionLogTab({
 
         {grouped
           ? groups.map(([page, pageEntries]) => (
-              <details key={page} open className="mt-2 first:mt-0">
-                <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-1.5 text-xs uppercase tracking-[0.1em] text-terminal-secondary list-none [&::-webkit-details-marker]:hidden">
-                  <span>{t('transcription.log.pageGroup', { page })}</span>
+              <details key={page} open className="group mt-2 first:mt-0">
+                <summary className="flex cursor-pointer select-none items-center justify-between gap-2 rounded-sm py-1.5 text-xs uppercase tracking-caption text-terminal-secondary list-none hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center gap-1.5">
+                    <ChevronRight size={12} aria-hidden="true" className="shrink-0 transition-transform group-open:rotate-90" />
+                    {t('transcription.log.pageGroup', { page })}
+                  </span>
                   <span className="text-terminal-muted">{pageEntries.length}</span>
                 </summary>
                 <div className="ml-2 space-y-1 border-l border-terminal-line pl-3 pb-1">
@@ -210,7 +250,7 @@ function LogRow({
   entry: PersistedLogEntry;
   pricingOverrides: Record<string, { input: number; output: number }>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Il costo non viene congelato alla scrittura come per la traduzione: le
   // righe OCR le scrive Rust, che non conosce il listino. Si applica qui,
   // con la stessa funzione usata dai riepiloghi della traduzione.
@@ -221,7 +261,7 @@ function LogRow({
     <div className="py-1">
       <div className="flex flex-wrap items-baseline gap-2 text-xs">
         <span className="select-none text-terminal-dim">$</span>
-        <span className="tabular-nums text-terminal-secondary">{entry.at.slice(11, 19)}</span>
+        <span className="tabular-nums text-terminal-secondary">{formatLogTime(entry.at, i18n.language)}</span>
         {entry.provider && (
           <span className="text-terminal-secondary">
             {entry.provider}{entry.model ? `:${entry.model}` : ''}
@@ -240,14 +280,14 @@ function LogRow({
             {t('transcription.log.cachedTokens', { count: entry.cachedInputTokens })}
           </span>
         )}
-        {cost != null && <span className="text-terminal-muted">${cost.toFixed(4)}</span>}
+        {cost != null && <span className="text-terminal-muted">{formatUsd(cost)}</span>}
       </div>
       <p className={`mt-0.5 pl-4 leading-relaxed ${LEVEL_COLOR[entry.level] ?? 'text-terminal-ink'}`}>
         {entry.message}
       </p>
       {entry.detail && entry.detailKind === 'prompt' && (
         <details className="ml-4 mt-1">
-          <summary className="cursor-pointer select-none text-xs uppercase tracking-[0.1em] text-terminal-muted hover:text-terminal-accent list-none [&::-webkit-details-marker]:hidden">
+          <summary className="cursor-pointer select-none text-xs uppercase tracking-caption text-terminal-muted hover:text-terminal-accent list-none [&::-webkit-details-marker]:hidden">
             {t('transcription.log.showPrompt')}
           </summary>
           <pre className="mt-1 whitespace-pre-wrap break-words border-l border-terminal-line pl-3 text-terminal-secondary">

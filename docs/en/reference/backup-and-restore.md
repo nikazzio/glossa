@@ -5,7 +5,7 @@ title: Backup and restore
 # Backup and restore
 
 A backup saves application data to a `.glossa-backup` file. It is available
-under **Settings → Backup** and includes all workspaces. Restoring replaces
+under **Settings → Data → Backup & Restore** and includes all workspaces. Restoring replaces
 the existing application data with the backup’s contents; it does not merge
 datasets or import an individual workspace.
 

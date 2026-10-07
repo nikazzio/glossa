@@ -1,7 +1,7 @@
 import { Columns2, Highlighter, LayoutGrid, Link2, Link2Off, PanelLeft, PanelRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useState, type ReactNode } from 'react';
-import { ClickPopover, IconButton, Tooltip } from '../ui';
+import { ClickPopover, IconButton, SettingRow, Tooltip } from '../ui';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 
@@ -15,18 +15,9 @@ interface ViewOptionRowProps {
 
 function ViewOptionRow({ active, disabled, onClick, icon, label }: ViewOptionRowProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={active}
-      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        active ? 'font-medium text-editorial-accent' : 'text-editorial-ink hover:bg-editorial-textbox/60'
-      }`}
-    >
-      <span className={active ? 'text-editorial-accent' : 'text-editorial-muted'}>{icon}</span>
-      <span className="truncate">{label}</span>
-    </button>
+    <SettingRow label={label}>
+      <IconButton onClick={onClick} disabled={disabled} ariaPressed={active} title={label}>{icon}</IconButton>
+    </SettingRow>
   );
 }
 
@@ -64,7 +55,7 @@ export function DocumentViewOptionsMenu() {
       trigger={
         <IconButton
           size="sm"
-          tone={open ? 'accent' : 'default'}
+          tone="default"
           title={t('document.viewOptions')}
           ariaLabel={t('document.viewOptions')}
           ariaPressed={open}
@@ -74,6 +65,7 @@ export function DocumentViewOptionsMenu() {
         </IconButton>
       }
     >
+      <div className="px-3">
       <ViewOptionRow
         active={documentPaneFocus === 'both'}
         onClick={() => setDocumentPaneFocus('both')}
@@ -92,7 +84,7 @@ export function DocumentViewOptionsMenu() {
         icon={<PanelRight size={13} />}
         label={t('document.focusTranslation')}
       />
-      <div className="border-t border-editorial-border/60" />
+      <div className="border-t border-rule" />
       <ViewOptionRow
         active={syncOn}
         disabled={syncDisabled}
@@ -108,6 +100,7 @@ export function DocumentViewOptionsMenu() {
           label={t('library.glossaryHighlightToggle')}
         />
       )}
+      </div>
     </ClickPopover>
   );
 }

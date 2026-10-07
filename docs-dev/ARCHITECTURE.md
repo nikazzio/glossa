@@ -14,11 +14,72 @@ nuova, idempotente sui database che l'hanno già superata.
 una migrazione dichiarata è cambiata o sparita, sia quando ne compare una non
 dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
 
+## Contesto e anteprime della pipeline (#489)
+
+`PipelineConfig.workBrief` / Rust `work_brief` è l’unico contesto comune degli
+LLM. Migrazione 0004 aggiunge la colonna; 0005 elimina Persona e override
+lingua globali, senza conversioni semantiche o percorsi legacy. Le lingue non
+stanno più nella pipeline: sono dell'opera (vedi «Lingue dell'opera» sotto).
+Lettura, salvataggio e duplicazione includono la descrizione. Backup usa righe
+e colonne dello schema corrente. Nome visibile «Contesto di traduzione» (campo `workBrief`, colonna `work_brief`): obbligatorio, mai vuoto — `DEFAULT_WORK_BRIEF` (inglese → italiano, come la vecchia coppia predefinita) nei default dello store e alla lettura di una riga vuota; l’editor non conferma un testo vuoto e il ripristino torna al predefinito. Template nel contesto `brief`;
+contesti obsoleti non vengono riclassificati silenziosamente: la lettura
+(`getPromptTemplates`) esclude le righe con contesto sconosciuto, le registra
+nel log e ne restituisce i nomi in `skipped`, che lo store mostra in un avviso;
+una riga sola non svuota più l’intero elenco. I tre template `persona` del
+database di sviluppo sono stati riclassificati a mano in `brief` (correzione
+dati una tantum, nessuna migrazione).
+
+Regole per fase: le frasi della memoria si aggiungono solo a traduzione e Refine (`receivesMemory` in `engine.ts`, stessa regola nell’anteprima); il glossario sta una volta nelle regole del blocco statico, senza promemoria nelle istruzioni; intestazione del contesto `Translation context:`. La prova di equivalenza confronta con una copia della composizione precedente aggiornata con gli stessi cambi di testo voluti. Testi di sistema (`src-tauri/src/llm/prompt_texts.rs`): ogni testo del programma attorno ai prompt dell’utente ha id, predefinito e segnaposto obbligatori (`SYSTEM_TEXTS`); `render(config, id, values)` usa la sostituzione della pipeline se completa, altrimenti il predefinito; sostituzione dei segnaposto in un solo passaggio. Comando `prompt_system_texts` per l’editor. Migrazione 0006 aggiunge `pipelines.prompt_composition` (JSON `{texts: {id: testo}, disabled: [id pezzo]}`, NULL = predefiniti) ↔ `PipelineConfig.promptComposition`; si copia nella duplicazione insieme a `coherence_prompt` (prima perso). I separatori fra pezzi restano nel codice, così i predefiniti producono gli stessi byte di prima. Categoria template `system`. Pezzi spenti: `promptComposition.disabled` con chiavi `fase:pezzo` (`translation`, `refine`, `format`, `audit`, `coherence`); `on()`/`when_on()` in `prompts.rs` li omettono; spenti i frammenti vicini, si omette anche l’id del frammento. Elenco dei facoltativi in `SWITCHABLE_PARTS` (`promptParts.ts`). Composizione a pezzi (`src-tauri/src/llm/composition.rs`): `compose_stage_prompts`,
+`compose_judge_prompts`, `compose_coherence_prompts` producono blocchi di `PromptPart`
+con id stabile; `into_structured()` li concatena (la richiesta vera), `preview_parts()`
+li restituisce all’anteprima nei comandi `preview_*_prompt` (campo `parts`). Anteprima e
+invio coincidono per costruzione; prova di equivalenza byte per byte con la copia della
+composizione precedente (`legacy_prompts_test.rs`). L’anteprima delle opzioni
+(`PromptPreviewTab` + catalogo `promptParts.ts`) mostra per fase tutti i pezzi possibili
+in ordine, con tipo (fisso/tuo/dati/automatico), luogo di modifica e motivo di assenza.
+L’impronta di ripresa (`pipelineFingerprint`) include modelli, prompt
+delle fasi LLM attive, prompt dell’audit, descrizione e parametri DeepL.
+La linguetta Anteprima dello Studio è stata rimossa: il modo «Frammento aperto» di `PromptPreviewTab` usa `useChunkPromptPreview` sul frammento selezionato (o il primo). L’hook offre anche `preview-audit` e
+`preview-coherence`: stessi input dell’esecuzione manuale (traduzione attuale; per la
+coerenza blocco dei frammenti vicini tradotti) tramite `preview_judge_prompt` e
+`preview_coherence_prompt`; voci spente senza traduzione.
+
+Traduzione/refine, audit e coerenza ricevono ruolo neutro, descrizione opzionale
+e istruzioni proprie; nessuna coppia implicita anche con descrizione vuota.
+Format resta isolato. Ordine system cacheabile immutato: static → blob →
+istruzioni della fase. Lingua report dalla UI, fallback English. Fingerprint
+comprende descrizione normalizzata e opzioni DeepL. La rifinitura `brief`
+preserva il contesto senza aggiungere ordini specifici delle fasi.
+
+DeepL usa solo `providerOptions.deepl.sourceLang/targetLang`; sorgente vuota
+significa rilevamento automatico, destinazione obbligatoria. Input Tauri unico
+`{text, deeplConfig}`. `build_translate_request` valida e compone il corpo sia
+per HTTP sia per `preview_deepl_stage`, senza chiavi nella preview. Codici
+dalle liste API; nessuna conversione euristica dei nomi lingua. Cambio coppia
+scollega il glossario, cambio target azzera formality. Glossario richiede
+sorgente esplicita e target.
+
+`preview_stage_prompt`, `preview_judge_prompt`, `preview_coherence_prompt`
+riusano i costruttori dell’esecuzione. Opzioni: richiesta completa iniziale,
+costruzione per blocchi selezionabile per fasi LLM, messaggi audit/coerenza e
+corpo DeepL. Segnaposto espliciti per testo, blob, memoria e risultato
+precedente; non sono richieste storiche. Risposte superate ignorate.
+`PromptMessage` unifica carta tenue/verde, espansione e copia integrale nelle
+opzioni e nel frammento. Log mantengono le richieste effettive.
+Anteprima diretta audit/coerenza nel singolo frammento ancora da completare.
+
+Tutti i quattro ruoli restano nella configurazione; la modalità determina
+`enabled`. Cambio modalità conserva prompt/modello/opzioni/profilo custom.
+Sotto-tab inattive disabilitate. Editor pipeline con bozza locale e conferma;
+applicazione modelli e rifinitura non salvano implicitamente. Coppia DeepL
+sempre visibile in Generale, abilitata soltanto in DeepL.
+
 ## Ricerca federata e Dashboard
 
 Le due viste vivono nella Dashboard (`DashboardArea`): `overview` e ricerca
 (`view: 'search'`). Si scelgono dalla barra a sinistra,
-come voci sotto la Dashboard (`WorkspaceRailNext`), non da una fila di linguette
+come voci sotto la Dashboard (`WorkspaceRailNext`, che in fondo porta anche il
+menu generale `ShellNavFooter`, tolto dalla testata), non da una fila di linguette
 dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
 continua a leggere. Contratto di navigazione: la variante `dashboard` di
 `AppLocation` porta `view` e `searchId`; la variante `library` porta solo
@@ -347,6 +408,10 @@ dentro.
 baseline si fissa e vale di nuovo la regola sopra — ogni cambiamento riceve un
 file di migrazione nuovo, la baseline non si tocca più.
 
+Per il ramo Studio/corpus (PR #488), istruzione esplicita dell'utente:
+conservare 0001 applicata e usare 0003 incrementale. L'eventuale consolidamento
+prima del merge viene eseguito dall'utente, non dall'agente.
+
 ## Modello di prodotto
 
 Biblioteca, Trascrizioni, Traduzioni e Analisi sono cataloghi globali. Un
@@ -381,8 +446,8 @@ approvate; traduzioni attive la cui origine è una copia dell'opera o una sua
 trascrizione.
 
 Vista (`libraryView`: elenco, copertine, tabella) e raggruppamento
-(`libraryGrouping`, `utils/libraryGrouping.ts`: secolo, autore, biblioteca,
-raccolta) sono preferenze persistite in `uiStore`. Il raggruppamento lavora
+(`libraryGrouping`, `utils/libraryGrouping.ts` sopra `utils/catalogGrouping.ts`:
+secolo, autore, biblioteca, raccolta) sono preferenze persistite in `uiStore`. Il raggruppamento lavora
 sull'elenco già filtrato e ordinato; un'opera in più raccolte compare in ogni
 gruppo, e la scelta per intervallo segue l'ordine visibile, gruppi compresi.
 
@@ -466,13 +531,24 @@ modo immutabile. Stato confinato a un componente resta locale.
 chiesta e scarta le risposte più lente: aprendo A e poi B, la risposta di A
 sostituiva il dettaglio di B e l'attesa non finiva più.
 
-**Impostazioni.** `uiStore.settingsTab` ha una sola linguetta per la Biblioteca
-(`library`), che al suo interno si divide in tre sotto-linguette — ritmi di
-rete, biblioteche, immagini — tenute in stato locale. Le vecchie `download` e
-`libraries` non esistono più; la linguetta disattivata «in arrivo» resta solo per
-le Trascrizioni. La bozza di un profilo di rete vive nella finestra e non nella
-scheda, perché la scheda si smonta cambiando linguetta, e il profilo in modifica
-si ritrova dalla bozza al rientro.
+**Tema.** `useIsDarkTheme` è l'unico calcolo di «tema scuro» (scelta
+dell'utente o sistema, seguito anche mentre l'app è aperta): lo usano
+`ThemeSync` (classe `dark` su `<html>`), l'accento e le evidenziazioni
+applicati a runtime.
+
+**Impostazioni.** Valgono per tutta l'app; quelle di un workspace stanno in
+`WorkspaceSettingsModal`. `uiStore.settingsTab` (non persistito) ha otto
+linguette, nella fila comune `TabStrip`: `appearance`, `library`,
+`transcriptions`, `translations`, `models`, `languages`, `data`, `jobs`. Le
+schede con argomenti diversi usano `SettingsSubTabs` (sotto-linguette in stato
+locale): Aspetto (interfaccia, documento, evidenziazioni), Biblioteca (ritmi di
+rete, biblioteche, immagini), Modelli (un provider per linguetta, provider
+personalizzato, prezzi), Dati (cartelle e deposito, cache di rete, backup). Ogni
+scheda legge da sé i propri store; le scelte esclusive sono `SettingChoiceRow`
+(`ChoiceDots` con il nome della scelta) o `Select`. La bozza di un profilo di
+rete vive nella finestra e non nella scheda, perché la scheda si smonta
+cambiando linguetta, e il profilo in modifica si ritrova dalla bozza al rientro.
+Il controllo pre-avvio con problemi apre direttamente Modelli.
 
 ## Trascrizioni
 
@@ -486,6 +562,15 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 di stato propria.
 
 Il testo si salva dopo 30 secondi senza modifiche, e subito lasciando la pagina.
+Lo stato del salvataggio sta nella barra di stato, come per le traduzioni:
+`useSegmentEditor` lo pubblica in `transcriptionStore.textSave` (stato, ora
+dell'ultimo salvataggio riuscito, messaggio d'errore; `null` a Studio chiuso) e
+`AppStatusBar` lo mostra con lo stesso `SaveIndicator` del progetto («da
+salvare» = `dirty`). Il salvataggio manuale (dischetto nella testata del foglio,
+rosso dopo un errore; Ctrl/⌘+S ascoltato sulla
+finestra mentre lo Studio è montato, anche dentro il foglio) passa dalla stessa
+coda di `save` e scrive una revisione senza nome; è spento quando il testo è
+già salvato o il foglio è in sola lettura.
 Ogni caricamento è legato all'indice di pagina che lo ha richiesto: una risposta
 tardiva non può sostituire testo e storico della pagina ora aperta. Le versioni
 consolidate sono le stesse revisioni con `consolidated_name` valorizzato: nessuna
@@ -520,6 +605,24 @@ digitalizzazione) resta su un solo blocco di testo, in posizione 0,
 `source_page_id` sempre `NULL` — lo stesso codice, solo che la pagina non
 cambia mai.
 
+**Catalogo** (`TranscriptionsCatalogArea`): stesso modello della Biblioteca e
+stessi pezzi (`ShelfItem`, `CatalogSearchField`, `CatalogViewSwitch`,
+`CompletionBar`, `CommandBar`, `ui/catalogStyles.ts`,
+`utils/catalogGrouping.ts`). `listTranscriptionCatalog`
+(`services/transcriptionCatalogService.ts`) legge in una query tutte le
+trascrizioni attive e archiviate di tutti i workspace, con pagine scritte
+(ultima revisione con testo non vuoto), pagine verificate e ultima revisione;
+l'opera arriva da `listLibraryCatalog` tramite `source_versions.source_id`,
+quindi con le correzioni manuali e il totale di pagine della Biblioteca.
+Scaffali, filtri rapidi (workspace, biblioteca, secolo), ordine e
+raggruppamento vivono in `utils/transcriptionCatalogFilters.ts`; vista e
+raggruppamento sono preferenze persistite (`transcriptionsView`,
+`transcriptionsGrouping` in `uiStore`), il filtro workspace segue
+l'indirizzo come in Biblioteca. «Verificata» vuol dire tutte le pagine
+dell'opera verificate, o tutte quelle scritte se il totale non si conosce.
+Rinomina (`renameDocument`) e archiviazione (`setDocumentStatus` con
+`archived`) sono comandi di riga; il cestino resta `trashed`.
+
 **Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
 #388): stessa convenzione della scheda opera in Biblioteca, non quella dello
 Studio di traduzione — `AppLocation` porta `{ area: 'transcriptions',
@@ -531,16 +634,32 @@ copia principale e dell'eventuale copia alternativa vive in
 `useTranscriptionSources`; storico e metadati vivono in
 `TranscriptionInspector`, separati dallo stato di salvataggio del testo.
 
+**Struttura dello Studio.** `TranscriptionStudio` compone soltanto: lo stato
+del testo per pagina (segmento, revisioni, bozza, catena dei salvataggi,
+debounce, cambio pagina, salvataggio all'uscita) vive in `useSegmentEditor`;
+verifica, ripristino, nomi, eliminazione e pulizia dello storico in
+`useRevisionActions`; l'OCR in `useStudioOcr`; aggancio fra visore e testo,
+richiesta di salto e cambio di copia in `useViewerSync`; larghezze e collasso
+della colonna in `useInspectorLayout` (`INSPECTOR_WIDTH`, condivise con la
+scheda opera); Ctrl/⌘+S in `useSaveShortcut`. Le parti visive sono
+`StudioPageHeader`, `StudioViewerPane`, `StudioTextHeader`. I comandi della
+copia (cambio immagini/PDF, sgancio) arrivano alla barra del visore come
+elenco `ViewerCommand`, non come elementi già disegnati: sotto i 560 px la
+barra (`useNarrowWidth`, una sola misura per barra e menu) li sposta nel menu
+con i tre puntini insieme a «solo file locali» e «apri la pagina», così un
+comando non è mai in due posti o in nessuno. `PagePendingOverlay`, mentre
+copre la pagina, mette `inert` e `aria-busy` sugli elementi accanto nel suo
+contenitore e li toglie quando sparisce.
+
 **Intestazione**, quando il documento è legato a un'opera: stessa riga della
 scheda opera in Biblioteca (icona, titolo e autore dell'opera, uscita verso
 la biblioteca) — non il titolo scelto per la trascrizione, che identifica il
 documento nel catalogo e nel breadcrumb ma non qui, per non mostrare due
 titoli nella stessa schermata. Letta una volta per opera
 (`getLibrarySourceDetail` + `listIIIFProviders`, tenuti in `bookInfo`), non a
-ogni cambio pagina. Il menu a tre puntini è **volutamente più povero** di
-quello della scheda opera: solo "Rimuovi trascrizione", perché scaricare,
-verificare, archiviare sono azioni sull'opera, non sul suo studio di
-trascrizione — vivono già nella scheda opera. Un documento senza opera
+ogni cambio pagina. L'unico comando della riga è il cestino della trascrizione:
+scaricare, verificare, archiviare sono azioni sull'opera, non sul suo studio
+di trascrizione — vivono già nella scheda opera. Un documento senza opera
 collegata mostra il proprio titolo, come prima.
 
 **Visore a sinistra** (#221, parte zoom/pan e cambio fonte — filtri visuali e
@@ -831,6 +950,254 @@ prima dell'invio. Nessuno dei tre ha oggi codice a metà strada in attesa: il
 lavoro sul testo di riferimento è stato rimosso perché nessuno lo calcolava.
 
 ## Pipeline di traduzione
+
+**Catalogo delle Traduzioni** (`TranslationsArea`): stesso modello e stessi
+pezzi del catalogo delle Trascrizioni (scaffali, ricerca, filtri rapidi, tre
+viste, `CommandBar`, `CompletionBar`, `RenameField` comune in `ui/`).
+`listTranslationCatalog` (`services/translationCatalogService.ts`) legge in una
+query tutti i progetti di tutti i workspace con lingue, `updated_at` e i
+conteggi dei frammenti della **prima pipeline** (quella che `openProject`
+apre): totale, tradotti (`chunk_status = 'completed'`), verificati
+(`translation_locked = 1`). Scaffali (Tutte, Recenti, Da iniziare, In corso,
+Verificate), filtri rapidi (workspace, coppia di lingue), ordine e
+raggruppamento vivono in `utils/translationCatalogFilters.ts`; vista e
+raggruppamento sono preferenze persistite (`translationsView`,
+`translationsGrouping` in `uiStore`), il filtro workspace segue l'indirizzo.
+Comandi di riga: rinomina (`renameProject`) ed elimina (`removeProject`, che
+cancella davvero: i progetti non hanno archivio). Nessun legame con opera o
+trascrizione: `translation_origins` resta non scritta fino alla strada «da una
+trascrizione».
+
+Creazione «da zero» (`CreateProjectDialog`): nome, workspace e file
+facoltativo. Il file si legge alla scelta con `importTextFile` (errori mappati
+da `importErrorMessageKey`, mostrati nella finestra; nulla si crea). Dopo
+`createAndOpen` il file va in `uiStore.pendingImportFile` (non persistito):
+l'editor montato lo consuma con `startImport`, la stessa via del comando di
+import, e apre `ImportPreviewDialog`. Chiudendo l'anteprima il progetto resta
+vuoto. Il libro di origine si sceglie con `SearchPicker` (titolo, copia sotto),
+mai con un `Select` che si allarga al titolo più lungo.
+
+**Lingue dell'opera.** Le lingue sono dell'opera (`projects`), valgono per
+tutte le sue pipeline; `pipelines` non ha più colonne di lingua (migrazione
+0007, che converte i vecchi nomi inglesi in codici e aggiunge
+`*_language_variety` e `*_language_note`). Ogni lato è un `LanguageChoice`
+(`code` ISO 639-3 o null, `variety` Glottocode o null, `note`); `WorkLanguages`
+vive in `pipelineStore.workLanguages`, caricato da `getProjectSource` e salvato
+da `saveProjectSource`, `createProject` e `projectStore.updateWorkLanguages`
+(`saveWorkLanguages`). Colonne vuote = non indicata. Elenco incluso in
+`src/languages/data` (ISO 639-3 dal registro SIL, varietà Glottolog di livello
+«dialect» collegate alla loro lingua ISO, nomi italiani da CLDR), rigenerato da
+`npx tsx scripts/update-languages.ts`. Costruzione e unione stanno in
+`languages/build.ts`, condiviso con «Aggiorna elenco lingue» (Impostazioni →
+Lingue): il backend scarica le due fonti (`languages_fetch_sources`, fuori dai
+limiti CORS), il frontend costruisce l'elenco, i codici spariti restano con il
+segno «ritirato» (nominati, non più proposti) e il risultato si salva in
+`<cartella dati>/languages/` (`languages_save`, scrittura via file temporaneo).
+`loadLanguageCatalog` preferisce l'elenco salvato (`languages_read_saved`) e
+ricade su quello incluso; caricato a richiesta come testo grezzo e validato
+(`languages/catalog.ts`, `useLanguageCatalog`); `catalog.info` dice origine,
+date, conteggi e ritirati. Interfaccia unica
+`WorkLanguagesFields` in `ImportPreviewDialog` (colonna sinistra) e nella
+finestra di `WorkLanguagesControl` (salva solo con Conferma; partenza vuota
+proposta dalla lingua del libro con `matchLanguage`). Dopo ogni Conferma
+`countProjectPhraseRelabels` e, se l'utente accetta, `relabelProjectPhrases`.
+Estrazione delle coppie: `describeLanguageForModel` (nome inglese, varietà,
+nota). Catalogo e Memorie mostrano i nomi con `useLanguageLabel`. Fatti di
+provenienza: codici dell'opera.
+
+**Studio di traduzione** (`components/translation/TranslationStudio`): si apre
+quando `projectStore.currentProjectId` è valorizzato, **dentro**
+`WorkspaceShellNext` come ogni altra area — la barra principale
+(`WorkspaceRailNext`) resta. Con un progetto aperto la barra marca Traduzioni
+come area attiva; ogni voce chiude il progetto (`closeProject`) prima di
+`navigate`, e tutte si spengono mentre `chunksStore.isProcessing`: chiudere il
+progetto sotto la pipeline svuoterebbe i frammenti a lavoro in corso. Il
+ritorno al catalogo (`leaveTranslation` in `App`) fa lo stesso e porta a
+`{ area: 'translations' }`. Ogni uscita (ritorno, voci della barra, percorso
+nell'`Header`, cambio di workspace, creazione di un workspace,
+`openProjectInWorkspace`) passa da `projectStore.leaveProject`: aspetta un
+salvataggio già in volo, confronta l'istantanea corrente con `trackedSnapshot`
+e salva se diverse; se il salvataggio fallisce restituisce `false` e la
+traduzione resta aperta con l'errore. `closeProject` resta la chiusura secca
+(dopo l'eliminazione, o dove non c'è niente da salvare). Limite: la chiusura
+della finestra non salva.
+
+Salvataggio: autosalvataggio dell'intero progetto (`useProjectAutosave`, 1,2 s,
+fermo durante la pipeline). Lo stato lo mostra `SaveIndicator` nella barra di
+stato (suggerimento: ora dell'ultimo salvataggio e, dopo un errore,
+`lastSaveError`; la barra è una regione `aria-live`, quindi si annuncia solo
+l'errore). Il comando è `ProjectSaveButton` nella testata del foglio della
+traduzione, o dell'originale con `paneFocus === 'source'`: spento senza
+modifiche e durante la pipeline (motivo nel suggerimento), `danger` con
+«Riprova» dopo un errore. Ctrl/⌘+S (`useKeyboardShortcuts`) a progetto aperto
+vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
+salva solo le risorse linguistiche, fuori dai campi, come prima.
+
+Memoria di frasi: `vec_save_locked_phrases` **aggiunge** e
+basta (niente più cancellazione delle coppie del frammento); le lingue delle
+revisioni le legge dal progetto (`text_languages::project_languages`, `und` se
+non indicata), non dal chiamante. Una coppia si
+toglie con `vec_delete_phrase_memory`. `vec_list_phrase_memory(workspaceId?,
+chunkId?)`: senza workspace tutte le frasi. `vec_search_phrase_memory` ha
+`allWorkspaces` e `sourceLanguage`/`targetLanguage` (lo Studio passa solo la
+lingua di arrivo dell'opera; nessun filtro se non indicata), e restituisce la
+provenienza (workspace di casa = quello della traduzione o dell'importazione,
+`NULL` = senza workspace; `project_id`, `chunk_id`), mostrata da
+`PhraseProvenance` con `usePhraseProvenanceLookup` (due letture in tutto).
+`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo del
+globo nei Riferimenti (`ReferencesTab`, `updateActiveWorkspace`), non più nelle
+impostazioni workspace. `ReferencesTab` ordina con `orderByCircle`
+(`utils/memoryCircles.ts`): documento corrente, poi workspace, poi altrove,
+dentro ogni cerchio per somiglianza; ogni riga (`ReferenceMatchRow`) porta
+l'etichetta del cerchio e le lingue delle revisioni (`vec_search_phrase_memory`
+restituisce `source_language`/`target_language`). La soglia ha passi di 0,01
+con − e +.
+Cambiare workspace, modello di misura, lingua di arrivo dell'opera o ambito
+invalida i riferimenti selezionati anche a ricerca automatica spenta; con
+ricerca automatica attiva ne avvia una nuova.
+
+Risorse linguistiche: `LibraryPanel` usa `TabStrip`; Modelli aggiunge ricerca,
+filtro OCR e `PromptTemplateForm` per creazione/modifica in posto tramite
+`updateTemplate`. Un duplicato nome/ambito/flusso mantiene il modulo aperto
+senza sovrascrivere un modello diverso. I modelli restano globali. La modifica
+si apre nella propria voce; ricerca e filtri restano disabilitati finché la
+bozza è aperta. Anteprima breve e lettura integrale non alterano il prompt.
+`DictionaryEntryEditor` legge le coppie come testo; il più inserisce in cima
+con focus esplicito. Modificare una voce aggiorna ancora la bozza nello store:
+la spunta chiude l'editor, solo il dischetto persiste il dizionario.
+
+Memorie legge `listPhraseMemoryEntries(null)` per «tutti» e «senza workspace»,
+senza dipendere dall’esistenza di workspace; filtro e ricerca restringono
+anche l’esportazione. La lista affianca i testi; i dettagli di una sola voce
+mostrano provenienza compatta, misure e tag. Apertura dei dettagli è stato locale,
+non una modifica ai dati. `measuringId` distingue il calcolo embedding dalle
+altre operazioni impegnate: accende la rotellina del solo comando interessato,
+dopo la conferma, e si azzera anche in caso di errore. Durante correzione/testo o tag sono bloccati ricerca,
+filtri e chiusura dei dettagli, così la bozza non viene smontata. Correggere la sola resa conserva le misure; correggere l’originale crea una revisione e ricalcola atomicamente tutti i modelli già presenti.
+La ricerca richiede misure con modello, dimensioni e profilo compatibili.
+Non esistono embedding senza modello né riferimenti esatti inseriti fuori
+dalla graduatoria semantica. Le coppie salvate restano nella Memoria del frammento.
+
+Dizionari: il filtro globale usa i **collegamenti** (`listGlossaries(ws)`),
+con provenienza dal legame `is_origin`; il filtro non modifica l’ambito di
+lettura/scrittura delle voci, che resta canonico (`null`) nelle risorse generali.
+Nel workspace ospite la scrittura usa `saveGlossaryEntriesAsOverrides`; il
+termine originale resta in sola lettura e nuove voci entrano nel canonico.
+La vista aperta dichiara risorsa, destinatari delle modifiche e ambito delle
+nuove voci. `entriesWorkspaceMap` conserva l’ambito della bozza per dizionario:
+letture con ambito diverso ricaricano, le risposte superate si ignorano e
+`saveAllDirty` conserva le correzioni locali. Chiudere dopo un salvataggio
+fallito mantiene la finestra; scartare elimina le bozze dalla cache.
+
+Frammento in lavorazione (`status === 'processing'`): il testo della traduzione
+(editor o confronto) è coperto da `PagePendingOverlay` `tone="running"`
+(«Traduzione in corso…»), che lo rende inerte; prima restava scrivibile e si
+scontrava col risultato della pipeline. La colonna delle fasi è fuori dal velo.
+I token di Ollama arrivano solo in `stageResults[stage].content`
+(`appendChunkStageContent`); il foglio sull'ultima fase mostra
+`translationDisplayText`, scritto a fine fase, quindi nella vista normale non
+c'è testo che arriva man mano.
+
+I comandi delle fasi (una per fase, confronto, coppie del confronto) sono una
+colonna verticale nel margine destro della pagina (`DocumentPage.sideRail`,
+`IconButton` xs con suggerimento a sinistra, ferma mentre il testo scorre): la
+testata non cresce e resta alta come quella dell'originale. Il margine destro è
+più largo su entrambe le pagine (`pr-11`), con o senza colonna.
+
+Verifica: `translationLocked` resta il dato (e `translation_locked` la colonna),
+ma in interfaccia è «verificata» — `CircleCheck` accanto al titolo del foglio
+della traduzione, `success` quando acceso, spento con il motivo a frammento in
+lavorazione o senza testo. Accanto, non al posto, l'etichetta ocra
+«Sorgente modificata» (`translationStale`); il segno del pallino è
+`editorial-warning`. `toggleChunkTranslationLock`, quando verifica, azzera
+`translationStale`. Nessun lucchetto sull'originale: lo stato modificabile lo
+dice la matita. I comandi spenti di fogli, colonna delle fasi, riga in cima,
+riquadro di esecuzione e barra principale (`ShellNavItem.disabledReason`)
+portano il motivo nel formato «Comando — motivo»
+(`transcription.commandBlocked`). **Limite accettato** (Niki, 2 ottobre):
+`translationStale` vive solo in memoria (non è in `translation_chunks`), quindi
+riaprendo il progetto il «da aggiornare» si perde; non si aggiunge una colonna.
+
+Storico del frammento (Revisione → Storico, `TranslationHistoryList`): legge
+`translation_revisions` del frammento (`listTranslationRevisions`, con
+`translations.approved_revision_id` per il segno «verificata»). Autori: `model`
+(passata della pipeline e riscrittura dopo l'audit, non distinte: lo schema non
+lo dice) e `human` (verifica con testo diverso, salvataggio manuale, ripristino).
+Il salvataggio manuale è `projectStore.saveVersionNow`: `saveCurrentProject`,
+poi `recordManualRevision` per ogni frammento di `unversionedChunks` (testo non
+vuoto, non verificato, diverso dall'ultima versione). L'ultima versione per
+frammento sta in `translationHistoryStore.latestText`, caricata all'apertura
+della pipeline (`useLatestRevisionTexts`, una query) e aggiornata da
+`insertRevision` stesso (`noteRevision`, che fa anche rileggere lo storico
+aperto). Il dischetto è acceso se c'è da salvare **o** da versionare.
+Ripristino = `updateChunkDraft` + versione manuale: nessuna riga si modifica o
+si cancella (registro immutabile, voluto). Niente nomi né puntine: servirebbe
+una colonna `consolidated_name`, rimandata.
+
+Configurazione della pipeline (`document/ConfigDrawer`, `Dialog` aperto da ⚙ in
+`PipelineSwitch` o Ctrl/⌘+,): eyebrow «Configura pipeline», titolo = nome della
+pipeline (la rinomina resta in `PipelineSwitch`), `TabStrip` (`idPrefix`
+`pconfig`) nella fila della finestra con il nome della linguetta accanto.
+Linguette (`ConfigSection`): `settings` Generale (`SettingsTabPanel`: modalità
+su `ChoiceDots`, coppia DeepL sempre visibile e attiva solo in DeepL, Descrizione comune con bozza/conferma), `translation` Fasi
+(`TranslationTabPanel` → `StageCard` per fase + memoria di contesto in fondo),
+`audit` Controllo qualità (`AuditTabPanel`), `memory` Memoria (`MemoryTabPanel`,
+spenta con motivo in modalità DeepL; se era aperta si torna a Generale),
+`glossary` (`GlossaryTabPanel`: assegnazione, termini, dischetto acceso solo con
+modifiche, caricamento DeepL), `preview` (`PromptPreviewTab`, fasi su
+`TabStrip`). `PipelineConfig` monta solo il corpo della linguetta aperta e il
+velo comune `PagePendingOverlay` (`components/common`, lo stesso delle
+Trascrizioni) durante la pipeline, che rende inerti i comandi coperti. Fase e
+giudizio condividono `ModelSection` (fornitore, modello, lucchetto se
+esistono traduzioni, ricarica Ollama, ragionamento e temperatura, opzioni
+Ollama in `ProviderRuntimeEditor`, cache Anthropic); le regole di taratura
+sono funzioni pure in `pipeline/modelTuning.ts`. Ogni prompt pipeline (fasi, descrizione,
+giudizio, coerenza) usa `PipelinePromptEditor` con `disabledReason` e
+`refineDisabledReason`. I modelli di prompt salvati si applicano e si salvano da
+`PromptTemplateMenus` (anche nell'OCR); si eliminano solo dalle risorse
+linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hint` di
+`PanelSection`, `SettingRow`, `ToggleRow`. Footer: `IconButton` danger
+«Azzera tutte le traduzioni» (`resetAllChunks`, conferma), spento con motivo.
+
+Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
+`RenameField`, accessorio `titleAccessory`: separatore /, `PipelineSwitch` con menu scelta/creazione/rinomina/eliminazione e ⚙, tipo Semplice/Editoriale/DeepL come sola icona con `Hint`; a destra `WorkLanguagesControl` (coppia dell'opera e icona che apre la finestra; la coppia DeepL resta nelle opzioni della fase), `CommandRule`, poi importa, esporta,
+risorse linguistiche del workspace, elimina), al centro `DocumentView` invariato salvo la fila
+`ChunkStrip` («nn/nn», poi una finestra di 7 `ChunkDot` con il frammento
+aperto fisso al centro: la fila intera trasla di `SLOT_PX` per posto, i
+pallini fuori finestra restano montati per lo scorrimento ma con `tabIndex`
+-1 e `aria-hidden`; frecce ±1 e ±7, rotella con ascoltatore nativo non
+passivo), `StageStatusRow` (spie delle fasi del frammento aperto, aprono
+`StageTraceDialog`) e la lente che apre `SearchTab` sotto la fila (regione,
+non più linguetta; Esc dal campo la chiude), a destra `TranslationInspector`: `InspectorShell` con `beforeTabs`
+per l'esecuzione (`PipelineSidebarRunSection` + `ChunkCostPanel`: una riga
+stima/speso che con un clic apre a sinistra un `ClickPopover` con due
+`CostTable`; il consumo viene da `summarizeChunkUsage`, che per ogni fase dà
+`calls` = chiamate completate, non esecuzioni; il registro non segna a quale
+esecuzione appartiene una chiamata) e cinque
+linguette (Glossario, Memoria, Anteprima, Revisione, Documento) su un solo
+stato, `uiStore.studioTab` (`TranslationStudioTab` =
+linguette del frammento ∪ linguette del documento). `studioGroupViews` conserva
+in memoria la scelta di ogni gruppo; `setStudioTab` registra anche la vista
+lasciata aperta dai percorsi di navigazione esterni. Il primo ingresso in
+Revisione sceglie Audit/Note in base alle segnalazioni, i successivi riaprono
+la scelta dell'utente; una vista indisponibile usa il ripiego del suo gruppo.
+Cambio e creazione pipeline sono bloccati durante `chunksStore.isProcessing`,
+nel menu e nelle operazioni di `projectStore`; il cambio ricontrolla il blocco
+anche dopo le letture asincrone, prima di sostituire configurazione e frammenti.
+Revisione (`ReviewTab`) è
+una linguetta della colonna ma quattro valori di `studioTab` — `audit`, `notes`,
+`sourceNotes`, `history` — mostrati come sottolinguette (`TabStrip`, linguette a icona con
+nome e conteggio nell'etichetta, Audit spento con il motivo); `setStudioTab('notes')` da altri punti apre quindi Revisione
+sulle note. Le note del testo (`SourceNotesList`) sono le note a piè di
+pagina importate, in sola lettura. Memoria (`MemoryGroupTab`, colonna
+`phraseMemory`) segue lo stesso schema con `references` e `memory`, Documento
+(`DocumentGroupTab`) con `index`, `stats`, `coherence`; tutte e tre usano `SubTabsPanel` (fila `TabStrip` ferma, nome della sottolinguetta
+accanto, un solo corpo che scorre). Le schede con barra fissa
+sopra un elenco (Riferimenti, Memoria, Glossario, Indice) scorrono da
+sé (`bodyScrolls` falso), le altre scorrono nella colonna. Aperta/chiusa e
+larghezza restano `showInsightPanel` e `projectFlyoutWidth`; colonna chiusa =
+solo traduci/stop. Le note aperte da altri punti (menu contestuale,
+segnalazione dell'audit) usano `setShowInsightPanel(true)` + `setStudioTab('notes')`.
 
 Il motore frontend coordina:
 
@@ -1717,3 +2084,82 @@ aprire lo stesso archivio. I backup precedenti non sono supportati.
 - E2E: smoke test Chromium sul primo avvio e sul flusso progetto.
 - CI: TypeScript/ESLint, test frontend, E2E, `cargo check`, `cargo fmt`,
   `cargo clippy -D warnings`, test Rust e audit dipendenze.
+
+
+### Corpus testuale e misure multiple (base attuale)
+
+`text_units` identifica un testo con riferimenti opzionali a opera/versione, parent e
+provenienza JSON congelata. `text_unit_revisions` contiene revisioni immutabili per
+ruolo (`source`, `translation`, `normalized`) e lingua, impronta e numero progressivo.
+Un trigger impedisce UPDATE delle revisioni. La base non richiede una traduzione;
+l’interfaccia attuale crea le unità dal percorso Memoria. Pagine/sezioni e analisi
+restano nella roadmap, non vengono simulate associando indici di chunk a pagine.
+
+`text_embeddings` usa chiave `(revision_id, provider, model, dimensions, profile)`;
+ogni record richiede metadati completi e un BLOB della misura corretta. Il profilo
+attuale è `source-verbatim-v1`, OpenAI small 1536 / large 3072. Il comando di rete
+controlla indici, completezza, dimensioni e valori; non si scartano coppie approvate
+per risposte incomplete. Cache legacy `source_phrase_embeddings` rimossa: nessun
+writer o consumer attivo. Vettori utente inclusi nei backup, artefatti cache no.
+
+`phrase_memory` punta alle revisioni correnti source/translation della stessa unità;
+`phrase_memory_entries` espone i campi per UI e ricerca e deriva il workspace dal
+progetto vivo. Uno spostamento non modifica le evidenze storiche; senza progetto
+la coppia è senza workspace. Snapshot conserva libro/versione, traduzione/chunk,
+workspace originale, impronte e selezione testuale. Offset solo quando univoco.
+
+`vector/text_units` gestisce salvataggio, revisioni, misure e tag; `memory_search`
+filtra modello/provider/dimensioni/profilo/lingue/scope prima della distanza cosine
+tramite CTE MATERIALIZED. `memory_commands` contiene i wrapper Tauri. Non inserisce
+coppie salvate come match a distanza zero; il frontend conserva queste nella Memoria.
+`vec_add_phrase_embedding` verifica la revisione attesa, `vec_set_phrase_tags`
+modifica solo tag dell’unità. `vec_update_phrase_memory(input)` confronta entrambe
+le revisioni prima della scrittura atomica. La rigenerazione del workspace aggiunge
+il modello selezionato e conserva tutti gli altri, con controllo dello snapshot.
+
+Lingua delle revisioni: `language` (ISO 639-3, `und` = non indicata) più
+`language_variety` (Glottocode) e `language_note` (migrazione 0008). Una lingua
+corretta è una revisione nuova con lo stesso testo: `text_languages::relabel_project`
+crea le revisioni per le frasi dell'opera con lingue diverse da quelle
+dell'opera, ricopia le misure dell'originale, sposta i puntatori di
+`phrase_memory` e registra `text.language.changed`, tutto in una transazione;
+`count_relabels` le conta (una sola query con le due revisioni in join). Comandi
+`vec_count_project_phrase_relabels`, `vec_relabel_project_phrases`. Elenco e
+ricerca restituiscono anche `source_language_variety`/`target_language_variety`
+(join sulle revisioni, la vista `phrase_memory_entries` resta invariata); la UI
+le mostra con `LanguagePairLabel` («Italiano (Old Italian) → Inglese») in cima
+allo Studio, nelle voci di Risorse linguistiche → Memorie e in testa a ogni
+riferimento.
+
+Tag manuali in `text_unit_tags`, non proposte automatiche né vocabolario controllato.
+Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel
+registro esistente con chiave distinta per ogni azione. Backup aggiunge le quattro
+tabelle prima delle coppie, differisce i parent autocorrelati, ripristina con INSERT
+rigoroso e include revisioni/vettori/tag. `0003_text_corpus.sql` aggiorna lo schema
+senza modificare la baseline già applicata e conserva testi, metadati e provenienza.
+Trasferisce solo vettori con modello registrato e dimensione compatibile; nessun
+modello viene inferito per quelli senza identità. Nessun reset del database.
+Il consolidamento prima del merge è riservato all'utente.
+
+`createProject` crea progetto, pipeline e origine di libro opzionale nella stessa
+transazione. La finestra di creazione propone versioni della Biblioteca, senza
+deduzioni dal file. Il collegamento non cambia né importa una trascrizione.
+
+Costi Studio: stima e consumi usano il Popover comune; eliminati posizionamento,
+portal e timer privati. Calcoli di stima e contatori del frammento invariati.
+Opzioni vista su SettingRow/IconButton; importazione nella schermata vuota con
+IconButton neutro.
+
+
+### Protezioni Studio e accessibilità
+
+`leaveProject` rifiuta l’uscita quando il progetto aperto è in elaborazione e
+ricontrolla dopo le attese di salvataggio: nessuna pulizia dei chunk mentre
+la pipeline lavora. Feedback di salvataggio/storico tradotti, eccezioni nel log.
+`reportUiError` applica la stessa regola ai nuovi flussi delle risorse.
+Date del catalogo e memorie normalizzate UTC con `timestampOf` già comune.
+`ChoiceDots` assegna il tab stop alla scelta corrente solo se disponibile,
+altrimenti alla prima abilitata. `TabButton` usa aria-disabled e blocca il click;
+le linguette indisponibili sono focusabili per la spiegazione e saltate dalle frecce.
+
+Lo Studio conserva le viste dei gruppi Memoria/Revisione/Documento in `studioGroupViews`; cambio e creazione pipeline sono bloccati durante elaborazione anche nello store. `CatalogSearchField` supporta `disabled` e motivo accessibile; il catalogo memorie disabilita la ricerca durante modifica. Le stringhe di provenienza lunghe usano `StatBlock` per andare a capo.

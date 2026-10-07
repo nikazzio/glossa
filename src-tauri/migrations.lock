@@ -30,3 +30,11 @@
 # della trascrizione nella baseline, prima del merge. Database locale ricreato.
 
 0001_baseline_2_0.sql 78fd5b2f9c0d3588
+0002_workspace_memory_scope.sql c55dcc7e778fe168
+
+0003_text_corpus.sql a37f19b0640b0551
+0004_pipeline_work_brief.sql ef82af7e7b69dd3d
+0005_pipeline_shared_context.sql 5c739564ba240f04
+0006_pipeline_prompt_composition.sql fb72574825df2ba7
+0007_work_languages.sql 676a265773629b03
+0008_text_language_variety.sql bcf89a39ab85c6ba

@@ -25,9 +25,9 @@ export function TabButton({ buttonId, active, disabled, onClick, onKeyDown, labe
       aria-selected={active}
       aria-controls={controls}
       aria-disabled={disabled}
-      disabled={disabled}
-      tabIndex={active ? 0 : -1}
-      onClick={onClick}
+      className={disabled ? 'cursor-not-allowed opacity-40' : undefined}
+      tabIndex={active || disabled ? 0 : -1}
+      onClick={() => { if (!disabled) onClick(); }}
       onKeyDown={onKeyDown}
       title={label}
       ariaLabel={label}

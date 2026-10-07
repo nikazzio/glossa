@@ -308,7 +308,7 @@ export function WorkspaceOverview() {
                     <span className="truncate font-display text-base italic text-editorial-ink">
                       {project.name}
                     </span>
-                    <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                    <span className="shrink-0 text-caption font-bold uppercase tracking-caption text-editorial-muted">
                       {t('workspace.pipelineBadge', { count: project.pipeline_count })}
                     </span>
                   </button>

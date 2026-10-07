@@ -5,7 +5,7 @@ title: Backup e ripristino
 # Backup e ripristino
 
 Il backup salva i dati dell’applicazione in un file `.glossa-backup`.
-L’operazione è disponibile in **Impostazioni → Backup** e comprende tutti
+L’operazione è disponibile in **Impostazioni → Dati → Backup e ripristino** e comprende tutti
 i workspace. Il ripristino sostituisce i dati applicativi presenti con quelli
 del backup; non esegue un’unione e non importa un singolo workspace.
 

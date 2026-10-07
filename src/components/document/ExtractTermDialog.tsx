@@ -115,17 +115,17 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
     >
       <div className="space-y-4">
         <div>
-            <label className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            <label className="mb-1 block caption-label">
               {t('memory.sourcePhraseLabel')}
             </label>
-            <div className="border-y border-editorial-border/70 py-2 text-xs text-editorial-muted font-mono leading-relaxed">
+            <div className="border-y border-rule py-2 text-xs text-editorial-muted font-mono leading-relaxed">
               {sourcePhrase}
             </div>
           </div>
 
           <div>
             <label htmlFor="extract-term-input"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('memory.termLabel')}
             </label>
             <input id="extract-term-input" type="text" value={isLoading ? '…' : term}
@@ -136,7 +136,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
 
           <div>
             <label htmlFor="extract-translation-input"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('glossary.translation')}
             </label>
             <input id="extract-translation-input" type="text" value={translation}
@@ -146,7 +146,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
 
           <div>
             <label htmlFor="extract-notes-input"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('glossary.notes')} ({t('common.optional')})
             </label>
             <input id="extract-notes-input" type="text" value={notes}
@@ -156,7 +156,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
 
           <div>
             <label htmlFor="extract-glossary-select"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('glossary.selectGlossary')}
             </label>
             <Select id="extract-glossary-select" value={selectedGlossaryId ?? ''}

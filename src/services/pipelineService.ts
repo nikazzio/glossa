@@ -1,22 +1,9 @@
 import { select, execute } from './dbService';
 import { logger } from '../utils/logger';
+import { DEFAULT_WORK_BRIEF } from '../constants';
+import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { generateId, normalizeQualityRating, qualityDefault } from '../utils';
-import type {
-  CoherenceResult,
-  FewShotExample,
-  Footnote,
-  FootnoteDefinition,
-  GlossaryEntry,
-  JudgeResult,
-  Pipeline,
-  PipelineConfig,
-  PipelineMode,
-  PipelineResult,
-  PipelineRunStatus,
-  PipelineStageConfig,
-  ProviderRuntimeConfig,
-  TranslationChunk,
-} from '../types';
+import type { CoherenceResult, FewShotExample, Footnote, FootnoteDefinition, GlossaryEntry, JudgeResult, Pipeline, PipelineConfig, PipelineMode, PipelineResult, PipelineRunStatus, PipelineStageConfig, PromptComposition, ProviderRuntimeConfig, TranslationChunk } from '../types';
 import type { SavedTranslation } from './projectService';
 
 // ── DB row types ─────────────────────────────────────────────────────
@@ -25,8 +12,6 @@ interface DbPipeline {
   id: string;
   project_id: string;
   name: string;
-  source_language: string;
-  target_language: string;
   pipeline_mode: string | null;
   stages: string;
   judge_prompt: string;
@@ -38,9 +23,8 @@ interface DbPipeline {
   source_processing_text: string | null;
   source_footnotes: string | null;
   review_provider_options: string | null;
-  persona: string | null;
-  custom_source_language: string | null;
-  custom_target_language: string | null;
+  work_brief: string | null;
+  prompt_composition: string | null;
   blob_budget_tokens: number | null;
   blob_overlap: number | null;
   coherence_prompt: string | null;
@@ -53,6 +37,23 @@ interface DbPipeline {
   last_run_config: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Stored composition, keeping only well-formed entries: text values and string ids. */
+function parsePromptComposition(value: unknown): PromptComposition | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const raw = value as { texts?: unknown; disabled?: unknown };
+  const texts = typeof raw.texts === 'object' && raw.texts !== null
+    ? Object.fromEntries(Object.entries(raw.texts).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
+    : {};
+  const disabled = Array.isArray(raw.disabled) ? raw.disabled.filter((id): id is string => typeof id === 'string') : [];
+  return { texts, disabled };
+}
+
+function serializePromptComposition(composition: PromptComposition | undefined): string | null {
+  const texts = composition?.texts ?? {};
+  const disabled = composition?.disabled ?? [];
+  return Object.keys(texts).length || disabled.length ? JSON.stringify({ texts, disabled }) : null;
 }
 
 function parseJson<T>(value: string | null | undefined): T | undefined;
@@ -77,8 +78,6 @@ function rowToPipeline(row: DbPipeline): Pipeline {
     id: row.id,
     projectId: row.project_id,
     name: row.name,
-    sourceLanguage: row.source_language,
-    targetLanguage: row.target_language,
     mode: toPipelineMode(row.pipeline_mode),
     runStatus: toPipelineRunStatus(row.run_status),
     lastRunConfig: row.last_run_config ?? null,
@@ -90,19 +89,17 @@ function rowToPipeline(row: DbPipeline): Pipeline {
 function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assignedGlossaryId: string | null): PipelineConfig {
   return {
     pipelineId: row.id,
-    sourceLanguage: row.source_language,
-    targetLanguage: row.target_language,
     mode: toPipelineMode(row.pipeline_mode),
-    stages: parseJson<PipelineStageConfig[]>(row.stages, []),
+    stages: buildStagesForMode(toPipelineMode(row.pipeline_mode), parseJson<PipelineStageConfig[]>(row.stages, [])),
     judgePrompt: row.judge_prompt,
     judgeModel: row.judge_model,
     judgeProvider: row.judge_provider as PipelineConfig['judgeProvider'],
     useChunking: row.use_chunking === 1,
     wordsPerChunk: row.words_per_chunk ?? 0,
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
-    persona: row.persona?.trim() || undefined,
-    customSourceLanguage: row.custom_source_language || undefined,
-    customTargetLanguage: row.custom_target_language || undefined,
+    // Mai vuoto: una pipeline senza testo proprio parte dal contesto predefinito.
+    workBrief: row.work_brief?.trim() || DEFAULT_WORK_BRIEF,
+    promptComposition: parsePromptComposition(parseJson<unknown>(row.prompt_composition)),
     blobBudgetTokens: row.blob_budget_tokens ?? undefined,
     blobOverlap: row.blob_overlap ?? undefined,
     coherencePrompt: row.coherence_prompt?.trim() || undefined,
@@ -170,13 +167,11 @@ export async function getPipelineConfig(pipelineId: string): Promise<{
 export async function createPipeline(
   projectId: string,
   name: string,
-  sourceLanguage: string,
-  targetLanguage: string,
 ): Promise<string> {
   const id = generateId('pipeline');
   await execute(
-    `INSERT INTO pipelines (id, project_id, name, source_language, target_language) VALUES ($1, $2, $3, $4, $5)`,
-    [id, projectId, name, sourceLanguage, targetLanguage],
+    `INSERT INTO pipelines (id, project_id, name) VALUES ($1, $2, $3)`,
+    [id, projectId, name],
   );
   return id;
 }
@@ -196,27 +191,29 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
 
   await execute(
     `INSERT INTO pipelines (
-       id, project_id, name, source_language, target_language, pipeline_mode,
+       id, project_id, name, pipeline_mode,
        stages, judge_prompt, judge_model, judge_provider,
        use_chunking, words_per_chunk,
-       review_provider_options, persona, custom_source_language, custom_target_language,
+       review_provider_options,
        blob_budget_tokens, blob_overlap, few_shot_examples,
-       use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+       use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results,
+       work_brief, coherence_prompt, prompt_composition
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
     [
       newId, source.project_id, newName,
-      source.source_language, source.target_language,
       source.pipeline_mode ?? 'standard',
       source.stages, source.judge_prompt, source.judge_model, source.judge_provider,
       source.use_chunking, source.words_per_chunk,
-      source.review_provider_options, source.persona,
-      source.custom_source_language, source.custom_target_language,
+      source.review_provider_options,
       source.blob_budget_tokens ?? 0, source.blob_overlap ?? 1,
       source.few_shot_examples ?? '[]',
       source.use_phrase_memory ?? 0,
       source.auto_search_phrase_memory ?? 1,
       source.phrase_memory_similarity_threshold ?? 0.75,
       source.phrase_memory_max_results ?? 10,
+      source.work_brief ?? null,
+      source.coherence_prompt ?? null,
+      source.prompt_composition ?? null,
     ],
   );
   return newId;
@@ -234,32 +231,27 @@ function buildPipelineConfigUpdate(
 ): { query: string; params: unknown[] } {
   return {
     query: `UPDATE pipelines SET
-       source_language          = $1,
-       target_language          = $2,
-       pipeline_mode            = $3,
-       stages                   = $4,
-       judge_prompt             = $5,
-       judge_model              = $6,
-       judge_provider           = $7,
-       use_chunking             = $8,
-       words_per_chunk       = $9,
-       review_provider_options  = $10,
-       persona                  = $11,
-       custom_source_language   = $12,
-       custom_target_language   = $13,
-       blob_budget_tokens       = $14,
-       blob_overlap             = $15,
-       coherence_prompt         = $16,
-       few_shot_examples        = $17,
-       use_phrase_memory        = $18,
-       auto_search_phrase_memory = $19,
-       phrase_memory_similarity_threshold = $20,
-       phrase_memory_max_results = $21,
+       pipeline_mode            = $1,
+       stages                   = $2,
+       judge_prompt             = $3,
+       judge_model              = $4,
+       judge_provider           = $5,
+       use_chunking             = $6,
+       words_per_chunk       = $7,
+       review_provider_options  = $8,
+       blob_budget_tokens       = $9,
+       blob_overlap             = $10,
+       coherence_prompt         = $11,
+       few_shot_examples        = $12,
+       use_phrase_memory        = $13,
+       auto_search_phrase_memory = $14,
+       phrase_memory_similarity_threshold = $15,
+       phrase_memory_max_results = $16,
+       work_brief               = $17,
+       prompt_composition       = $18,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $22`,
+     WHERE id = $19`,
     params: [
-      config.sourceLanguage,
-      config.targetLanguage,
       config.mode ?? 'standard',
       JSON.stringify(config.stages),
       config.judgePrompt,
@@ -268,9 +260,6 @@ function buildPipelineConfigUpdate(
       config.useChunking !== false ? 1 : 0,
       config.wordsPerChunk ?? 0,
       config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
-      config.persona?.trim() || null,
-      config.customSourceLanguage || null,
-      config.customTargetLanguage || null,
       config.blobBudgetTokens ?? 0,
       config.blobOverlap ?? 1,
       config.coherencePrompt?.trim() || null,
@@ -279,6 +268,8 @@ function buildPipelineConfigUpdate(
       config.autoSearchPhraseMemory === false ? 0 : 1,
       config.phraseMemorySimilarityThreshold ?? 0.75,
       config.phraseMemoryMaxResults ?? 10,
+      config.workBrief?.trim() || null,
+      serializePromptComposition(config.promptComposition),
       pipelineId,
     ],
   };

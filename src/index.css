@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* La variante scura segue la scelta fatta nell'app (classe `dark` su <html>,
+   messa da ThemeSync), non il sistema operativo. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Elstob variable serif — public/fonts/ (da https://github.com/psb1558/Elstob-font/releases) */
 @font-face {
   font-family: "Elstob";
@@ -77,6 +81,13 @@
   --text-lg: 1.125rem;   /* 18px */
   --text-xl: 1.375rem;   /* 22px */
   --text-2xl: 1.625rem;  /* 26px */
+  /* Didascalia: etichette maiuscole e titoletti di sezione, l'unico testo
+     sotto text-xs ammesso. */
+  --text-caption: 0.6875rem; /* 11px */
+
+  /* Spaziatura delle lettere delle maiuscole piccole. */
+  --tracking-caption: 0.1em;  /* etichette di dati, intestazioni di tabella */
+  --tracking-section: 0.16em; /* titoletti di sezione */
 
   /* ── Palette — Sage Teal H2 (ink 5.66:1 WCAG AA) ────────────────────────── */
   --color-editorial-bg: #F8F5F0;
@@ -96,6 +107,16 @@
   --color-editorial-warning: #7A5A14;
   --color-editorial-running: #C49B2A;
 
+  /* Testo sopra un fondo pieno d'inchiostro o d'accento (comandi principali,
+     scelta attiva). Bianco in chiaro; nel tema scuro l'inchiostro diventa
+     chiaro e il testo sopra torna scuro. */
+  --color-on-ink: #FFFFFF;
+  --color-on-accent: #FFFFFF;
+
+  /* Bordi: tre forze, non otto opacità sparse. Pieno = `editorial-border`. */
+  --color-rule: color-mix(in srgb, var(--color-editorial-border) 70%, transparent);
+  --color-rule-faint: color-mix(in srgb, var(--color-editorial-border) 40%, transparent);
+
   /* ── Surface tokens — usati da DocumentView e sidebar ───────────────────── */
   --color-editorial-paper: #f4efe5;
   --color-editorial-page: #fffdf9;
@@ -108,7 +129,31 @@
      con opacità diverse a caso. ────────────────────────────────────────── */
   --color-surface-elevated: var(--color-editorial-page); /* dialog, menu, popover, header sticky */
   --color-surface-panel: var(--color-editorial-bg);       /* wrapper strutturali di pannello/colonna/sidebar */
+  --color-surface-resource: var(--color-editorial-paper); /* carta tenue, unica per voce nelle risorse */
+  --color-resource-muted: #666666; /* testo secondario sulla carta delle risorse */
   --color-surface-hover: var(--color-editorial-textbox);  /* usa con /50 — hover su riga/voce cliccabile */
+
+  /* ── Inchiostro e carta d'area — identità di Biblioteca, Trascrizioni e
+     Traduzioni. Solo segni piccoli (filetto del titolo, icona, segnaposto) e
+     una carta appena percepibile: verde, rosso, ocra e oro restano agli stati.
+     Contrasto sul fondo ≥ 7:1 (5.66:1 per la Biblioteca, che è l'inchiostro). */
+  --color-area-library: var(--color-editorial-ink);
+  --color-area-transcriptions: #6B4A3A; /* seppia */
+  --color-area-translations: #4B4C8C;   /* indaco */
+  --color-area-library-paper: var(--color-surface-panel);
+  --color-area-transcriptions-paper: #F8F3EA;
+  --color-area-translations-paper: #F3F3F1;
+
+  /* ── Ombre — `shadow-modal`, `shadow-tooltip`… Le varianti scure sono in
+     html.dark più sotto. ─────────────────────────────────────────────── */
+  --shadow-modal:           0 24px 80px rgba(26,26,26,0.20);
+  --shadow-tooltip:         0 12px 28px rgba(26,26,26,0.12);
+  --shadow-warm-sm:         0 16px 50px rgba(26,26,26,0.05);
+  --shadow-warm-md:         0 8px 24px rgba(74,50,17,0.12);
+  --shadow-page-card:       0 18px 45px rgba(74,50,17,0.08);
+  --shadow-inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.85);
+  --shadow-inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.45);
+  --shadow-chunk-current-ring:     0 0 0 1px rgba(255,255,255,0.28);
 
   /* ── Dark mode — token overrides attivi su html.dark ────────────────────── */
   /* Vedi ThemeSync in App.tsx */
@@ -147,6 +192,7 @@ html.dark {
   --color-editorial-accent:       #3A7A72;
   --color-editorial-danger:       #C8705E;
   --color-editorial-muted:        #857d77;
+  --color-resource-muted:         #a49a91; /* 6.13:1 sulla carta scura delle risorse */
   --color-editorial-border:       #352d28;
   --color-editorial-textbox:      #251f1b;
   --color-editorial-success:      #5c9e7e;
@@ -157,17 +203,24 @@ html.dark {
   --color-editorial-page:         #231f1b;
   --color-editorial-divider:      #2c2520;
   --color-editorial-divider-soft: #261f1c;
+  --color-on-ink:                 #1c1814;
+
+  /* Inchiostri e carte d'area schiariti per il fondo scuro: ≥ 7:1. */
+  --color-area-transcriptions:       #C9A08A;
+  --color-area-translations:         #A3A5DE;
+  --color-area-transcriptions-paper: #1e1813;
+  --color-area-translations-paper:   #1a1919;
 
   /* Gradient header */
   --header-bg-from: #201c18;
   --header-bg-to:   #1c1814;
 
   /* Inset top-highlight shadows — ridotti in dark */
-  --inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.04);
-  --inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.03);
+  --shadow-inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.04);
+  --shadow-inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.03);
 
   /* Ring bianco sul pallino chunk corrente */
-  --chunk-current-ring: 0 0 0 1px rgba(255,255,255,0.10);
+  --shadow-chunk-current-ring: 0 0 0 1px rgba(255,255,255,0.10);
   --shadow-modal:       0 24px 80px rgba(0,0,0,0.60);
   --shadow-tooltip:     0 12px 28px rgba(0,0,0,0.40);
   --shadow-warm-sm:     0 16px 50px rgba(0,0,0,0.20);
@@ -194,6 +247,21 @@ html.dark {
   --color-terminal-accent:    #c49b2a;
 }
 
+/* Mantiene leggibili anche etichette e metadati dei componenti comuni.
+   Una sola carta per voce; i dettagli aperti ereditano la superficie. */
+.linguistic-resource {
+  --color-editorial-muted: var(--color-resource-muted);
+}
+
+/* Didascalia: etichetta maiuscola di un dato o di una colonna di tabella. */
+@utility caption-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caption);
+  color: var(--color-editorial-muted);
+}
+
 /* Consistent focus-visible ring across the app */
 *:focus-visible {
   outline: none;
@@ -216,14 +284,6 @@ html.dark {
 :root {
   --header-bg-from: #fffdf8;
   --header-bg-to:   #f8f3ea;
-  --inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.85);
-  --inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.45);
-  --chunk-current-ring:     0 0 0 1px rgba(255,255,255,0.28);
-  --shadow-modal:           0 24px 80px rgba(26,26,26,0.20);
-  --shadow-tooltip:         0 12px 28px rgba(26,26,26,0.12);
-  --shadow-warm-sm:         0 16px 50px rgba(26,26,26,0.05);
-  --shadow-warm-md:         0 8px 24px rgba(74,50,17,0.12);
-  --shadow-page-card:       0 18px 45px rgba(74,50,17,0.08);
   --app-min-width: 1080px;
   --app-min-height: 680px;
   --doc-font-size: 0.9375rem;
@@ -233,7 +293,16 @@ html.dark {
   --hl-mismatch-bg: rgba(239, 68, 68, 0.15);
   --hl-search-bg: rgba(234, 179, 8, 0.25);
   --hl-audit-bg: rgba(249, 115, 22, 0.25);
-  --hl-annot-bg: rgba(166, 78, 66, 0.16);
+  /* Valori di partenza, gli stessi di HL_COLORS_LIGHT: HighlightColorSync li
+     sostituisce con quelli scelti dall'utente appena l'app parte. */
+  --hl-annot-bg: rgba(58, 122, 114, 0.25);
+  --hl-diff-add-bg: rgba(34, 197, 94, 0.22);
+  --hl-diff-rm-bg: rgba(239, 68, 68, 0.18);
+}
+
+html.dark {
+  --hl-diff-add-bg: rgba(74, 222, 128, 0.24);
+  --hl-diff-rm-bg: rgba(248, 113, 113, 0.24);
 }
 
 html,
@@ -310,6 +379,14 @@ mark.hl-annot {
   position: relative;
 }
 
+/* Un suggerimento Radix non intercetta mai il puntatore: il contenitore che
+   Radix crea attorno al contenuto riceverebbe i clic anche con il contenuto in
+   pointer-events-none, e un suggerimento comparso sopra un menu aperto ne
+   bloccava le voci (nome della pipeline sopra il suo menu). */
+[data-radix-popper-content-wrapper]:has(> [data-glossa-tooltip]) {
+  pointer-events: none;
+}
+
 [data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -355,13 +432,13 @@ mark.hl-annot {
 }
 
 mark.hl-diff-add {
-  background-color: rgba(34, 197, 94, 0.22);
+  background-color: var(--hl-diff-add-bg);
   border-radius: 2px;
   color: inherit;
 }
 
 mark.hl-diff-rm {
-  background-color: rgba(239, 68, 68, 0.18);
+  background-color: var(--hl-diff-rm-bg);
   border-radius: 2px;
   color: inherit;
   text-decoration: line-through;

@@ -1,3 +1,5 @@
+import { reportUiError } from '../../utils/reportUiError';
+import { confirm } from '../../stores/confirmStore';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AlignLeft, Brain, Cpu, Loader2, RefreshCcw, ScanText, Settings2, Type } from 'lucide-react';
@@ -5,12 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select, TabStrip } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import { OcrSettingsSection } from './OcrSettingsSection';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../../workspaceIdentity';
 import { WorkspaceIcon, WorkspaceIconPicker } from './WorkspaceIdentity';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 type WorkspaceSettingsTab = 'general' | 'memory' | 'ocr';
 
@@ -82,9 +85,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       toast.success(t('workspace.updated'));
       shouldClose = true;
     } catch (err: unknown) {
-      toast.error(t('workspace.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      reportUiError(t('workspace.saveFailed'), err);
     } finally {
       setSaving(false);
       if (shouldClose) onClose();
@@ -92,15 +93,15 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   };
 
   const handleRegenerateEmbeddings = async () => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace || isRegenerating) return;
+    if (!await confirm({ title: t('library.measureTitle'), message: t('workspace.regenerateEmbeddingsHint', { model: embeddingModel }),
+      confirmLabel: t('common.confirm'), cancelLabel: t('common.cancel') })) return;
     setIsRegenerating(true);
     try {
       const count = await regenerateAllEmbeddings(activeWorkspace.id, embeddingModel);
       toast.success(t('workspace.embeddingsRegenerated', { count }));
     } catch (err: unknown) {
-      toast.error(t('workspace.embeddingsRegenerateFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      reportUiError(t('workspace.embeddingsRegenerateFailed'), err);
     } finally {
       setIsRegenerating(false);
     }
@@ -113,26 +114,10 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   ];
 
   const tabBar = (
-    <div className="flex items-center gap-2" role="tablist" aria-label={t('workspace.settings.eyebrow')}>
-      {tabConfig.map((tab) => {
-        const isActive = activeTab === tab.id;
-        return (
-          <IconButton
-            key={tab.id}
-            id={`workspace-settings-tab-${tab.id}`}
-            size="lg"
-            tone={isActive ? 'accent' : 'default'}
-            onClick={() => setActiveTab(tab.id)}
-            title={tab.label}
-            role="tab"
-            aria-selected={isActive}
-            aria-controls={`workspace-settings-panel-${tab.id}`}
-          >
-            {tab.icon}
-          </IconButton>
-        );
-      })}
-      <span className="mx-1 h-4 w-px shrink-0 self-center bg-editorial-border/70" aria-hidden="true" />
+    <div className="flex items-center gap-2">
+      <TabStrip tabs={tabConfig} activeId={activeTab} onChange={(id) => setActiveTab(id as WorkspaceSettingsTab)}
+        ariaLabel={t('workspace.settings.eyebrow')} idPrefix="workspace-settings" />
+      <span className="mx-1 h-4 w-px shrink-0 self-center bg-rule" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
         {tabConfig.find((tb) => tb.id === activeTab)?.label}
       </span>
@@ -181,7 +166,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder={t('workspace.namePlaceholder')}
-                      className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className={FIELD_CLASSNAME}
                       // eslint-disable-next-line jsx-a11y/no-autofocus -- finestra impostazioni aperta da un click esplicito
                       autoFocus
                     />
@@ -195,7 +180,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder={t('workspace.descriptionPlaceholder')}
-                      className="min-h-24 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className={`${FIELD_CLASSNAME} min-h-24`}
                     />
                   </div>
                 </div>
@@ -208,7 +193,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   aria-labelledby="workspace-settings-tab-memory"
                   className="space-y-4"
                 >
-                  <div className="space-y-3 border-y border-editorial-border/70 py-4">
+                  <div className="space-y-3 border-y border-rule py-4">
                     <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
                       {t('workspace.embeddingModel')}
                     </FieldLabel>
@@ -227,7 +212,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                         size="md"
                         tone="default"
                         onClick={() => void handleRegenerateEmbeddings()}
-                        disabled={isRegenerating || !activeWorkspace || embeddingModel === activeWorkspace?.embeddingModel}
+                        disabled={isRegenerating || !activeWorkspace}
                         title={t('workspace.regenerateEmbeddings')}
                         tooltipSide="top"
                       >

@@ -15,7 +15,7 @@ import {
 
 export type LibraryTab = 'dictionaries' | 'templates' | 'memories';
 export const DEFAULT_LIBRARY_TAB: LibraryTab = 'dictionaries';
-/** 'workspace': solo dizionari del workspace attivo. 'global': catalogo cross-workspace in sola lettura. */
+/** 'workspace': dizionari con correzioni locali. 'global': catalogo degli originali. */
 export type LibraryScope = 'workspace' | 'global';
 
 interface LibraryState {
@@ -28,6 +28,7 @@ interface LibraryState {
 
   // Entries state lifted from DictionariesTab to survive panel close/reopen
   entriesMap: Record<string, GlossaryEntry[]>;
+  entriesWorkspaceMap: Record<string, string | null>;
   dirtyIds: string[];
   expandedGlossaryId: string | null;
 
@@ -49,12 +50,14 @@ interface LibraryState {
   setExpandedGlossaryId: (id: string | null) => void;
   saveGlossaryEntries: (id: string, workspaceId?: string | null) => Promise<void>;
   saveAllDirty: () => Promise<void>;
+  discardDirty: () => void;
 }
 
 // Ordina le richieste di caricamento glossari: se cambio workspace prima che
 // la richiesta precedente risponda, quella risposta tardiva non deve più
 // sovrascrivere lo stato del workspace corrente.
 let loadGlossariesRequestId = 0;
+const loadEntriesRequests = new Map<string, number>();
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   showLibraryPanel: false,
@@ -64,6 +67,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   isLoaded: false,
   loadedForWorkspaceId: null,
   entriesMap: {},
+  entriesWorkspaceMap: {},
   dirtyIds: [],
   expandedGlossaryId: null,
 
@@ -87,13 +91,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   reloadGlossaries: async (workspaceId) => {
+    const requestId = ++loadGlossariesRequestId;
     const glossaries = await listGlossaries(workspaceId);
-    set({ glossaries, loadedForWorkspaceId: workspaceId });
+    if (requestId !== loadGlossariesRequestId) return;
+    set({ glossaries, loadedForWorkspaceId: workspaceId, isLoaded: true });
   },
 
   createGlossary: async (name, description, sourceLang, targetLang, workspaceId) => {
     const id = await createGlossary(name, description, sourceLang, targetLang, workspaceId);
-    await get().reloadGlossaries(workspaceId ?? null);
+    await get().reloadGlossaries(get().loadedForWorkspaceId);
     return id;
   },
 
@@ -120,7 +126,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   forkGlossary: async (id, newName, destinationWorkspaceId) => {
     const newId = await forkGlossary(id, newName, destinationWorkspaceId);
-    await get().reloadGlossaries(destinationWorkspaceId);
+    await get().reloadGlossaries(get().loadedForWorkspaceId);
     return newId;
   },
 
@@ -133,11 +139,16 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   loadGlossaryEntries: async (id, workspaceId) => {
-    if (get().entriesMap[id] !== undefined) return;
+    const scope = workspaceId ?? null;
+    if (get().entriesMap[id] !== undefined && get().entriesWorkspaceMap[id] === scope) return;
+    if (get().dirtyIds.includes(id)) throw new Error('Save or discard dictionary changes before changing workspace.');
+    const requestId = (loadEntriesRequests.get(id) ?? 0) + 1;
+    loadEntriesRequests.set(id, requestId);
     // Le voci **come le vede questo workspace**: un dizionario condiviso può
     // avere qui una correzione che altrove non c'è (#213).
     const entries = await getGlossaryEntries(id, workspaceId);
-    set((state) => ({ entriesMap: { ...state.entriesMap, [id]: entries } }));
+    if (loadEntriesRequests.get(id) !== requestId) return;
+    set((state) => ({ entriesMap: { ...state.entriesMap, [id]: entries }, entriesWorkspaceMap: { ...state.entriesWorkspaceMap, [id]: scope } }));
   },
 
   markDirty: (id) => {
@@ -156,18 +167,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   saveGlossaryEntries: async (id, workspaceId) => {
     const entries = get().entriesMap[id] ?? [];
+    const scope = workspaceId === undefined ? get().entriesWorkspaceMap[id] ?? null : workspaceId;
     // Chi **ospita** un dizionario non lo riscrive per tutti: le sue modifiche
     // diventano correzioni valide solo qui (#213). Chi ce l'ha in casa, invece,
     // sta modificando il dizionario.
-    const home = workspaceId ? await isGlossaryHome(id, workspaceId) : true;
-    if (workspaceId && !home) {
-      await saveGlossaryEntriesAsOverrides(id, workspaceId, entries);
+    const home = scope ? await isGlossaryHome(id, scope) : true;
+    if (scope && !home) {
+      await saveGlossaryEntriesAsOverrides(id, scope, entries);
     } else {
       await upsertGlossaryEntries(id, entries);
     }
-    const fresh = await getGlossaryEntries(id, workspaceId);
+    const fresh = await getGlossaryEntries(id, scope);
     set((state) => ({
       entriesMap: { ...state.entriesMap, [id]: fresh },
+      entriesWorkspaceMap: { ...state.entriesWorkspaceMap, [id]: scope },
       dirtyIds: state.dirtyIds.filter((d) => d !== id),
     }));
   },
@@ -179,5 +192,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     if (failed.length > 0) {
       throw new Error('Failed to save one or more dictionaries.');
     }
+  },
+  discardDirty: () => {
+    set((state) => ({
+      entriesMap: Object.fromEntries(Object.entries(state.entriesMap).filter(([id]) => !state.dirtyIds.includes(id))),
+      entriesWorkspaceMap: Object.fromEntries(Object.entries(state.entriesWorkspaceMap).filter(([id]) => !state.dirtyIds.includes(id))),
+      dirtyIds: [],
+    }));
   },
 }));

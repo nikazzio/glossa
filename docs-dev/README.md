@@ -24,3 +24,6 @@ ed export. #186 e #446 tracciano adozione e adattamento dei pattern.
 Piani e specifiche implementative completati non restano come documentazione:
 invarianti in architettura, regole visive nel design system, lavoro residuo
 nella roadmap.
+
+Piano aperto: [Ricerca federata e Dashboard](./PIANO_RICERCA_FEDERATA_DASHBOARD.md),
+riferimento per il lavoro sulla Dashboard; si toglie a lavoro concluso.

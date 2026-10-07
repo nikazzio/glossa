@@ -1,49 +1,31 @@
-import { useEffect, useState } from 'react';
-import { Check, LibraryBig, Pencil, Save, Trash2, X } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { BookOpen, Brain, Eraser, Eye, Languages, Settings, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, DialogCancelButton, IconButton, PillButton, Select } from '../ui';
-import { PipelineConfig } from '../pipeline/PipelineConfig';
+import { Dialog, DialogCancelButton, IconButton, TabStrip, type TabStripItem } from '../ui';
+import { PipelineConfig, type ConfigSection } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { useLibraryStore } from '../../stores/libraryStore';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
-import { assignGlossaryToProject } from '../../services/glossaryService';
-import { upsertGlossaryEntries } from '../../services/glossaryService';
-import { DictionaryEntryEditor } from '../library/DictionaryEntryEditor';
 import { confirm } from '../../stores/confirmStore';
 
-interface ConfigDrawerProps {
-  onRunPipeline: () => void;
-  onRunAuditOnly: () => void;
-  onCancelPipeline: () => void;
-}
+const TAB_ID_PREFIX = 'pconfig';
 
-export function ConfigDrawer({
-  onRunPipeline,
-  onRunAuditOnly,
-  onCancelPipeline,
-}: ConfigDrawerProps) {
+/** La finestra di configurazione della pipeline aperta: titolo con il suo
+ *  nome (si rinomina dalla riga in cima allo Studio), linguette nella fila
+ *  della finestra, azzeramento delle traduzioni in fondo. */
+export function ConfigDrawer() {
   const { t } = useTranslation();
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const setWorkMode = useConfigStore((state) => state.setWorkMode);
-  const [glossaryDirty, setGlossaryDirty] = useState(false);
-  const [isSavingGlossary, setIsSavingGlossary] = useState(false);
-  const { config, setConfig, assignGlossary } = usePipelineStore();
+  const mode = usePipelineStore((s) => s.config.mode);
   const { chunks, resetAllChunks, isProcessing } = useChunksStore();
-  const { glossaries, setShowLibraryPanel, loadGlossaries } = useLibraryStore();
-  const { activeWorkspace } = useWorkspaceStore();
-  const { currentProjectId, pipelines, activePipelineId, renamePipeline } = useProjectStore();
+  const { pipelines, activePipelineId } = useProjectStore();
   const activePipeline = pipelines.find((p) => p.id === activePipelineId);
-  const [nameValue, setNameValue] = useState(activePipeline?.name ?? '');
-
-  useEffect(() => {
-    setNameValue(activePipeline?.name ?? '');
-  }, [activePipeline?.name]);
+  const [activeTab, setActiveTab] = useState<ConfigSection>('translation');
 
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
 
@@ -60,196 +42,86 @@ export function ConfigDrawer({
     toast.success(t('pipeline.resetAllDone'));
   };
 
-  useEffect(() => {
-    if (showConfigDrawer) loadGlossaries(activeWorkspace?.id ?? null);
-  }, [showConfigDrawer, activeWorkspace?.id, loadGlossaries]);
+  const memoryDisabled = mode === 'deepl-hybrid';
+  // La linguetta Memoria si spegne passando a DeepL: chi la stava guardando
+  // torna a Generale invece di restare davanti a una scheda vuota.
+  const shownTab: ConfigSection = activeTab === 'memory' && memoryDisabled ? 'settings' : activeTab;
 
-  useEffect(() => {
-    setGlossaryDirty(false);
-  }, [config.assignedGlossaryId]);
+  const tabEntries: Array<{ id: ConfigSection; label: string; icon: ReactNode; disabledReason?: string }> = [
+    { id: 'settings', label: t('pipeline.tabSettings'), icon: <Settings size={16} /> },
+    { id: 'translation', label: t('pipeline.tabTranslation'), icon: <Languages size={16} /> },
+    { id: 'audit', label: t('pipeline.tabAudit'), icon: <ShieldCheck size={16} /> },
+    {
+      id: 'memory',
+      label: t('pipeline.tabMemory'),
+      icon: <Brain size={16} />,
+      disabledReason: memoryDisabled ? t('pipeline.memoryUnavailableDeepl') : undefined,
+    },
+    { id: 'glossary', label: t('pipeline.tabGlossary'), icon: <BookOpen size={16} /> },
+    { id: 'preview', label: t('pipeline.tabPreview'), icon: <Eye size={16} /> },
+  ];
+  const tabs: TabStripItem[] = tabEntries.map(({ id, label, icon, disabledReason }) => ({
+    id,
+    label: disabledReason ? t('transcription.commandBlocked', { command: label, reason: disabledReason }) : label,
+    icon,
+    disabled: Boolean(disabledReason),
+  }));
 
-  const handleDictChange = async (glossaryId: string) => {
-    try {
-      if (currentProjectId) {
-        await assignGlossaryToProject(currentProjectId, glossaryId || null);
-      }
-      if (glossaryId) {
-        await assignGlossary(glossaryId);
-      } else {
-        await assignGlossary(null);
-      }
-    } catch (err: unknown) {
-      toast.error(t('library.dictionaryAssignError'), { description: err instanceof Error ? err.message : String(err) });
-    }
-  };
-
-  const handleSaveGlossary = async () => {
-    if (!config.assignedGlossaryId) return;
-    setIsSavingGlossary(true);
-    try {
-      await upsertGlossaryEntries(config.assignedGlossaryId, config.glossary);
-      setGlossaryDirty(false);
-      toast.success(t('library.dictionarySaved'));
-    } catch (err: unknown) {
-      toast.error(t('library.dictionarySaveError'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsSavingGlossary(false);
-    }
-  };
-
-  const libraryGlossarySection = (
-    <div className="space-y-3 border-y border-editorial-border/70 py-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <LibraryBig size={11} className="text-editorial-accent shrink-0" />
-          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-            {t('library.assignedDictionary')}
-          </span>
-        </div>
-        <IconButton
-          size="md"
-          onClick={() => setShowLibraryPanel(true, 'dictionaries')}
-          title={t('library.openLibrary')}
-          className="shrink-0"
-        >
-          <LibraryBig size={16} />
-        </IconButton>
-      </div>
-      <Select
-        value={config.assignedGlossaryId ?? ''}
-        onChange={handleDictChange}
-        className="w-full font-mono"
-        ariaLabel={t('library.assignedDictionary')}
-        options={[
-          { value: '', label: t('library.noDictionaryAssigned') },
-          ...glossaries.map((g) => ({ value: g.id, label: g.name })),
-        ]}
+  const tabBar = (
+    <div className="flex items-center gap-3">
+      <TabStrip
+        tabs={tabs}
+        activeId={shownTab}
+        onChange={(id) => setActiveTab(id as ConfigSection)}
+        ariaLabel={t('pipeline.configSections')}
+        idPrefix={TAB_ID_PREFIX}
       />
-      {config.assignedGlossaryId && (
-        <DictionaryEntryEditor
-          entries={config.glossary}
-          onChange={(entries) => {
-            setConfig((prev) => ({ ...prev, glossary: entries }));
-            setGlossaryDirty(true);
-          }}
-        />
-      )}
-      {glossaryDirty && config.assignedGlossaryId && (
-        <div className="flex justify-end">
-          <PillButton
-            variant="accent"
-            onClick={handleSaveGlossary}
-            disabled={isSavingGlossary}
-            className="inline-flex items-center gap-1.5"
-          >
-            <Save size={13} />
-            {t('common.save')}
-          </PillButton>
-        </div>
-      )}
+      <span className="font-display text-sm italic text-editorial-ink">
+        {tabEntries.find((tab) => tab.id === shownTab)?.label}
+      </span>
     </div>
   );
 
-  const isNameDirty = !!activePipelineId && !!activePipeline && nameValue.trim() !== activePipeline.name;
-
-  const commitName = () => {
-    const trimmed = nameValue.trim();
-    if (!trimmed) { setNameValue(activePipeline?.name ?? t('pipeline.globalSetup')); return; }
-    if (activePipelineId && activePipeline && trimmed !== activePipeline.name) {
-      void renamePipeline(activePipelineId, trimmed);
-    }
-  };
-
-  const cancelNameEdit = () => {
-    setNameValue(activePipeline?.name ?? '');
-  };
-
-  const nameInput = (
-    <div className="flex items-center gap-2">
-      <div className="group relative flex-1">
-        <input
-          id="config-drawer-title"
-          type="text"
-          value={nameValue}
-          onChange={(e) => setNameValue(e.target.value)}
-          onBlur={() => { if (isNameDirty) commitName(); }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { commitName(); e.currentTarget.blur(); }
-            if (e.key === 'Escape') { cancelNameEdit(); e.currentTarget.blur(); }
-          }}
-          placeholder={t('pipeline.globalSetup')}
-          aria-label={t('pipeline.pipelineNameLabel')}
-          className="w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent border-b border-transparent group-hover:border-editorial-border/60 focus:border-editorial-accent/50"
-        />
-        {!isNameDirty && (
-          <Pencil
-            size={13}
-            aria-hidden="true"
-            className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-editorial-muted/30 opacity-0 transition-opacity group-hover:opacity-100"
-          />
-        )}
-      </div>
-      {isNameDirty && (
-        <div className="flex items-center gap-1 shrink-0">
-          <IconButton size="sm" tone="accent" onClick={commitName} title={t('common.confirm')}>
-            <Check size={14} />
-          </IconButton>
-          <IconButton size="sm" onClick={cancelNameEdit} title={t('common.cancel')}>
-            <X size={14} />
-          </IconButton>
-        </div>
-      )}
-    </div>
-  );
-
-  const configForm = (
-    <PipelineConfig
-      onRunPipeline={onRunPipeline}
-      onRunAuditOnly={onRunAuditOnly}
-      onCancelPipeline={onCancelPipeline}
-      showActions={false}
-      showOnlyGlobalDefaults={false}
-      libraryGlossarySection={libraryGlossarySection}
-      className="flex flex-1 flex-col bg-editorial-bg/40 min-h-0"
-    />
-  );
-
-  const resetButton = completedCount > 0 ? (
-    <PillButton
-      variant="secondary"
-      onClick={handleResetAll}
-      disabled={isProcessing}
-      className="inline-flex items-center gap-2 border-editorial-accent/40 text-editorial-accent/80 hover:border-editorial-accent hover:text-editorial-accent"
-    >
-      <Trash2 size={12} />
-      {t('pipeline.resetAll')}
-    </PillButton>
-  ) : null;
+  const resetLabel = t('pipeline.resetAll');
+  const resetBlockedReason = isProcessing
+    ? t('document.operationsRunning')
+    : completedCount === 0
+      ? t('pipeline.resetAllNothing')
+      : null;
 
   return (
     <Dialog
       open={showConfigDrawer}
       onOpenChange={(open) => { if (!open) setShowConfigDrawer(false); }}
-      title={t('pipeline.configurePipeline')}
+      eyebrow={t('pipeline.configurePipeline')}
+      title={activePipeline?.name ?? t('pipeline.configurePipeline')}
       closeLabel={t('common.close')}
       closeDisabled={isProcessing}
       widthClassName="max-w-4xl"
       panelClassName="h-[88vh]"
       bodyClassName="p-0"
+      tabBar={tabBar}
       footer={
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          <IconButton
+            tone="danger"
+            onClick={() => void handleResetAll()}
+            disabled={resetBlockedReason !== null}
+            title={resetBlockedReason
+              ? t('transcription.commandBlocked', { command: resetLabel, reason: resetBlockedReason })
+              : resetLabel}
+            tooltipSide="top"
+          >
+            <Eraser size={16} />
+          </IconButton>
           <DialogCancelButton onClick={() => setShowConfigDrawer(false)} disabled={isProcessing}>
             {t('common.close')}
           </DialogCancelButton>
         </div>
       }
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="shrink-0 border-b border-editorial-border px-6 py-4">{nameInput}</div>
-        {configForm}
-        {resetButton ? (
-          <div className="flex shrink-0 justify-center border-t border-editorial-border/40 px-6 py-4">{resetButton}</div>
-        ) : null}
+      <div className="flex h-full min-h-0 flex-col bg-editorial-bg/40">
+        <PipelineConfig activeTab={shownTab} onOpenSection={setActiveTab} />
       </div>
     </Dialog>
   );

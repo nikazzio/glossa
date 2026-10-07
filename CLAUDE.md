@@ -1,103 +1,130 @@
-# Glossa — Istruzioni per lo sviluppo
+# Glossa — guidance for AI coding agents
 
-## Stato del progetto
+Glossa is a desktop application for scholars working on historical texts:
+discover and collect sources (Library), transcribe them with optional OCR/HTR
+assistance (Transcriptions), translate them through configurable LLM/DeepL
+pipelines with glossaries and phrase memory (Translations), and export the
+results. It is a private beta: the 2.x version numbers come from release-automation
+tests and do not indicate completeness. Product order of work: Library →
+Transcriptions → Translations → Export (see `docs-dev/ROADMAP_2_0.md`).
 
-Beta privata in sviluppo, senza una base di utenti esterni. La numerazione 2.x deriva da prove di rilascio automatico e non indica completezza. Obiettivo: completare Biblioteca → Trascrizioni → Traduzioni → Export, preservando la modalità documento/editoriale. Ordine in docs-dev/ROADMAP_2_0.md. Scriptoria resta riferimento tecnico per fonti, deposito, lavori, trascrizione ed export. UI sandbox tocca solo regressioni bloccanti.
+The interface, in-app guide and developer documentation are written in
+Italian; public documentation is published in Italian and English.
 
 ## Stack
 
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Zustand, Vite
-- **Backend**: Rust (Tauri v2), SQLite via SQLx, reqwest
-- **Test**: Vitest + Testing Library (Frontend), tokio-test + wiremock (Backend)
+- **Frontend:** React 19, TypeScript, Tailwind CSS v4, Zustand, Radix UI, Vite.
+- **Backend:** Rust, Tauri v2. SQLite through `@tauri-apps/plugin-sql` from the
+  frontend (`src/services/dbService.ts`) and through `rusqlite` + `sqlite-vec` in
+  the backend for the text corpus and embeddings (`src-tauri/src/vector/`).
+- **Tests:** Vitest + Testing Library (frontend), `cargo test` with tokio-test and
+  wiremock (backend), Playwright with a Tauri mock (`e2e/`).
+- **Docs:** VitePress (`docs/` Italian, `docs/en/` English).
 
-## Principi Fondamentali
+## Repository layout
 
-- **Semplicità**: Codice minimo. No feature speculative future.
-- **UI (vincolo utente)**: Comandi visivi solo `IconButton` neutri, icona + tooltip hover. No pill o pulsanti testuali/colorati. Verde solo per tab, selettori e stati attivi, salvo richiesta esplicita utente.
-- **Leggibilità**: Nomi descrittivi. Commenti solo per logiche non ovvie, vincoli nascosti, workaround.
-- **Immutabilità**: No mutare oggetti esistenti (preferisci `let` a `let mut`, usa spread operator e metodi funzionali in JS).
-- **File**: Max 400-800 righe. Organizza per dominio/feature, non per tipo file.
-- **TypeScript**: Tipi espliciti (mai `any`), costanti nominate. Gestione esplicita `null`/`undefined`. Validazione rigorosa input esterni.
-- **Rust**: No `.unwrap()` in produzione. Uso sistematico `?` e `thiserror`. Formattazione/linting rigorosi (`cargo fmt`, zero warning `clippy`). Evita `clone()` inutili.
-- **Architettura**: Handler backend snelli (logica in moduli dominio). Frontend con hook custom; Zustand solo per stato globale reale.
+| Path | Content |
+|---|---|
+| `src/components/` | UI by domain (`library`, `transcription`, `translation`, `pipeline`, `document`, `settings`, …); shared primitives in `src/components/ui/` |
+| `src/stores/`, `src/hooks/`, `src/services/` | Zustand stores (global state only), domain hooks, data and Tauri-command services |
+| `src/i18n/it.json`, `src/i18n/en.json` | All UI strings, including the in-app guide (`help.*`) |
+| `src/languages/` | Bundled ISO 639-3 and Glottolog language lists; regenerate with `npx tsx scripts/update-languages.ts` (in the app: Settings → Languages) |
+| `src-tauri/src/` | Backend modules by domain (`llm`, `deepl`, `vector`, `federation`, `iiif`, `ocr`, `jobs`, …) |
+| `src-tauri/migrations/` | SQLx migrations, fingerprinted in `src-tauri/migrations.lock` |
+| `docs-dev/` | Developer documentation; start from `docs-dev/README.md` |
 
-## Invarianti della Pipeline
+## Commands
 
-- **Prefix Caching (CRITICO)**: Ordine blocchi system prompt (`static → blob → stage-instructions`) **mai cambia**. Inversione spezza cache provider, moltiplica costi.
+```bash
+npm run tauri:dev          # run the desktop app in development
+npm run lint:all           # typecheck + ESLint
+npm test                   # Vitest
+npx vitest run <path>      # targeted frontend tests
+cd src-tauri && cargo fmt && cargo clippy --all-targets -- -D warnings
+cd src-tauri && cargo test # backend tests (includes the migration lock test)
+npx vitepress build docs   # public docs; fails on dead links
+```
 
-## Documentazione e Stato
+Run the checks relevant to what you changed; run full suites once, before
+committing work that touches several areas. Do not run app builds, Tauri
+builds, E2E or dependency installs unless asked or needed to diagnose a failure.
 
-- **Lettura selettiva**: Parti da `docs-dev/README.md` e apri solo i documenti
-  pertinenti al task; non leggere tutta `docs-dev` per default.
-- **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche flussi, comandi Tauri, schemi DB, store Zustand.
-- **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di ogni modifica visiva.
-- **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` inizio sessione, aggiorna obbligatorio fine task/feature.
+## Engineering principles
 
-### Regola di documentazione (OBBLIGATORIA, non negoziabile)
+- **Simplicity:** minimal code, no speculative features or abstractions.
+- **TypeScript:** explicit types, never `any`; explicit `null`/`undefined`
+  handling; validate external input (API responses, files, bundled data).
+- **Rust:** no `.unwrap()` in production code; propagate errors with `?` and
+  `thiserror`; zero `clippy` warnings; avoid needless `clone()`.
+- **Immutability:** prefer `let` over `let mut`; spread and functional methods in
+  TypeScript.
+- **Size and structure:** files of 400–800 lines at most, organised by domain.
+  Backend handlers stay thin; logic lives in domain modules. Frontend logic in
+  custom hooks.
+- **Comments:** only for non-obvious logic, hidden constraints and workarounds.
+- **Testing:** descriptive test names stating the expected behaviour; never
+  silence errors. Target 80% coverage on new logic.
 
-Ogni funzionalità nuova, rimossa o cambiata nel comportamento visibile va documentata **in tre posti nello stesso task**, prima di considerarlo finito:
+## Invariants
 
-1. **Guida in-app** — `src/components/help/HelpGuide.tsx` più le stringhe `help.*` in `src/i18n/it.json` **e** `src/i18n/en.json`. Se serve una sezione nuova, aggiungila all'elenco di navigazione, al selettore di rendering e al tipo `HelpSection` in `src/stores/uiStore.ts`.
-2. **Documentazione pubblica VitePress** — `docs/` (IT) **e** `docs/en/` (EN), pubblicata su GitHub Pages. Pagina nuova ⇒ voce in entrambe le barre laterali di `docs/.vitepress/config.ts`. Verifica con `npx vitepress build docs`, che fallisce sui collegamenti morti.
-3. **Documentazione di sviluppo** — il documento pertinente secondo la tabella in `docs-dev/README.md`: architettura per flussi, comandi e schema; design system per regole visive; roadmap per il lavoro che resta.
+- **Prompt cache order (critical):** the system prompt blocks are always ordered
+  `static → blob → stage instructions`. Changing the order breaks provider prompt
+  caching and multiplies costs. The composed prompts are covered by a
+  byte-equivalence test (`src-tauri/src/llm/legacy_prompts_test.rs`).
+- **Migrations:** an applied migration is never edited. Add a new migration and
+  its line in `migrations.lock`. Use migrations only for real schema changes,
+  never for one-off data fixes. Do not recreate tables (`DROP TABLE`) inside a
+  migration: SQLx runs it in a transaction where `PRAGMA foreign_keys=OFF` has no
+  effect, so cascades delete data. Pre-release consolidation of migrations is
+  done only on explicit request by the maintainer.
+- **Text corpus:** text revisions are immutable; a correction (text or language)
+  creates a new revision. Embeddings always record provider, model, dimensions
+  and input profile; similarity search only compares compatible measures.
+- **Languages:** a work's languages belong to the work (ISO 639-3 code, optional
+  Glottolog variety, free note), not to its pipelines. DeepL keeps its own
+  language pair in its phase options.
 
-Nessuna delle tre è opzionale né rimandabile a un task successivo: una funzione non documentata è una funzione che nessuno sa usare e che verrà riprogettata da capo fra un mese. Vale anche per le correzioni che cambiano cosa l'utente vede, non solo per le funzioni nuove.
+## UI rules
 
-Le tre superfici hanno destinatari diversi e non si copiano fra loro: la guida in-app spiega cosa fare mentre l'utente è nell'applicazione; la documentazione pubblica spiega il percorso completo e i limiti attuali; `docs-dev` registra invarianti e decisioni tecniche.
-Descrivi sempre il comportamento presente e i limiti veri, mai la cronologia dello sviluppo.
+Read `docs-dev/UI_DESIGN_SYSTEM.md` before any visual change.
 
-## Comunicazione con l'utente (CRITICO)
+- Commands are neutral icon-only `IconButton`s with a tooltip. No pills, no
+  coloured or text buttons outside dialogs.
+- Green (accent) only for tabs, selectors and active states.
+- Explanations go in hover hints, not permanent paragraphs.
+- Reuse the shared primitives in `src/components/ui/` (`Dialog`, `SettingRow`,
+  `SearchPicker`, `ClickPopover`, `ChoiceDots`, …); no local variants.
+- Every UI string exists in both `it.json` and `en.json`.
 
-Niki non scrive codice, non riconosce nomi tecnici. Spiegazioni utente:
+## Documentation rule (mandatory)
 
-- **Mai** citare nomi file, funzioni, variabili, hook, componenti
-- **Sempre** descrivere comportamenti visibili: cosa utente vede, clicca, ottiene
-- **Giusto**: "la finestra della Libreria ora mostra il nome del workspace nel titolo"
-- **Sbagliato**: "LibraryPanel usa panelTitle derivato da activeWorkspace?.name"
+Every feature that is added, removed or changes visible behaviour is documented
+in the same task, in three places:
 
-## Git e Test
+1. **In-app guide:** `src/components/help/HelpGuide.tsx` and the `help.*` strings
+   in both `src/i18n/it.json` and `src/i18n/en.json`. A new section also needs its
+   navigation entry, renderer case and the `HelpSection` type in
+   `src/stores/uiStore.ts`.
+2. **Public docs:** `docs/` (Italian) and `docs/en/` (English). A new page needs an
+   entry in both sidebars of `docs/.vitepress/config.ts`.
+3. **Developer docs:** the relevant file per `docs-dev/README.md` — architecture
+   for flows, commands and schema; design system for visual rules; roadmap for
+   remaining work.
 
-- **Git**: Aggiorna sempre `main` prima creare branch (`git checkout main && git pull origin main && git checkout -b nome-branch`).
-- **Test**: Approccio TDD. Copertura minima 80%. Nomi test descrittivi su comportamento atteso. Mai sopprimere errori in silenzio. Su task lunghi fare i test solo alla fine.
+The three surfaces have different readers and are not copies of each other.
+Always describe present behaviour and real limits, never development history.
 
----
+## Git
 
-## Strumenti e Ottimizzazione Token
+- Never work on `main`. Branch from an up-to-date `main`
+  (`git checkout main && git pull origin main && git checkout -b <branch>`),
+  unless the maintainer names a different base.
+- Conventional commits: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`,
+  `perf`, `ci`, with an optional scope.
+- Base and target branch of a pull request are chosen by the maintainer;
+  opening a PR never implies merging it.
 
-### Repomix (Esplorazione Iniziale)
+## References
 
-Prima di analizzare porzioni codebase estese o poco conosciute, usa **repomix** (`skill repomix-commands:pack-local`).
-
-- **Scopo**: Vista compatta e indicizzata intero progetto in un'unica operazione, azzera catene esplorative costose filesystem, risparmia token.
-- **Misura**: usa include mirati al dominio da modificare; non generare pack completi quando bastano pochi file noti.
-
-### RTK (Rust Token Killer) - Filtro Output CLI
-
-Per prevenire esaurimento finestra contesto, **ogni comando terminale deve iniziare con `rtk`**.
-
-`rtk` intercetta output, filtra verbosità, restituisce formati iper-compatti, risparmia 60-90% token.
-
-- **Uso corretto**: `rtk cargo test`, `rtk grep pattern`, `rtk read file.ts`
-- **Catene**: Anche con `&&`, applica ogni step: `rtk git add . && rtk git commit -m "msg" && rtk git push`
-
-### Economia di tempo e token
-
-- **Comunicazione**: usa il skill `caveman` nelle attività operative, salvo casi in cui la chiarezza o la sicurezza richiedano prosa normale.
-- **Verifica proporzionata**: esegui soltanto test direttamente pertinenti ai file o contratti modificati — `npx vitest run <percorso>`, `cargo test <modulo>`. Suite complete **una sola volta, prima del commit**, e solo se il commit tocca più aree; mai fra una modifica e l'altra, mai per confermare qualcosa che il compilatore ha già detto. Vale anche per `clippy` e `tsc`: si lanciano quando servono, non a ogni passo.
-- **Build**: non eseguire build dell'app, build Tauri, build della documentazione, E2E o installazioni di dipendenze salvo richiesta esplicita dell'utente o necessità indispensabile per diagnosticare un errore.
-- **Esplorazione**: preferisci `rtk rg`, letture mirate e repomix compresso; evita scansioni o output completi non necessari al task.
-
-### MCP Tools: code-review-graph
-
-⚠️ **REGOLA DI INGAGGIO (OTTIMIZZAZIONE TOKEN):**
-Strumenti grafo consumano molti token per esecuzione, aumentano latenza. Uso NON default.
-
-1. **Usa strumenti MCP (es. `query_graph`, `get_impact_radius`) SOLO se:**
-   - Utente chiede analisi architetturale o report impatto cross-file.
-   - Devi mappare dipendenze complesse per refactoring strutturale profondo.
-   - Stai esplorando parte completamente sconosciuta e interconnessa progetto.
-
-2. **Usa comandi CLI standard (`rtk grep`, `rtk read`, `rtk ls`) o repomix come DEFAULT per:**
-   - Fix locali, aggiunta componenti isolati o logica circoscritta.
-   - Interventi dentro file già noti.
-   - Lettura firme funzioni o ispezione file configurazione.
+Scriptoria remains the technical reference for sources, storage, jobs,
+transcription and export (#186, #446).

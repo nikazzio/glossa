@@ -37,7 +37,7 @@ function Row({ label, value, tone }: { label: string; value: string; tone?: stri
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-xs uppercase tracking-[0.14em] text-editorial-muted/70">{title}</div>
+      <div className="text-xs uppercase tracking-section text-editorial-muted/70">{title}</div>
       {children}
     </div>
   );

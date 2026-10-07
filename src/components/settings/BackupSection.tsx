@@ -2,19 +2,12 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, Check, Copy, DatabaseBackup, Download, KeyRound, LockKeyhole, Upload } from 'lucide-react';
-import {
-  Dialog,
-  DialogCancelButton,
-  DialogConfirmButton,
-  FIELD_CLASSNAME,
-  IconButton,
-  SectionLabel,
-  SettingRow,
-} from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, FIELD_CLASSNAME, IconButton, SettingRow, PanelSection } from '../ui';
 import { writeBackup, restoreBackup } from '../../services/backupService';
 import { enqueueVaultVerification } from '../../services/jobsService';
 import { markRestoreCheck } from '../../services/restoreFollowUp';
 import { logger } from '../../utils/logger';
+import { FIELD_MONO_CLASSNAME } from '../ui/fieldStyles';
 
 type BackupDialog = 'create' | 'restore' | 'recovery' | null;
 
@@ -165,10 +158,9 @@ export function BackupSection() {
   };
 
   return (
-    <section className="space-y-4">
-      <SectionLabel icon={DatabaseBackup} label={t('settings.backup')} />
+    <PanelSection icon={DatabaseBackup} label={t('settings.backup')}>
 
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+      <div className="divide-y divide-rule border-b border-rule">
         <SettingRow label={t('settings.backupExport')} hint={t('settings.backupHint')}>
           <div className="flex items-center gap-1">
             <IconButton size="sm" onClick={() => void handleWrite(false)} disabled={busy} title={t('settings.backupExportTooltip')}>
@@ -242,12 +234,12 @@ export function BackupSection() {
         footer={<div className="flex justify-end"><DialogConfirmButton onClick={() => { setRecoveryCodeCopied(false); setRecoveryCode(null); setDialog(null); }}>{t('settings.backupRecoveryCodeSaved')}</DialogConfirmButton></div>}
       >
         <div className="flex items-center gap-2">
-          <input aria-label={t('settings.backupShowRecoveryCode')} className="min-w-0 flex-1 rounded border border-editorial-border bg-editorial-textbox px-3 py-2 font-mono text-sm text-editorial-ink" onFocus={(event) => event.currentTarget.select()} readOnly value={recoveryCode ?? ''} />
+          <input aria-label={t('settings.backupShowRecoveryCode')} className={`${FIELD_MONO_CLASSNAME} min-w-0 flex-1`} onFocus={(event) => event.currentTarget.select()} readOnly value={recoveryCode ?? ''} />
           <IconButton size="sm" title={t('settings.backupCopyRecoveryCode')} onClick={() => void copyRecoveryCode()}>
             {recoveryCodeCopied ? <Check size={13} /> : <Copy size={13} />}
           </IconButton>
         </div>
       </Dialog>
-    </section>
+    </PanelSection>
   );
 }

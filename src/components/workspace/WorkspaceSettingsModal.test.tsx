@@ -22,7 +22,7 @@ describe('WorkspaceSettingsModal', () => {
         memoryExtractorProvider: 'openai',
         memoryExtractorModel: 'gpt-5.4-nano',
         memoryExtractorPrompt: 'Estrai le frasi.',
-        ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '',
+        ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', memorySearchAllWorkspaces: false,
         createdAt: '2026-07-28T00:00:00.000Z',
       },
       workspaces: [],
@@ -46,5 +46,13 @@ describe('WorkspaceSettingsModal', () => {
       iconKey: 'anchor',
     });
     expect(onClose).toHaveBeenCalledOnce();
+  });
+  it('no longer offers a search-all-workspaces switch in the memory tab and never saves it', async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceSettingsModal open onClose={vi.fn()} />);
+    await user.click(screen.getByRole('tab', { name: 'workspace.settings.memoryTab' }));
+    expect(screen.queryByRole('switch', { name: 'workspace.memorySearchAllWorkspaces' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'common.save' }));
+    expect(updateActiveWorkspace).toHaveBeenCalledWith(expect.not.objectContaining({ memorySearchAllWorkspaces: expect.anything() }));
   });
 });

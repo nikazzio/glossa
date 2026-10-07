@@ -146,6 +146,19 @@ export async function setDocumentStatus(
   logger.info('transcription.document.status_changed', { documentId, status });
 }
 
+/** Lunghezza massima del nome di una trascrizione. */
+export const DOCUMENT_TITLE_MAX = 200;
+
+export async function renameDocument(documentId: string, title: string): Promise<void> {
+  const trimmed = title.trim();
+  if (!trimmed || trimmed.length > DOCUMENT_TITLE_MAX) throw new Error('transcription.invalidTitle');
+  await execute(
+    'UPDATE transcription_documents SET title = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+    [documentId, trimmed],
+  );
+  logger.info('transcription.document.renamed', { documentId });
+}
+
 export async function addSegment(
   documentId: string,
   position: number,

@@ -1,26 +1,31 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TranslationsArea } from './TranslationsArea';
 import { useProjectStore } from '../../stores/projectStore';
+import { useUiStore } from '../../stores/uiStore';
+import type { TranslationCatalogEntry } from '../../services/translationCatalogService';
 import '../../test/i18n-mock';
 
-const mockListAllProjects = vi.fn();
-vi.mock('../../services/projectService', () => ({
-  listAllProjects: () => mockListAllProjects(),
+const mockListCatalog = vi.fn();
+vi.mock('../../services/translationCatalogService', () => ({
+  listTranslationCatalog: () => mockListCatalog(),
 }));
-
+const mockRenameProject = vi.fn().mockResolvedValue(undefined);
+vi.mock('../../services/projectService', () => ({
+  renameProject: (id: string, name: string) => mockRenameProject(id, name),
+}));
 vi.mock('../../stores/projectStore');
 
-const PROJECT_ALPHA = {
-  id: 'p1', name: 'Fiore dei Liberi', source_language: 'it', target_language: 'en',
-  created_at: '2026-07-15T10:00:00.000Z', updated_at: '2026-07-15T10:00:00.000Z',
-  pipeline_count: 1, pipeline_names: null, workspace_id: 'ws-1', workspace_name: 'Alpha',
+const ALPHA: TranslationCatalogEntry = {
+  id: 'p1', name: 'Fiore dei Liberi', workspaceId: 'ws-1', workspaceName: 'Alpha',
+  sourceLanguage: 'Italian', targetLanguage: 'English', updatedAt: '2026-07-15T10:00:00.000Z',
+  chunkCount: 0, translatedChunks: 0, verifiedChunks: 0,
 };
-const PROJECT_BETA = {
-  id: 'p2', name: 'Vadi', source_language: 'it', target_language: 'en',
-  created_at: '2026-07-14T10:00:00.000Z', updated_at: '2026-07-14T10:00:00.000Z',
-  pipeline_count: 2, pipeline_names: null, workspace_id: 'ws-2', workspace_name: 'Beta',
+const BETA: TranslationCatalogEntry = {
+  id: 'p2', name: 'Vadi', workspaceId: 'ws-2', workspaceName: 'Beta',
+  sourceLanguage: 'Latin', targetLanguage: 'Italian', updatedAt: '2026-07-14T10:00:00.000Z',
+  chunkCount: 4, translatedChunks: 4, verifiedChunks: 4,
 };
 
 const mockOpenProjectInWorkspace = vi.fn().mockResolvedValue(undefined);
@@ -28,7 +33,8 @@ const mockRemoveProject = vi.fn().mockResolvedValue(undefined);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockListAllProjects.mockResolvedValue([PROJECT_ALPHA, PROJECT_BETA]);
+  mockListCatalog.mockResolvedValue([ALPHA, BETA]);
+  useUiStore.setState({ location: { area: 'translations' }, translationsView: 'list', translationsGrouping: 'none' });
   vi.mocked(useProjectStore).mockImplementation((selector) => selector({
     openProjectInWorkspace: mockOpenProjectInWorkspace,
     removeProject: mockRemoveProject,
@@ -36,53 +42,55 @@ beforeEach(() => {
 });
 
 describe('TranslationsArea', () => {
-  it('renders Translations heading', async () => {
-    render(<TranslationsArea />);
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    await screen.findByText('Fiore dei Liberi');
-  });
-
-  it('shows every project across all workspaces, each tagged with its workspace name', async () => {
+  it('lists every translation of every workspace with its languages and workspace', async () => {
     render(<TranslationsArea />);
 
-    await screen.findByText('Fiore dei Liberi');
-    expect(screen.getByText('Vadi')).toBeInTheDocument();
-    expect(screen.getByText('Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Beta')).toBeInTheDocument();
+    const alpha = (await screen.findByText('Fiore dei Liberi')).closest('article');
+    const beta = screen.getByText('Vadi').closest('article');
+    if (!alpha || !beta) throw new Error('row not found');
+    expect(within(alpha).getByText(/Italian → .*English/)).toBeInTheDocument();
+    expect(within(alpha).getByText(/Alpha/)).toBeInTheDocument();
+    expect(within(beta).getByText(/Beta/)).toBeInTheDocument();
   });
 
-  it('renders sort toggle buttons', async () => {
-    render(<TranslationsArea />);
-    await screen.findByText('Fiore dei Liberi');
-    expect(screen.getByRole('button', { name: /recenti|recent|updatedat/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /nome|name/i })).toBeInTheDocument();
-  });
-
-  it('opening a project delegates to the store, workspace switch included', async () => {
+  it('shows on the verified shelf only translations with every segment verified', async () => {
     render(<TranslationsArea />);
     await screen.findByText('Vadi');
 
-    await userEvent.click(screen.getByText('Vadi'));
+    await userEvent.click(screen.getByRole('button', { name: /areas.translations.catalog.shelves.verified/ }));
 
-    await waitFor(() => {
-      expect(mockOpenProjectInWorkspace).toHaveBeenCalledWith('p2', 'ws-2');
-    });
+    expect(screen.queryByText('Fiore dei Liberi')).not.toBeInTheDocument();
+    expect(screen.getByText('Vadi')).toBeInTheDocument();
   });
 
-  it('shows an error toast and clears the opening state when the store call fails', async () => {
+  it('opening a translation delegates to the store, workspace switch included', async () => {
+    render(<TranslationsArea />);
+    await userEvent.click(await screen.findByText('Vadi'));
+
+    await waitFor(() => expect(mockOpenProjectInWorkspace).toHaveBeenCalledWith('p2', 'ws-2'));
+  });
+
+  it('re-enables the rows when opening fails', async () => {
     mockOpenProjectInWorkspace.mockRejectedValueOnce(new Error('boom'));
     render(<TranslationsArea />);
-    await screen.findByText('Fiore dei Liberi');
+    const name = await screen.findByText('Fiore dei Liberi');
 
-    const card = await screen.findByText('Fiore dei Liberi');
-    await userEvent.click(card);
+    await userEvent.click(name);
 
-    await waitFor(() => {
-      expect(mockOpenProjectInWorkspace).toHaveBeenCalledWith('p1', 'ws-1');
-    });
-    // the button must be re-enabled (opening state cleared) after the failure
-    await waitFor(() => {
-      expect(card.closest('button')).not.toBeDisabled();
-    });
+    await waitFor(() => expect(mockOpenProjectInWorkspace).toHaveBeenCalledWith('p1', 'ws-1'));
+    await waitFor(() => expect(name.closest('button')).not.toBeDisabled());
+  });
+
+  it('renames a translation in place from the row command', async () => {
+    render(<TranslationsArea />);
+    const row = (await screen.findByText('Vadi')).closest('article');
+    if (!row) throw new Error('row not found');
+
+    await userEvent.click(within(row).getByRole('button', { name: 'areas.translations.catalog.rename' }));
+    const field = screen.getByRole('textbox', { name: 'areas.translations.catalog.renameLabel' });
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Vadi, De arte gladiatoria{Enter}');
+
+    await waitFor(() => expect(mockRenameProject).toHaveBeenCalledWith('p2', 'Vadi, De arte gladiatoria'));
   });
 });

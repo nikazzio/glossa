@@ -46,6 +46,10 @@ interface InspectorShellProps {
   tabRowHeightClassName?: string;
   /** Informazione compatta che resta sotto il comando di riapertura. */
   collapsedContent?: ReactNode;
+  /** Blocco fisso fra l'intestazione e le linguette (es. i comandi di
+   *  esecuzione dello Studio di traduzione): resta in vista qualunque scheda
+   *  sia aperta. */
+  beforeTabs?: ReactNode;
   /**
    * Falso quando il contenuto porta già il proprio contenitore scorrevole (per
    * esempio una barra di filtri fissa sopra un elenco lungo): due aree che
@@ -76,6 +80,7 @@ export function InspectorShell({
   onCollapsedChange,
   headerActions,
   collapsedContent,
+  beforeTabs,
   bodyScrolls = true,
   headerHeightClassName = 'h-20',
   tabRowHeightClassName,
@@ -160,6 +165,7 @@ export function InspectorShell({
           {headerActions && <div className="ml-auto flex shrink-0 items-center gap-1">{headerActions}</div>}
         </div>
       )}
+      {beforeTabs && <div className="shrink-0 border-b border-editorial-border">{beforeTabs}</div>}
       {tabs.length > 0 && (
         <div className={`flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 ${tabRowHeightClassName ?? 'py-2'}`}>
           <div role="tablist" aria-orientation="horizontal" aria-label={ariaLabel} className="flex min-w-0 shrink-0 items-center gap-1">

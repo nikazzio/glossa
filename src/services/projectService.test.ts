@@ -9,7 +9,8 @@ const dbMocks = vi.hoisted(() => ({
 vi.mock('./dbService', () => dbMocks);
 
 const {
-  deleteProject, getProjectSource, listProjects, saveProjectSource,
+  createProject, deleteProject, getProjectSource, listProjects, saveProjectSource,
+  saveWorkLanguages, listWorkspaceLanguageCodes,
   getDashboardOverviewStats, listProjectsNeedingAttention,
 } = await import('./projectService');
 
@@ -101,8 +102,10 @@ describe('projectService — source text', () => {
         renderProfile: 'markdown',
         markdownAware: true,
         experimentalImport: 'docx-markdown',
-        sourceLanguage: 'Latin',
-        targetLanguage: 'English',
+      },
+      {
+        source: { code: 'lat', variety: 'medieval', note: '' },
+        target: { code: null, variety: null, note: ' modern register ' },
       },
     );
 
@@ -117,10 +120,50 @@ describe('projectService — source text', () => {
       'markdown',
       1,
       'docx-markdown',
-      'Latin',
-      'English',
+      'lat',
+      'medieval',
+      '',
+      '',
+      null,
+      'modern register',
       'proj-1',
     ]);
+  });
+
+  it('getProjectSource returns the work languages from the project columns', async () => {
+    dbMocks.select.mockResolvedValueOnce([
+      {
+        source_display_text: 'x', source_processing_text: 'x', source_footnotes: '[]',
+        document_format: 'plain', render_profile: 'plain-text', markdown_aware: 0, experimental_import: null,
+        source_language: 'lat', source_language_variety: 'medieval', source_language_note: 'abbrev.',
+        target_language: '', target_language_variety: null, target_language_note: '',
+      },
+    ]);
+
+    const result = await getProjectSource('proj-1');
+
+    expect(result?.workLanguages).toEqual({
+      source: { code: 'lat', variety: 'medieval', note: 'abbrev.' },
+      target: { code: null, variety: null, note: '' },
+    });
+  });
+
+  it('saveWorkLanguages updates only the six language columns', async () => {
+    await saveWorkLanguages('proj-1', {
+      source: { code: 'lat', variety: null, note: '' },
+      target: { code: 'ita', variety: null, note: '' },
+    });
+
+    const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+    expect(query).toContain('UPDATE projects SET');
+    expect(query).not.toContain('source_display_text');
+    expect(params).toEqual(['lat', null, '', 'ita', null, '', 'proj-1']);
+  });
+
+  it('listWorkspaceLanguageCodes returns the non-empty codes used in the workspace', async () => {
+    dbMocks.select.mockResolvedValueOnce([{ code: 'lat' }, { code: '' }, { code: null }, { code: 'ita' }]);
+
+    await expect(listWorkspaceLanguageCodes('ws-1')).resolves.toEqual(['lat', 'ita']);
   });
 });
 
@@ -128,20 +171,44 @@ describe('projectService — deleteProject', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.runInTransaction.mockImplementation(async (callback: (run: typeof dbMocks.execute) => Promise<void>) => callback(dbMocks.execute));
   });
 
   it('deletes project-scoped data before deleting the project row', async () => {
     await deleteProject('proj-1');
+    expect(dbMocks.runInTransaction).toHaveBeenCalledOnce();
 
     expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
       'DELETE FROM operation_logs WHERE project_id = $1',
       'DELETE FROM project_glossaries WHERE project_id = $1',
-      'DELETE FROM source_phrase_embeddings WHERE project_id = $1',
       'UPDATE phrase_memory SET project_id = NULL, chunk_id = NULL WHERE project_id = $1',
       'DELETE FROM translations WHERE project_id = $1',
       'DELETE FROM pipelines WHERE project_id = $1',
       'DELETE FROM projects WHERE id = $1',
     ]);
+  });
+});
+
+const LANGUAGES = { source: { code: 'lat', variety: null, note: '' }, target: { code: 'ita', variety: null, note: '' } };
+
+describe('projectService — explicit book origin', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.runInTransaction.mockImplementation(async (callback: (run: typeof dbMocks.execute) => Promise<void>) => callback(dbMocks.execute));
+  });
+  it('creates the translation, pipeline and selected source version in one transaction', async () => {
+    const id = await createProject('Fiore', LANGUAGES, 'ws-1', 'version-a');
+    expect(dbMocks.runInTransaction).toHaveBeenCalledOnce();
+    expect(dbMocks.execute).toHaveBeenCalledTimes(3);
+    expect(dbMocks.execute.mock.calls[0][1]).toEqual([id, 'Fiore', 'ws-1', 'lat', null, '', 'ita', null, '']);
+    expect(String(dbMocks.execute.mock.calls[1][0])).not.toContain('language');
+    expect(dbMocks.execute.mock.calls[2]).toEqual([expect.stringContaining('INSERT INTO translation_origins'), [id, 'version-a']]);
+  });
+  it('does not infer a book when no version is selected', async () => {
+    await createProject('Fiore.txt', LANGUAGES, 'ws-1');
+    expect(dbMocks.execute).toHaveBeenCalledTimes(2);
+    expect(dbMocks.execute.mock.calls.some(([query]) => String(query).includes('translation_origins'))).toBe(false);
   });
 });
 

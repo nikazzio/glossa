@@ -8,12 +8,18 @@ import {
   orderLibraryCatalog,
   parseLibraryFilters,
   shelfCounts,
+  timestampOf,
   type CatalogClock,
   type LibraryFilters,
 } from './libraryCatalogFilters';
 import { EMPTY_SOURCE_FIELDS, type LibraryCatalogEntry } from '../types';
 
 const NOW = Date.parse('2026-09-25T12:00:00Z');
+
+it('normalizes SQLite UTC timestamps without changing ISO timestamps', () => {
+  expect(timestampOf('2026-09-25 00:30:00')).toBe(Date.parse('2026-09-25T00:30:00Z'));
+  expect(timestampOf('2026-09-25T00:30:00+02:00')).toBe(Date.parse('2026-09-25T00:30:00+02:00'));
+});
 const CLOCK: CatalogClock = { now: NOW, openedAt: {} };
 
 function entry(id: string, overrides: Partial<LibraryCatalogEntry> = {}): LibraryCatalogEntry {

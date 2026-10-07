@@ -5,6 +5,9 @@ export interface TabStripItem {
   id: string;
   label: string;
   icon: ReactNode;
+  /** Spenta per lo stato del contenuto: resta visibile e raggiungibile col
+   *  fuoco, il motivo sta nell'etichetta; le frecce la saltano. */
+  disabled?: boolean;
 }
 
 /**
@@ -38,14 +41,23 @@ export function TabStrip({
     buttons.current[id]?.focus();
   };
 
+  // Le frecce e Home/End saltano le linguette spente: ricevono il fuoco solo
+  // col mouse o col tabulatore, mai come scelta.
+  const nextEnabled = (start: number, step: number): string | null => {
+    for (let offset = 1; offset <= tabs.length; offset += 1) {
+      const candidate = tabs[(start + step * offset + tabs.length * offset) % tabs.length];
+      if (!candidate.disabled) return candidate.id;
+    }
+    return null;
+  };
+
   const handleKeyDown = (id: string, event: KeyboardEvent<HTMLButtonElement>) => {
     const index = tabs.findIndex((tab) => tab.id === id);
-    const last = tabs.length - 1;
     let next: string | null = null;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = tabs[(index - 1 + tabs.length) % tabs.length].id;
-    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = tabs[(index + 1) % tabs.length].id;
-    else if (event.key === 'Home') next = tabs[0].id;
-    else if (event.key === 'End') next = tabs[last].id;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = nextEnabled(index, -1);
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = nextEnabled(index, 1);
+    else if (event.key === 'Home') next = nextEnabled(-1, 1);
+    else if (event.key === 'End') next = nextEnabled(tabs.length, -1);
     if (next === null) return;
     event.preventDefault();
     go(next);
@@ -58,6 +70,7 @@ export function TabStrip({
           key={tab.id}
           buttonId={`${idPrefix}-tab-${tab.id}`}
           active={tab.id === activeId}
+          disabled={tab.disabled}
           onClick={() => onChange(tab.id)}
           onKeyDown={(event) => handleKeyDown(tab.id, event)}
           label={tab.label}

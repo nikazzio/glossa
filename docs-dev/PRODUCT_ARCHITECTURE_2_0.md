@@ -390,6 +390,31 @@ Glossa prepara dataset versionati ed esportabili; l'addestramento resta
 esterno nella 2.0. Modelli o adapter prodotti fuori dall'app possono essere
 registrati, valutati e riusati tramite provider locali come Ollama.
 
+### Base del corpus testuale — decisioni, implementazione da completare
+
+Unità testuali di lunghezza variabile (frasi, passaggi, pagine, sezioni), con
+identità, revisioni e provenienza indipendenti dai modelli. Conservare il testo
+archiviato e la selezione nella fonte, anche attraverso più pagine. Originale,
+normalizzazione e traduzioni sono rappresentazioni distinguibili. Correzioni
+della fonte non riscrivono silenziosamente gli estratti già utilizzati.
+
+Memoria traduttiva, raccolte di studio ed evidenze documentali condividono la
+base; una «tecnica» è un esempio di classificazione, non il tipo obbligatorio
+del corpus. Tag manuali riutilizzabili separati dai metadati della fonte;
+annotazioni automatiche identificano input/versione, modello e conferma umana.
+Vocabolari controllati, gerarchie e classificazione automatica sono estensioni.
+
+Una unità può avere più embedding. Ogni misura dichiara input e revisione,
+ruolo del testo, provider/modello, dimensione e preparazione. Modello obbligatorio,
+senza eccezioni per dati precedenti. Il workspace mantiene un modello attivo;
+aggiungere una misura conserva le altre. Ricerca solo fra misure compatibili,
+senza confronto fra modelli diversi. La ricerca globale esplicita della memoria
+non sposta gli oggetti né estende implicitamente l'ambito di ogni corpus.
+
+Issue collegate: #227, #391, #382, #380, #377, #209, #223 e #381; i passi
+successivi sono nella roadmap. La base deve integrare revisioni e provenienza già
+esistenti, non creare un registro parallelo scollegato.
+
 ## 10. Scriptoria come riferimento principale
 
 Ogni issue implementativa 2.0 deve indicare quali moduli Scriptoria sono stati

@@ -11,8 +11,8 @@ import { Hint } from './Hint';
  * dentro la scheda Scaricamento e ogni altra scheda ne aveva una copia leggermente
  * diversa — corpo del testo, spaziatura, icona ripetuta a sinistra.
  *
- * Va dentro una lista `divide-y divide-editorial-border/60 border-y
- * border-editorial-border/70`, che è il trattamento degli elenchi nelle finestre.
+ * Va dentro una lista `divide-y divide-rule border-y
+ * border-rule`, che è il trattamento degli elenchi nelle finestre.
  */
 export function SettingRow({
   label,

@@ -79,7 +79,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
           )}
 
           {/* Formato */}
-          <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
+          <div className="border-y border-rule bg-editorial-bg/45 px-4 py-4">
             <div className="mb-2">
               <SectionLabel icon={FileText} label={t('files.exportFormat')} />
             </div>
@@ -104,7 +104,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
 
           {/* Separatore */}
           {showSeparator && (
-            <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
+            <div className="border-y border-rule bg-editorial-bg/45 px-4 py-4">
               <div className="mb-2">
                 <SectionLabel icon={Rows3} label={t('files.exportSeparator')} />
               </div>

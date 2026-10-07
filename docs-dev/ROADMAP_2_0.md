@@ -1,6 +1,15 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 29 settembre 2026.
+Aggiornata: 7 ottobre 2026.
+
+## Prossimi passi concordati (7 ottobre 2026)
+
+- **Dashboard**, insieme ai colori delle superfici (#485 D).
+- Unione di #488 su `main` con l'accorpamento delle migrazioni 0004-0008; poi
+  chiusura di #489.
+- Da chiudere dopo verifica: #481, #467, #469.
+- Futuro, senza data: sblocco del prompt delle fasi quando esistono frammenti
+  tradotti.
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 
@@ -140,7 +149,8 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
 
 - Verificare i percorsi già presenti e correggere le regressioni prima di
   aggiungere nuove varianti. Revisione UI/UX generale ancora da fare.
-- Rendere visibili log generali, salvataggio e stato dei lavori (#413),
+- Rendere visibili log generali, salvataggio (fatto per traduzioni e
+  trascrizioni, mancano le fonti) e stato dei lavori (#413),
   riusando la coda e i pannelli esistenti.
 - Riallineare capacità dichiarate e reali dei provider (#397). La ricerca
   aggregata (#395) viene dopo la verifica dei singoli provider. I risultati
@@ -221,6 +231,43 @@ e il testo delle pagine vicine come contesto di continuità nel prompt.
 L'immagine inviata (ottimizzata a misura scelta o copia locale così com'è) si
 sceglie in Impostazioni → Trascrizioni e per sessione nella scheda OCR.
 
+**Stato al 1° ottobre 2026 (#485 H e L).** Lo Studio sta nella finestra a
+ogni larghezza; salvataggio manuale di una versione (comando e Ctrl+S). La
+pagina iniziale delle Trascrizioni è un catalogo sul modello della Biblioteca,
+con gli stessi pezzi condivisi (scaffali, ricerca, filtri rapidi, tre viste,
+comandi di riga, barretta di completamento). Anche la pagina iniziale delle
+Traduzioni segue lo stesso modello (#485 N, primo passo: scaffali, filtri
+workspace e lingue, rinomina | elimina, creazione «da zero» con il file).
+**Restano**: strada «da una trascrizione» con copia fissata, legame con opera
+e trascrizione d'origine e, solo allora, i comandi apri l'opera / apri la
+trascrizione, filtri per biblioteca e secolo, raggruppamento per biblioteca;
+Studio di traduzione (#485 N): fatta la disposizione (T1: barra principale
+sempre in vista, riga d'intestazione, una colonna Strumenti a destra) e il
+salvataggio (T2: stato nella barra di stato anche per le trascrizioni,
+dischetto e Ctrl/⌘+S nei fogli, salvataggio prima di uscire) e la verifica (T3: spunta, motivi dei comandi
+spenti; il «da aggiornare» resta solo in memoria per scelta, si perde
+riaprendo) e lo storico (T4: sottolinguetta in Revisione, versioni dal
+dischetto, ripristino; **in futuro**: nomi/puntine sulle versioni, con una
+colonna nuova) e la configurazione della pipeline (T5: finestra a sei linguette
+comuni, sezione Modello e editor dei prompt comuni, niente spiegazioni fisse,
+«Azzera tutte le traduzioni» a icona, velo comune) e il velo oro sul frammento
+in traduzione (T6) e Memoria/risorse linguistiche (T7: scheda del frammento,
+modelli modificabili con filtro OCR, dizionari con ambito visibile, memorie
+con provenienza/modello e filtri, ricerca fra workspace). T7 implementato:
+resta la prova dal vivo. Decisione del 3 ottobre: nessuna retrocompatibilità
+per embedding senza modello; più misure per unità testuale, modello obbligatorio
+e ricerca compatibile. Base corpus implementata: unità/revisioni/misure/tag,
+provenienza e libro esplicito; selezione di pagine/sezioni e analisi restano future.
+Schema aggiornato da `0003_text_corpus.sql`, baseline applicata conservata;
+consolidamento prima del merge riservato all'utente.
+Costi T8 su pannelli comuni; conteggio blocchi confermato dall'utente.
+T9: revisione finale e nove correzioni della review implementate; i due Studio
+sono inclusi nello stesso ramo della PR #488. Restano CI e prova dal vivo;
+la UI/UX non è approvata dall'utente e richiede una nuova revisione visuale.
+quali riepiloghi unire
+nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
+ora.
+
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti
 alla fonte.
@@ -233,6 +280,10 @@ Issue: #208, #221, #222, #209, #223, #189, #224; risorse contestuali #227.
 - Creare il progetto di traduzione dal testo approvato senza perdere provenienza.
 - Collegare fonte, trascrizioni e traduzioni dalla scheda dell'opera.
 - Integrare corpus e suggerimenti contestuali con ambito workspace chiaro.
+- Generalizzare #227 a unità testuali di lunghezza variabile, anche passaggi
+  attraverso più pagine; tecniche storiche come esempio di classificazione.
+  Tenere distinti corpus testuale ed evidenze visive #209/#223, collegandone
+  le provenienze. Tag manuali riutilizzabili e versioni del testo nella base.
 
 Uscita: image workbench e corpus di frammenti pronti; passaggio trascrizione
 → traduzione con provenienza conservata, storico ricostruibile.
@@ -266,6 +317,14 @@ L'addestramento resta esterno a Glossa.
 
 Il loro perimetro minimo per la prima beta completa va deciso sulla base dei
 casi reali: non dichiararli rimossi né prometterli tutti nel prossimo tag.
+
+La base del corpus testuale è consegnata (unità, revisioni, misure con
+modello/dimensioni/profilo, tag, provenienza; vedi architettura). #391 va
+riallineata alla conservazione delle misure; #382 riusa questa base per
+originali e traduzioni. Restano passi successivi, da valutare su testi
+medievali reali: selettore di pagine/sezioni, ricerca ibrida lessicale +
+semantica, tag automatici con conferma, vocabolari multilingui (SKOS),
+confronti fra testimoni e analisi di opere intere.
 
 ## Riferimenti e lavori trasversali
 

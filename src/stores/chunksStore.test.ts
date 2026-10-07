@@ -3,6 +3,7 @@ import { usePipelineStore } from './pipelineStore';
 import { useChunksStore, flushPendingTokenBatch } from './chunksStore';
 import { useUiStore } from './uiStore';
 import { useConfigStore } from './configStore';
+import { makeTranslationChunk } from '../test/chunkFactory';
 
 describe('chunksStore', () => {
   beforeEach(() => {
@@ -270,6 +271,18 @@ describe('chunksStore', () => {
     useChunksStore.getState().updateChunkSourceText(chunkId, 'Original text');
 
     expect(useChunksStore.getState().chunks).toBe(before);
+  });
+
+  it('verifying a translation clears «needs updating»; returning it to draft does not bring it back', () => {
+    useChunksStore.setState({
+      chunks: [{ ...makeTranslationChunk({ id: 'c1', translationDisplayText: 'Uno' }), translationStale: true }],
+    });
+
+    useChunksStore.getState().toggleChunkTranslationLock('c1');
+    expect(useChunksStore.getState().chunks[0]).toMatchObject({ translationLocked: true, translationStale: false });
+
+    useChunksStore.getState().toggleChunkTranslationLock('c1');
+    expect(useChunksStore.getState().chunks[0]).toMatchObject({ translationLocked: false, translationStale: false });
   });
 
   describe('O(1) index — per-id updates only touch the target chunk', () => {

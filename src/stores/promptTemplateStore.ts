@@ -1,10 +1,23 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
+import i18next from 'i18next';
 import type { PromptTemplate, PromptTemplateContext, PromptTemplateWorkflow } from '../types';
 import {
   getPromptTemplates,
   savePromptTemplate,
+  updatePromptTemplate,
   deletePromptTemplate,
 } from '../services/promptTemplateService';
+
+async function fetchTemplates(): Promise<PromptTemplate[]> {
+  const { templates, skipped } = await getPromptTemplates();
+  if (skipped.length > 0) {
+    toast.error(i18next.t('pipeline.templates.skipped', { count: skipped.length }), {
+      description: skipped.join(', '),
+    });
+  }
+  return templates;
+}
 
 export type SaveTemplateFn = (
   name: string,
@@ -27,6 +40,7 @@ interface PromptTemplateState {
     defaultModel?: string,
     defaultProvider?: string,
   ) => Promise<void>;
+  updateTemplate: (id: string, input: Omit<PromptTemplate, 'id' | 'createdAt'>) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
 }
 
@@ -41,14 +55,20 @@ export const usePromptTemplateStore = create<PromptTemplateState>((set, get) => 
   loadTemplates: async () => {
     if (get().isLoaded) return;
     const requestId = ++loadTemplatesRequestId;
-    const templates = await getPromptTemplates();
+    const templates = await fetchTemplates();
     if (requestId !== loadTemplatesRequestId) return;
     set({ templates, isLoaded: true });
   },
 
   saveTemplate: async (name, prompt, context, workflow, defaultModel, defaultProvider) => {
     await savePromptTemplate({ name, prompt, context, workflow, defaultModel, defaultProvider });
-    const templates = await getPromptTemplates();
+    const templates = await fetchTemplates();
+    set({ templates });
+  },
+
+  updateTemplate: async (id, input) => {
+    await updatePromptTemplate(id, input);
+    const templates = await fetchTemplates();
     set({ templates });
   },
 

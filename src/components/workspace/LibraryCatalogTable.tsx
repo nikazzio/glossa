@@ -2,6 +2,7 @@ import type { DragEvent, MouseEvent } from 'react';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Tooltip } from '../ui';
+import { ROW_REVEAL_CLASSNAME } from '../ui/catalogStyles';
 import { imprint } from '../common/WorkIdentity';
 import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
@@ -32,7 +33,7 @@ function TableRow({ entry, providerLabel, selected, selecting, handlers }: {
   const { t } = useTranslation();
   const actions = useSourceActions(entry, handlers);
   const { summary } = actions;
-  const revealed = 'opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100';
+  const revealed = ROW_REVEAL_CLASSNAME;
   const download = entry.localPages === 0
     ? t('areas.library.availabilityRemoteShort')
     : summary.availability === 'complete' ? '100%' : `${summary.presentPages}/${summary.expectedPages || entry.expectedPages || '?'}`;
@@ -45,7 +46,7 @@ function TableRow({ entry, providerLabel, selected, selecting, handlers }: {
 
   return (
     <tr draggable onDragStart={handlers.onDragStart}
-      className={`group/row border-b border-editorial-border/60 align-top ${selected ? 'bg-editorial-accent/5' : 'hover:bg-surface-hover/50'}${actions.archived ? ' opacity-60' : ''}`}>
+      className={`group/row border-b border-rule align-top ${selected ? 'bg-editorial-accent/5' : 'hover:bg-surface-hover/50'}${actions.archived ? ' opacity-60' : ''}`}>
       <td className="w-8 py-2 pl-1">
         <IconButton size="xs" tone={selected ? 'accent' : 'default'} ariaPressed={selected}
           title={selected ? t('areas.library.selection.deselect') : t('areas.library.selection.select')}
@@ -99,10 +100,10 @@ export function LibraryCatalogTable({ entries, sort, onSort, providerLabel, isSe
             const label = t(`areas.library.table.${column}`);
             return (
               <th key={column} scope="col" aria-sort={sortKey && sortKey === sort ? 'ascending' : undefined}
-                className="py-2 pr-3 text-xs font-semibold uppercase tracking-[0.1em] text-editorial-muted">
+                className="py-2 pr-3 text-xs font-semibold uppercase tracking-caption text-editorial-muted">
                 {sortKey ? (
                   <button type="button" onClick={() => onSort(sortKey)}
-                    className={`uppercase tracking-[0.1em] focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${sortKey === sort ? 'text-editorial-accent' : 'hover:text-editorial-ink'}`}>
+                    className={`uppercase tracking-caption focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${sortKey === sort ? 'text-editorial-accent' : 'hover:text-editorial-ink'}`}>
                     {label}
                   </button>
                 ) : label}

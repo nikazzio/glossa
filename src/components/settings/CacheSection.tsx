@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Images, Trash2 } from 'lucide-react';
-import { IconButton, SectionLabel, Select, SettingRow } from '../ui';
+import { IconButton, Select, SettingRow, PanelSection } from '../ui';
 import {
   CACHE_CAPS,
   DEFAULT_CACHE_MAX_BYTES,
@@ -113,9 +113,8 @@ export function CacheSection() {
   };
 
   return (
-    <section className="space-y-4">
-      <SectionLabel icon={Images} label={t('settings.cache.title')} />
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+    <PanelSection icon={Images} label={t('settings.cache.title')}>
+      <div className="divide-y divide-rule border-b border-rule">
         <SettingRow label={t('settings.cache.used')} hint={t('settings.cache.usedHint')}>
           <span className="flex items-center gap-2">
             <span className="font-mono text-sm text-editorial-ink">
@@ -134,6 +133,7 @@ export function CacheSection() {
 
         <SettingRow label={t('settings.cache.cap')} hint={t('settings.cache.capHint')}>
           <Select
+            size="md"
             value={String(maxBytes)}
             onChange={(value) => void changeMax(value)}
             ariaLabel={t('settings.cache.cap')}
@@ -148,6 +148,7 @@ export function CacheSection() {
 
         <SettingRow label={t('settings.cache.searchTtl')} hint={t('settings.cache.searchTtlHint')}>
           <Select
+            size="md"
             value={String(ttlHours)}
             onChange={(value) => void changeTtl(value)}
             ariaLabel={t('settings.cache.searchTtl')}
@@ -158,6 +159,6 @@ export function CacheSection() {
           />
         </SettingRow>
       </div>
-    </section>
+    </PanelSection>
   );
 }

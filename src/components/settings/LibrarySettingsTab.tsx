@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Landmark, Ruler } from 'lucide-react';
-import { TabStrip, type TabStripItem } from '../ui';
+import type { TabStripItem } from '../ui';
+import { SettingsSubTabs } from './SettingsSubTabs';
 import { LibraryImagesSection } from './LibraryImagesSection';
 import { LibraryLibrariesSection } from './LibraryLibrariesSection';
 import { EuropeanaKeySection } from './EuropeanaKeySection';
@@ -9,8 +10,6 @@ import { LibraryProfilesSection } from './LibraryProfilesSection';
 import { useLibraryNetworkSettings, type NetworkProfileDraft } from '../../hooks/useLibraryNetworkSettings';
 
 type LibrarySubTab = 'profiles' | 'libraries' | 'images';
-
-const ID_PREFIX = 'settings-library';
 
 /**
  * Tutto quello che riguarda la Biblioteca in una scheda sola, divisa in tre
@@ -40,31 +39,8 @@ export function LibrarySettingsTab({
   ];
 
   return (
-    <div
-      id="settings-panel-library"
-      role="tabpanel"
-      aria-labelledby="settings-tab-library"
-      className="space-y-6"
-    >
-      <div className="flex items-center gap-3 border-b border-editorial-border/70 pb-3">
-        <TabStrip
-          tabs={tabs}
-          activeId={subTab}
-          onChange={(id) => setSubTab(id as LibrarySubTab)}
-          ariaLabel={t('areas.library.title')}
-          idPrefix={ID_PREFIX}
-        />
-        <span className="font-display text-sm italic text-editorial-ink">
-          {tabs.find((tab) => tab.id === subTab)?.label}
-        </span>
-      </div>
-
-      <div
-        id={`${ID_PREFIX}-panel-${subTab}`}
-        role="tabpanel"
-        aria-labelledby={`${ID_PREFIX}-tab-${subTab}`}
-        className="space-y-10"
-      >
+    <SettingsSubTabs tabId="library" ariaLabel={t('areas.library.title')} tabs={tabs} activeId={subTab}
+      onChange={(id) => setSubTab(id as LibrarySubTab)}>
         {subTab === 'profiles' && (
           <LibraryProfilesSection
             settings={settings}
@@ -91,7 +67,6 @@ export function LibrarySettingsTab({
         )}
 
         {subTab === 'images' && <LibraryImagesSection />}
-      </div>
-    </div>
+    </SettingsSubTabs>
   );
 }

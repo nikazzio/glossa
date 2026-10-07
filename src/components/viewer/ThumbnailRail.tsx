@@ -145,11 +145,11 @@ function ThumbnailRow({
       aria-selected={active}
       onClick={onSelect}
       style={{ top, height: ROW_HEIGHT_PX }}
-      className={`absolute inset-x-0 flex flex-col items-center justify-center gap-1 border-b border-editorial-border/50 px-2 py-1 text-[11px] outline-none transition-colors focus-visible:ring-1 focus-visible:ring-editorial-accent ${
+      className={`absolute inset-x-0 flex flex-col items-center justify-center gap-1 border-b border-rule px-2 py-1 text-caption outline-none transition-colors focus-visible:ring-1 focus-visible:ring-editorial-accent ${
         active ? 'bg-editorial-accent/15 text-editorial-accent' : 'text-editorial-muted hover:bg-surface-hover'
       }`}
     >
-      <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-sm border border-editorial-border/60 bg-surface-elevated">
+      <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-sm border border-rule bg-surface-elevated">
         {url ? (
           <img src={url} alt="" className="h-full w-full object-contain" />
         ) : loading ? (

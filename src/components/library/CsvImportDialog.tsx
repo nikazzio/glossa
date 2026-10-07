@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile, readFile } from '@tauri-apps/plugin-fs';
 import Papa from 'papaparse';
-import { Dialog, DialogConfirmButton, DialogCancelButton, Select } from '../ui';
+import { Dialog, DialogConfirmButton, DialogCancelButton, FieldLabel, Hint, IconButton, Select, Tooltip } from '../ui';
 import { useLibraryStore } from '../../stores/libraryStore';
 import {
   importEntriesFromCsv,
@@ -157,7 +157,10 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
 
   return (
     <Dialog
+      compact
       open
+      closeDisabled={loading}
+      bodyClassName="px-6 py-4"
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
@@ -176,23 +179,16 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
 
           {step === 'pick' && (
             <div className="space-y-4">
-              <p className="text-xs text-editorial-muted leading-relaxed">
-                {t('library.importPickDesc')}
-              </p>
-              <button
-                onClick={handlePickFile}
-                className="w-full border-y border-dashed border-editorial-border/60 py-6 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                {t('library.importPickButton')}
-              </button>
+              <div className="flex items-center justify-center gap-3 py-4">
+                <Hint label={t('library.importPickDesc')}><span className="text-sm text-editorial-muted">CSV · TSV · Excel</span></Hint>
+                <IconButton onClick={() => void handlePickFile()} title={t('library.importPickButton')}><Upload size={16} /></IconButton>
+              </div>
             </div>
           )}
 
           {step === 'map' && (
             <div className="space-y-4">
-              <p className="text-xs text-editorial-muted leading-relaxed">
-                {t('library.xlsxMapDesc')}
-              </p>
+              <Hint label={t('library.xlsxMapDesc')} />
               <div className="space-y-3">
                 {([
                   { key: 'termKey', label: t('library.xlsxTermCol'), required: true },
@@ -200,9 +196,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                   { key: 'notesKey', label: t('library.xlsxNotesCol'), required: false },
                 ] as const).map(({ key, label, required }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <label htmlFor={`csv-map-${key}`} className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                      {label}
-                    </label>
+                    <FieldLabel htmlFor={`csv-map-${key}`}>{label}</FieldLabel>
                     <Select
                       id={`csv-map-${key}`}
                       value={columnMap[key] ?? ''}
@@ -232,12 +226,12 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
               <p className="text-xs text-editorial-muted">
                 {t('library.csvPreviewDesc', { count: totalRows })}
               </p>
-              <div className="overflow-x-auto border-y border-editorial-border/70">
-                <table className="w-full text-xs font-mono">
-                  <thead className="bg-editorial-textbox/30">
+              <div className="overflow-x-auto rounded-md bg-surface-panel">
+                <table className="w-full text-sm">
+                  <thead className="text-xs">
                     <tr>
                       {previewHeaders.map((h, i) => (
-                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-[0.14em] truncate max-w-[120px]">
+                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-section truncate max-w-[120px]">
                           {h}
                         </th>
                       ))}
@@ -245,10 +239,10 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                   </thead>
                   <tbody>
                     {previewRows.map((row, ri) => (
-                      <tr key={ri} className="border-t border-editorial-border/20">
+                      <tr key={ri} className="border-t border-rule-faint">
                         {row.map((cell, ci) => (
                           <td key={ci} className="px-2 py-1.5 text-editorial-ink/80 truncate max-w-[120px]">
-                            {cell}
+                            <Tooltip label={cell}><span className="truncate">{cell}</span></Tooltip>
                           </td>
                         ))}
                       </tr>
@@ -263,7 +257,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
               )}
 
               <div className="flex gap-2 justify-end pt-2">
-                <DialogCancelButton onClick={goBack}>{t('common.back')}</DialogCancelButton>
+                <DialogCancelButton disabled={loading} onClick={goBack}>{t('common.back')}</DialogCancelButton>
                 <DialogConfirmButton onClick={handleConfirm} disabled={loading}>
                   <Check size={13} />
                   {loading ? t('common.loading') : t('library.csvConfirm')}

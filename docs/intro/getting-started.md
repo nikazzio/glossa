@@ -21,14 +21,14 @@ verifica gli allegati della release scelta.
 
 Per usare un servizio di traduzione remoto occorrono le relative credenziali.
 Per l’elaborazione locale occorrono un server Ollama in esecuzione e un modello
-già scaricato. La scelta si configura in **Impostazioni → Provider**.
+già scaricato. La scelta si configura in **Impostazioni → Modelli**.
 
 ## Primo progetto di traduzione
 
 1. Crea un workspace, cioè un gruppo di progetti e risorse condivise.
 2. Crea un progetto nel workspace e importa un documento.
 3. Controlla il testo estratto e la suddivisione in frammenti nell’anteprima.
-4. Configura lingue, modalità della pipeline, provider e modelli per le fasi attive.
+4. Indica le lingue dell’opera e configura modalità della pipeline, provider e modelli per le fasi attive.
 5. Esegui una prova su un frammento rappresentativo e confronta il risultato con l’originale.
 6. Avvia l’elaborazione degli altri frammenti, rivedi le traduzioni ed esporta il documento.
 

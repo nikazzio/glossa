@@ -3,7 +3,7 @@ import { Cpu, Lock, LockOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AuditPromptEditor } from '../pipeline/AuditPromptEditor';
-import { IconButton, SectionLabel, Select } from '../ui';
+import { IconButton, PANEL_BODY_CLASSNAME, PanelSection, Select, Spinner } from '../ui';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { getVisionCapableModelIds, LLM_PROVIDER_ORDER, providerSupportsVision } from '../../models/catalog';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
@@ -18,6 +18,7 @@ import type { OcrImageMode, OcrImagePreferences } from '../../services/ocrImageS
 import type { ModelProvider, PromptTemplate, Workspace } from '../../types';
 import { OcrImageModePicker } from './OcrImageModePicker';
 import { OcrStartButton } from './OcrStartButton';
+import { FIELD_MONO_CLASSNAME } from '../ui/fieldStyles';
 
 interface TranscriptionAssistTabProps {
   document: TranscriptionDocument | null;
@@ -56,7 +57,6 @@ export function TranscriptionAssistTab({
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const { templates, isLoaded, loadTemplates } = usePromptTemplateStore();
   const saveTemplate = usePromptTemplateStore((s) => s.saveTemplate);
-  const deleteTemplate = usePromptTemplateStore((s) => s.deleteTemplate);
   const { statuses: keyStatuses } = useProviderKeyStatus();
   const [isRefining, setIsRefining] = useState(false);
   // Bloccato per default: la select mostra il valore ereditato dal workspace
@@ -92,9 +92,9 @@ export function TranscriptionAssistTab({
 
   if (!document || !workspace) {
     return (
-      <p className="px-4 py-6 text-center text-xs text-editorial-muted">
-        {t('transcription.assist.loading')}
-      </p>
+      <div className={PANEL_BODY_CLASSNAME}>
+        <Spinner label={t('transcription.assist.loading')} />
+      </div>
     );
   }
 
@@ -150,10 +150,11 @@ export function TranscriptionAssistTab({
   ];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
-      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
-        <div className="flex items-center justify-between gap-2">
-          <SectionLabel icon={Cpu} label={t('transcription.assist.documentModel')} />
+    <div className={PANEL_BODY_CLASSNAME}>
+      <PanelSection
+        icon={Cpu}
+        label={t('transcription.assist.documentModel')}
+        actions={
           <OcrStartButton
             document={document}
             workspace={workspace}
@@ -163,7 +164,8 @@ export function TranscriptionAssistTab({
             reading={reading}
             onStart={onStartOcr}
           />
-        </div>
+        }
+      >
         <div className="flex items-center gap-2">
           <Select
             value={effectiveProvider}
@@ -198,7 +200,7 @@ export function TranscriptionAssistTab({
               onChange={(e) => onDocumentModelChange(e.target.value)}
               disabled={!overridden}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`${FIELD_MONO_CLASSNAME} min-w-0 flex-1 py-1`}
               aria-label={t('transcription.assist.documentModel')}
             />
           )}
@@ -214,7 +216,7 @@ export function TranscriptionAssistTab({
           </IconButton>
         </div>
         <OcrImageModePicker value={image.mode} edge={image.edge} onChange={onImageModeChange} />
-      </div>
+      </PanelSection>
 
       {/* Il prompt del documento: modificato da una pagina qualsiasi vale per
           tutte le sue pagine, e per nessun altro documento. */}
@@ -232,7 +234,6 @@ export function TranscriptionAssistTab({
         onChange={handlePromptChange}
         onApplyTemplate={(template: PromptTemplate) => handlePromptChange(template.prompt)}
         saveTemplate={saveTemplate}
-        onDeleteTemplate={deleteTemplate}
         defaultModel={resolved.model}
         defaultProvider={resolved.provider}
         defaultValue={defaultPrompt}

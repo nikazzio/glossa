@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Landmark } from 'lucide-react';
-import { SectionLabel, Select, SettingRow } from '../ui';
+import { Select, SettingRow, PanelSection } from '../ui';
 import { SIZE_POLICIES, type NetworkSettings, type SizePolicy } from '../../services/downloadSettingsService';
 
 /**
@@ -20,9 +20,8 @@ export function LibraryLibrariesSection({
   const { t } = useTranslation();
 
   return (
-    <section className="space-y-4">
-      <SectionLabel icon={Landmark} label={t('settings.network.libraries')} />
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+    <PanelSection icon={Landmark} label={t('settings.network.libraries')}>
+      <div className="divide-y divide-rule border-b border-rule">
         {settings.libraries.map((library) => (
           <SettingRow
             key={library.key}
@@ -54,6 +53,6 @@ export function LibraryLibrariesSection({
           </SettingRow>
         ))}
       </div>
-    </section>
+    </PanelSection>
   );
 }

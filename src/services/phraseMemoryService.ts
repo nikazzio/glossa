@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { select } from './dbService';
 import { logOperation } from '../stores/operationLogStore';
 import { logger } from '../utils/logger';
-import type { EmbeddingModel, ModelProvider, PhraseMatch } from '../types';
+import type { EmbeddingModel, ModelProvider, PhraseMatch, TextProvenance } from '../types';
 import { fetchEmbeddings } from './embeddingService';
 import { useConfigStore } from '../stores/configStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
@@ -15,24 +15,42 @@ type RawPhraseMatch = {
   target_phrase: string;
   distance: number;
   confidence: number | null;
+  workspace_id: string | null;
+  project_id: string | null;
+  chunk_id: string | null;
+  source_language: string;
+  target_language: string;
+  source_language_variety: string | null;
+  target_language_variety: string | null;
+  provenance: TextProvenance;
+  embedding_model: string;
+  dimensions: number;
 };
 
 type RawPhraseMemoryEntry = {
   id: string;
-  workspace_id: string;
+  workspace_id: string | null;
   source_phrase: string;
   target_phrase: string;
   confidence: number | null;
   source_language: string;
   target_language: string;
+  source_language_variety: string | null;
+  target_language_variety: string | null;
   author: string | null;
   work: string | null;
   domain: string | null;
-  tags: string | null;
+  tags: string[];
   notes: string | null;
   chunk_id: string | null;
   project_id: string | null;
-  embedding_model: string | null;
+  unit_id: string;
+  source_revision_id: string;
+  target_revision_id: string;
+  source_id: string | null;
+  source_version_id: string | null;
+  provenance: TextProvenance;
+  embeddings: TextEmbeddingInfo[];
   created_at: string;
 };
 
@@ -53,26 +71,52 @@ type RawExtractedPairs = {
 /** Lo stadio con cui l'estrattore della memoria entra nel registro. */
 const MEMORY_EXTRACTOR_STAGE_ID = 'memory-extractor';
 
+export interface TextEmbeddingInfo {
+  provider: string;
+  model: string;
+  dimensions: number;
+  profile: string;
+}
+
+export type { TextProvenance } from '../types';
+
 export interface PhraseMemoryEntry {
   id: string;
-  workspaceId: string;
+  /** Workspace di casa; `null` = traduzione senza workspace. */
+  workspaceId: string | null;
   sourcePhrase: string;
   targetPhrase: string;
   confidence: number;
   sourceLanguage: string;
   targetLanguage: string;
+  sourceLanguageVariety: string | null;
+  targetLanguageVariety: string | null;
   author: string | null;
   work: string | null;
   domain: string | null;
-  tags: string | null;
+  tags: string[];
   notes: string | null;
   chunkId: string | null;
   projectId: string | null;
-  embeddingModel: string | null;
+  unitId: string;
+  sourceRevisionId: string;
+  targetRevisionId: string;
+  sourceId: string | null;
+  sourceVersionId: string | null;
+  provenance: TextProvenance;
+  embeddings: TextEmbeddingInfo[];
   createdAt: string;
 }
 
-export interface SearchOptions {
+/** Dove cerca: il workspace, o anche tutti gli altri; sempre nella coppia di
+ *  lingue della traduzione, se data. */
+export interface SearchScope {
+  allWorkspaces?: boolean;
+  sourceLanguage?: string;
+  targetLanguage?: string;
+}
+
+export interface SearchOptions extends SearchScope {
   workspaceId: string;
   embeddingModel: EmbeddingModel;
   queryText: string;
@@ -80,12 +124,20 @@ export interface SearchOptions {
   maxResults: number;
 }
 
-export interface BatchSearchOptions {
+export interface BatchSearchOptions extends SearchScope {
   workspaceId: string;
   embeddingModel: EmbeddingModel;
   chunks: Array<{ id: string; text: string }>;
   threshold: number;
   maxResults: number;
+}
+
+function scopeArgs(scope: SearchScope) {
+  return {
+    allWorkspaces: scope.allWorkspaces ?? false,
+    sourceLanguage: scope.sourceLanguage ?? null,
+    targetLanguage: scope.targetLanguage ?? null,
+  };
 }
 
 export interface ApprovedPhrasePair {
@@ -99,8 +151,6 @@ export interface SaveApprovedPhrasePairsOptions {
   projectId: string;
   chunkId: string;
   embeddingModel: EmbeddingModel;
-  sourceLanguage: string;
-  targetLanguage: string;
   pairs: ApprovedPhrasePair[];
 }
 
@@ -111,6 +161,16 @@ function toPhraseMatch(raw: RawPhraseMatch): PhraseMatch {
     targetPhrase: raw.target_phrase,
     distance: raw.distance,
     confidence: raw.confidence ?? 1,
+    workspaceId: raw.workspace_id,
+    projectId: raw.project_id,
+    chunkId: raw.chunk_id,
+    sourceLanguage: raw.source_language,
+    targetLanguage: raw.target_language,
+    sourceLanguageVariety: raw.source_language_variety ?? null,
+    targetLanguageVariety: raw.target_language_variety ?? null,
+    provenance: raw.provenance,
+    embeddingModel: raw.embedding_model,
+    dimensions: raw.dimensions,
   };
 }
 
@@ -123,6 +183,8 @@ function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
     confidence: raw.confidence ?? 1,
     sourceLanguage: raw.source_language,
     targetLanguage: raw.target_language,
+    sourceLanguageVariety: raw.source_language_variety ?? null,
+    targetLanguageVariety: raw.target_language_variety ?? null,
     author: raw.author,
     work: raw.work,
     domain: raw.domain,
@@ -130,7 +192,13 @@ function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
     notes: raw.notes,
     chunkId: raw.chunk_id,
     projectId: raw.project_id,
-    embeddingModel: raw.embedding_model,
+    unitId: raw.unit_id,
+    sourceRevisionId: raw.source_revision_id,
+    targetRevisionId: raw.target_revision_id,
+    sourceId: raw.source_id,
+    sourceVersionId: raw.source_version_id,
+    provenance: raw.provenance,
+    embeddings: raw.embeddings,
     createdAt: raw.created_at,
   };
 }
@@ -321,6 +389,7 @@ export async function searchPhraseMemory(options: SearchOptions): Promise<Phrase
     threshold: similarityToDistanceThreshold(threshold),
     maxResults,
     embeddingModel,
+    ...scopeArgs(options),
   });
 
   const results = raw.map(toPhraseMatch);
@@ -386,6 +455,7 @@ export async function searchPhraseMemoryBatch(
         threshold: similarityToDistanceThreshold(threshold),
         maxResults,
         embeddingModel,
+        ...scopeArgs(options),
       });
       result.set(chunks[i].id, raw.map(toPhraseMatch));
     } catch (err) {
@@ -422,47 +492,72 @@ export async function countPhraseMemoryEntries(): Promise<number> {
   return rows[0]?.count ?? 0;
 }
 
-export async function listPhraseMemoryEntries(workspaceId: string): Promise<PhraseMemoryEntry[]> {
-  const raw = await invoke<RawPhraseMemoryEntry[]>('vec_list_phrase_memory', { workspaceId });
+/** `workspaceId` `null`: tutte le frasi, anche di traduzioni senza workspace.
+ *  `chunkId`: solo quelle di un frammento. */
+export async function listPhraseMemoryEntries(
+  workspaceId: string | null,
+  chunkId: string | null = null,
+): Promise<PhraseMemoryEntry[]> {
+  const raw = await invoke<RawPhraseMemoryEntry[]>('vec_list_phrase_memory', { workspaceId, chunkId });
   return raw.map(toPhraseMemoryEntry);
 }
 
 export async function deletePhraseMemoryEntry(
-  workspaceId: string,
+  workspaceId: string | null,
   phraseMemoryId: string,
 ): Promise<void> {
   await invoke('vec_delete_phrase_memory', { workspaceId, phraseMemoryId });
 }
 
+function sourceEmbeddingModels(entry: PhraseMemoryEntry): EmbeddingModel[] {
+  return [...new Set(entry.embeddings.map((measure) => {
+    if (measure.provider !== 'openai' || measure.profile !== 'source-verbatim-v1'
+      || (measure.model !== 'text-embedding-3-small' && measure.model !== 'text-embedding-3-large')) {
+      throw new Error('The source uses an unsupported embedding profile.');
+    }
+    return measure.model;
+  }))];
+}
+
 export async function updatePhraseMemoryEntry(options: {
-  workspaceId: string;
-  phraseMemoryId: string;
-  embeddingModel: EmbeddingModel;
+  entry: PhraseMemoryEntry;
   sourcePhrase: string;
   targetPhrase: string;
 }): Promise<void> {
+  const { entry } = options;
   const sourcePhrase = options.sourcePhrase.trim();
   const targetPhrase = options.targetPhrase.trim();
-  if (!sourcePhrase || !targetPhrase) {
-    throw new Error('Source and target phrases are required.');
-  }
+  if (!sourcePhrase || !targetPhrase) throw new Error('Source and target texts are required.');
+  const embeddings = sourcePhrase === entry.sourcePhrase ? [] : await Promise.all(
+    sourceEmbeddingModels(entry).map(async (model) => {
+      const [embedding] = await fetchEmbeddings([sourcePhrase], model);
+      if (!embedding?.length) throw new Error('Embedding generation failed.');
+      return { model, embedding };
+    }),
+  );
+  await invoke('vec_update_phrase_memory', { input: {
+    workspaceId: entry.workspaceId,
+    phraseMemoryId: entry.id,
+    sourceRevisionId: entry.sourceRevisionId,
+    targetRevisionId: entry.targetRevisionId,
+    sourcePhrase, targetPhrase, embeddings,
+  } });
+}
 
-  const [embedding] = await fetchEmbeddings([sourcePhrase], options.embeddingModel);
-  if (!embedding) {
-    throw new Error('Embedding generation failed.');
-  }
+export async function addPhraseMemoryEmbedding(entry: PhraseMemoryEntry, model: EmbeddingModel): Promise<void> {
+  const [embedding] = await fetchEmbeddings([entry.sourcePhrase], model);
+  if (!embedding?.length) throw new Error('Embedding generation failed.');
+  await invoke('vec_add_phrase_embedding', { workspaceId: entry.workspaceId, phraseMemoryId: entry.id,
+    sourceRevisionId: entry.sourceRevisionId, embedding: { model, embedding } });
+}
 
-  await invoke('vec_update_phrase_memory', {
-    workspaceId: options.workspaceId,
-    phraseMemoryId: options.phraseMemoryId,
-    sourcePhrase,
-    targetPhrase,
-    embedding,
-  });
+export async function setPhraseMemoryTags(entry: PhraseMemoryEntry, tags: string[]): Promise<void> {
+  await invoke('vec_set_phrase_tags', { workspaceId: entry.workspaceId, phraseMemoryId: entry.id,
+    tags: [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))] });
 }
 
 export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOptions): Promise<number> {
-  const { workspaceId, projectId, chunkId, embeddingModel, sourceLanguage, targetLanguage } = options;
+  const { workspaceId, projectId, chunkId, embeddingModel } = options;
 
   if (options.pairs.length === 0) {
     throw new Error('saveApprovedPhrasePairs called with no pairs to save.');
@@ -497,38 +592,10 @@ export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOp
     embeddingModel,
   );
 
-  const pairs = trimmedPairs.flatMap((pair, i) => {
-    const sourceEmbedding = sourceVectors[i];
-    return sourceEmbedding?.length ? [{ ...pair, sourceEmbedding }] : [];
-  });
-
-  const droppedCount = trimmedPairs.length - pairs.length;
-  if (droppedCount > 0 && pairs.length > 0) {
-    logger.warn('phrase_memory.save_approved.partial_embedding_drop', {
-      workspaceId, projectId, chunkId, candidatePairCount: trimmedPairs.length, droppedCount,
-    });
-    logOperation({
-      level: 'warn',
-      scope: 'memory',
-      chunkId,
-      message: `${droppedCount} pair(s) discarded — embedding unavailable`,
-      meta: { workspaceId, projectId, candidatePairCount: trimmedPairs.length, droppedCount },
-    });
+  if (sourceVectors.length !== trimmedPairs.length || sourceVectors.some((vector) => !vector?.length)) {
+    throw new Error('Incomplete embedding response: no phrases were saved.');
   }
-
-  if (pairs.length === 0) {
-    logger.warn('phrase_memory.save_approved.no_valid_embeddings', {
-      workspaceId, projectId, chunkId, candidatePairCount: trimmedPairs.length, embeddingCount: sourceVectors.length,
-    });
-    logOperation({
-      level: 'warn',
-      scope: 'memory',
-      chunkId,
-      message: 'Phrase memory save skipped because embeddings could not be generated',
-      meta: { workspaceId, projectId, candidatePairCount: trimmedPairs.length, embeddingCount: sourceVectors.length },
-    });
-    return 0;
-  }
+  const pairs = trimmedPairs.map((pair, index) => ({ ...pair, sourceEmbedding: sourceVectors[index] }));
 
   // Il workspace non si passa: una frase nata da una traduzione sta dove sta il
   // progetto, e dirlo due volte era il modo di farli divergere (#213).
@@ -536,8 +603,6 @@ export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOp
     projectId,
     chunkId,
     pairs,
-    sourceLanguage,
-    targetLanguage,
     embeddingModel,
   });
   logger.info('phrase_memory.save_approved.insert_done', {
@@ -596,6 +661,18 @@ export async function getChunkPositions(chunkIds: string[]): Promise<Record<stri
   return map;
 }
 
+/** Nomi delle traduzioni da cui vengono le frasi, in una sola lettura. */
+export async function getProjectNames(projectIds: string[]): Promise<Record<string, string>> {
+  const unique = [...new Set(projectIds)];
+  if (unique.length === 0) return {};
+  const placeholders = unique.map((_, i) => `$${i + 1}`).join(', ');
+  const rows = await select<{ id: string; name: string }>(
+    `SELECT id, name FROM projects WHERE id IN (${placeholders})`,
+    unique,
+  );
+  return Object.fromEntries(rows.map((row) => [row.id, row.name]));
+}
+
 const PHRASE_MEMORY_CSV_FIELDS = [
   'source_phrase',
   'target_phrase',
@@ -604,6 +681,16 @@ const PHRASE_MEMORY_CSV_FIELDS = [
   'target_language',
   'domain',
   'notes',
+  'tags',
+  'workspace_id',
+  'project_id',
+  'unit_id',
+  'source_revision_id',
+  'target_revision_id',
+  'source_version_id',
+  'source_id',
+  'source_title',
+  'embedding_models',
   'created_at',
 ] as const;
 
@@ -616,7 +703,27 @@ export function exportPhraseMemoryToCsv(entries: PhraseMemoryEntry[]): string {
     target_language: e.targetLanguage,
     domain: e.domain ?? '',
     notes: e.notes ?? '',
+    tags: e.tags.join('; '),
+    workspace_id: e.workspaceId ?? '',
+    project_id: e.projectId ?? '',
+    unit_id: e.unitId,
+    source_revision_id: e.sourceRevisionId,
+    target_revision_id: e.targetRevisionId,
+    source_version_id: e.sourceVersionId ?? '',
+    source_id: e.sourceId ?? '',
+    source_title: e.provenance.sourceTitle ?? '',
+    embedding_models: e.embeddings.map((measure) => measure.model).join('; '),
     created_at: e.createdAt,
   }));
   return Papa.unparse({ fields: [...PHRASE_MEMORY_CSV_FIELDS], data: rows });
+}
+
+/** Phrases saved from the work whose languages differ from the work's current ones. */
+export async function countProjectPhraseRelabels(projectId: string): Promise<number> {
+  return invoke<number>('vec_count_project_phrase_relabels', { projectId });
+}
+
+/** Gives the phrases saved from the work the work's current languages (new revisions, same text). */
+export async function relabelProjectPhrases(projectId: string): Promise<number> {
+  return invoke<number>('vec_relabel_project_phrases', { projectId });
 }

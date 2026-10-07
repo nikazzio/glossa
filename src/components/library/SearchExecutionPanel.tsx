@@ -47,7 +47,7 @@ export function SearchExecutionPanel({ run, providers, busy, providerFilter, onP
   const label = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
 
   return (
-    <ul className="divide-y divide-editorial-border/60 border-b border-editorial-border/70 px-3">
+    <ul className="divide-y divide-rule border-b border-rule px-3">
       {currentExecutions(run).map((execution) => {
         const { job } = execution;
         const only = providerFilter === execution.providerKey;

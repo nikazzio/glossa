@@ -8,9 +8,37 @@ Lo Studio di trascrizione è la modalità concentrata per scrivere e correggere
 il testo di un documento: visore a sinistra, testo al centro, strumenti a
 destra. È la stessa idea della Traduzione, applicata alla trascrizione.
 
-## Creare un documento
+## Il catalogo delle Trascrizioni
 
-Dall'area **Trascrizioni** scegli "Nuovo documento" e dai un titolo. Puoi
+L'area **Trascrizioni** raccoglie le trascrizioni di tutti i workspace ed è
+organizzata come la Biblioteca: scaffali a destra, ricerca e filtri rapidi
+sopra l'elenco, tre viste — elenco, copertine, tabella — in fondo alla riga
+del titolo.
+
+Ogni riga mostra il nome della trascrizione in corsivo e, sotto, l'opera
+trascritta: autore, anno, luogo e tipografo, titolo. Se il nome è lo stesso
+titolo dell'opera, che è il nome proposto alla creazione, non si ripete. In
+fondo alla riga stanno il workspace, le pagine scritte sul totale dell'opera,
+le pagine verificate e la barretta di completamento. Una trascrizione senza
+opera collegata non ha un totale: conta solo le pagine scritte.
+
+Gli scaffali sono **Tutte**, **Recenti** (modificate negli ultimi 30 giorni),
+**Da iniziare**, **In corso**, **Verificate** (tutte le pagine verificate),
+**Senza opera** (nate da zero) e **Archiviate**; le archiviate compaiono solo
+nel loro scaffale. La ricerca guarda il nome e tutti i dati dell'opera. I
+filtri rapidi restringono per workspace, biblioteca e secolo dell'opera, con
+il conteggio accanto a ogni valore; l'elenco si ordina per nome, autore, anno,
+ultima modifica o avanzamento, e si raggruppa per workspace o biblioteca.
+
+Un click sulla riga apre lo Studio. Passando sulla riga compaiono i comandi:
+apri l'opera in Biblioteca, rinomina — il nome diventa un campo, Invio salva,
+Esc annulla —, archivia o ripristina, elimina. Nelle copertine e nella
+tabella gli stessi comandi stanno nel menu con i tre puntini. Non c'è ancora
+la scelta di più trascrizioni insieme.
+
+## Creare una trascrizione
+
+Dall'area **Trascrizioni** usa il comando **+** accanto al titolo e dai un nome. Puoi
 anche collegarlo subito a un'opera già in Biblioteca cercandola per titolo
 nello stesso dialogo — facoltativo: senza, il documento resta senza visore,
 un solo blocco di testo. Dalla scheda di un'opera in **Biblioteca** puoi
@@ -34,23 +62,30 @@ visore compare un avviso, non un errore, e resta un solo blocco di testo.
 
 In alto, un documento legato a un'opera la presenta come la scheda in
 Biblioteca — autore, anno, luogo e tipografo sopra, titolo sotto — con l'uscita verso il sito della
-biblioteca. Il comando con i tre puntini offre solo "Rimuovi trascrizione":
+biblioteca. A destra il cestino elimina la trascrizione, dopo conferma:
 scaricare, verificare o archiviare l'opera restano comandi della scheda in
 Biblioteca, non dello Studio.
 
 ## Scrivere e salvare
 
-Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in alto a
-destra distingue il testo ancora da salvare dal salvataggio in corso, riuscito
-o fallito, con un comando per riprovare in caso di errore. Cambiando pagina o
+Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in basso a
+destra, nella barra di stato come per le traduzioni, distingue il testo ancora
+da salvare dal salvataggio in corso, riuscito o fallito; il suggerimento dà
+l'ora dell'ultimo salvataggio. Per salvare subito una versione nello storico
+usa il dischetto in cima al foglio, oppure **Ctrl + S** anche mentre scrivi nel foglio: il comando
+resta spento quando non c'è niente di nuovo da salvare, e la versione nasce
+senza nome — per fissarla con un nome si usa la puntina nello storico.
+Cambiando pagina o
 uscendo normalmente dallo Studio, il testo ancora da salvare viene scritto
 subito. Una chiusura forzata prima del salvataggio può perdere le ultime
 modifiche.
 
-Quando il testo è pronto, segnalo come **verificato** con il lucchetto
-accanto al titolo "Pagina N": il testo diventa bloccato, per non
-sovrascrivere per sbaglio una trascrizione già controllata. Puoi tornare in
-bozza in qualsiasi momento con lo stesso comando.
+Quando il testo è pronto, segnalo come **verificato** con la spunta accanto
+al titolo della pagina: il testo diventa bloccato, per non sovrascrivere per
+sbaglio una trascrizione già controllata. Puoi tornare in bozza in qualsiasi
+momento con lo stesso comando. Se la spunta è spenta, il suggerimento dice
+perché: pagina vuota, in caricamento o in lettura. Se un salvataggio non
+riesce, il dischetto diventa rosso e lo riprova.
 
 Mentre il visore sta ancora aprendo la pagina scelta, un velo copre il testo
 e lo storico con una rotellina al centro: scrivere o ripristinare restano
@@ -64,8 +99,12 @@ comandi per passare dall'una all'altra. Se le due dichiarano lo stesso
 numero di pagine, il cambio è fluido: stessa numerazione, il testo segue.
 Se il numero non combacia, passando sulla copia secondaria il visore si
 stacca dal testo — si sfoglia liberamente cercando quel che serve, mentre il
-testo si sfoglia con le proprie frecce, accanto al titolo "Pagina N".
-Tornando sulla copia principale l'aggancio si ripristina da solo.
+testo si sfoglia con le proprie frecce, che compaiono accanto al titolo della
+pagina solo quando testo e visore sono sganciati. Tornando sulla copia
+principale l'aggancio si ripristina da solo. Con la finestra stretta i comandi
+secondari del visore — cambio di copia, sgancio, solo file locali, apertura
+della pagina nel sito — passano nel menu con i tre puntini; sfoglio, salto a
+una pagina e zoom restano sempre in vista.
 
 Un terzo comando stacca il collegamento **a prescindere** dal numero di
 pagine, anche restando sulla copia principale: comodo per guardare una
@@ -119,7 +158,7 @@ Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura,
 anche dopo la richiesta di annullamento, finché il lavoro si ferma davvero.
 Se stai modificando un'altra pagina, il testo non viene rimpiazzato quando
 la lettura finisce. Nella riga in alto
-della colonna del testo una pastiglia dice quale pagina è in lettura, e resta
+della colonna del testo una scritta color oro dice quale pagina è in lettura, e resta
 visibile anche se nel frattempo sfogli avanti.
 
 La lettura parte in coda, come uno scaricamento: la trovi nel pannello
@@ -138,11 +177,13 @@ modello, l'immagine inviata con misura reale, peso e provenienza (libro scaricat
 della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per
 livello, e il raggruppamento per pagina.
 
-## Storico, riepilogo e metadati
+## Storico e riepilogo
 
-Ogni salvataggio resta nello storico della pagina, nel pannello a destra:
-mostra chi ha scritto quella versione — correzione manuale, riconoscimento
-automatico o importazione — e quando. Il comando su ogni voce dello storico
+La colonna a destra ha tre schede — **Storico**, **OCR**, **Riepilogo** — e si
+apre sullo Storico. Ogni salvataggio resta nello storico della pagina: per ogni
+versione mostra chi l'ha scritta — correzione manuale, riconoscimento
+automatico o importazione —, quando, e se è la versione corrente o quella
+verificata. Il comando su ogni voce dello storico
 riporta il testo di quella versione come nuovo salvataggio, senza sovrascrivere
 le versioni precedenti. Cambiando pagina lo
 storico mostrato cambia con lei.
@@ -152,16 +193,14 @@ senza occupare spazio aggiuntivo. Puoi togliere il nome per riportarle nello
 storico ordinario. Puoi eliminare una vecchia versione singolarmente, oppure
 usare **Svuota storico** per cancellare i salvataggi ordinari precedenti.
 Le versioni consolidate, quella corrente e quella verificata restano dopo
-la pulizia. La versione corrente e quella verificata non si possono eliminare.
+la pulizia. La versione corrente e quella verificata non si possono eliminare: il comando
+resta spento e il suggerimento dice perché.
 L'eliminazione di una versione toglie la possibilità di ripristinarne il testo.
 
-La scheda **Riepilogo** segue il layout del riepilogo della traduzione:
-mostra pagine con testo, parole, pagine verificate e avanzamento; sotto
-riporta letture OCR completate, token e costo stimato.
-
-La scheda **Metadati**, accanto allo Storico, mostra i dati grezzi salvati
-per la pagina corrente: posizione, etichetta, stato e numero di revisioni.
-Serve a vedere cosa viene registrato oggi; la sua presentazione cambierà.
+Il **Riepilogo** parte dalla pagina aperta — numero, etichetta della
+biblioteca se c'è, stato e versioni salvate — e prosegue con il documento:
+pagine con testo, parole, pagine verificate e avanzamento, letture OCR
+completate, token e costo stimato.
 
 ## Limiti attuali
 

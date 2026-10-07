@@ -23,10 +23,10 @@ interface TooltipProps {
 }
 
 const TOOLTIP_BASE =
-  'pointer-events-none z-[210] w-max rounded-[14px] border border-editorial-border bg-editorial-bg/98 shadow-[var(--shadow-tooltip)]';
+  'pointer-events-none z-[210] w-max rounded-[14px] border border-editorial-border bg-editorial-bg/98 shadow-tooltip';
 
 const TOOLTIP_VARIANT = {
-  note: 'max-w-[16rem] whitespace-pre-line px-3.5 py-2.5 text-center font-display text-[14px] italic leading-tight text-editorial-ink',
+  note: 'max-w-[16rem] whitespace-pre-line px-3.5 py-2.5 text-center font-display text-sm italic leading-tight text-editorial-ink',
   panel: 'max-w-[22rem] px-3.5 py-3 text-left font-sans text-xs leading-snug text-editorial-ink',
 } as const;
 
@@ -50,7 +50,7 @@ export function Tooltip({
           <span className={`inline-flex ${className}`.trim()}>{children}</span>
         </RadixTooltip.Trigger>
         <RadixTooltip.Portal>
-          <RadixTooltip.Content side={side} sideOffset={offset} collisionPadding={12} className={box}>
+          <RadixTooltip.Content data-glossa-tooltip="" side={side} sideOffset={offset} collisionPadding={12} className={box}>
             {label}
           </RadixTooltip.Content>
         </RadixTooltip.Portal>

@@ -214,7 +214,7 @@ export function OperationsTab({
             type="button"
             onClick={() => setGrouped((g) => !g)}
             aria-pressed={grouped}
-            className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
+            className={`shrink-0 text-xs uppercase tracking-section transition-colors focus:outline-none ${
               grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
             }`}
           >
@@ -280,7 +280,7 @@ export function OperationsTab({
 function StatusPill({ tone, label, progress }: { tone: 'accent' | 'info'; label: string; progress?: string }) {
   const color = tone === 'accent' ? 'text-terminal-accent bg-terminal-accent/12' : 'text-terminal-info bg-terminal-info/12';
   return (
-    <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] ${color}`}>
+    <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-bold uppercase tracking-caption ${color}`}>
       <Loader2 size={10} className="animate-spin shrink-0" />
       {label}
       {progress && <span className="font-display text-xs italic normal-case tracking-normal opacity-80">{progress}</span>}
@@ -332,7 +332,7 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
         const stageBuckets = Array.from(byStage.entries());
         return (
           <details key={chunkId} open className="mt-3">
-            <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-1.5 text-xs uppercase tracking-[0.1em] text-terminal-secondary list-none [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-1.5 text-xs uppercase tracking-caption text-terminal-secondary list-none [&::-webkit-details-marker]:hidden">
               <span>
                 {t('log.unitLabel')} {chunkIndex >= 0 ? indexPad(chunkIndex + 1) : chunkId}
               </span>
@@ -355,7 +355,7 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
                 return (
                   <details key={stageKey} open className="mt-1.5">
                     <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-0.5 text-xs list-none [&::-webkit-details-marker]:hidden">
-                      <span className="font-bold uppercase tracking-[0.1em] text-terminal-secondary">
+                      <span className="font-bold uppercase tracking-caption text-terminal-secondary">
                         {stageHeader.title}
                       </span>
                       <span className="text-xs text-terminal-muted">{stageHeader.meta}</span>
@@ -463,7 +463,7 @@ function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
     return (
       <div className="flex items-center gap-3 py-1.5">
         <div className="h-px flex-1 bg-terminal-line" />
-        <span className="text-xs uppercase tracking-[0.1em] text-terminal-muted">{t('log.newRun')}</span>
+        <span className="text-xs uppercase tracking-caption text-terminal-muted">{t('log.newRun')}</span>
         <div className="h-px flex-1 bg-terminal-line" />
       </div>
     );

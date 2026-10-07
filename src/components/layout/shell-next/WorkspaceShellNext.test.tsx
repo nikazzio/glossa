@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useChunksStore } from '../../../stores/chunksStore';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -21,7 +22,7 @@ describe('WorkspaceShellNext (#294)', () => {
     vi.clearAllMocks();
     useUiStore.setState(initialUiState, true);
     useWorkspaceStore.setState(initialWorkspaceState, true);
-    useProjectStore.setState({ closeProject: vi.fn(), loadProjects: vi.fn() });
+    useProjectStore.setState({ leaveProject: vi.fn().mockResolvedValue(true), loadProjects: vi.fn() });
     useWorkspaceStore.setState({
       workspaces: [
         { id: 'ws-1', name: 'Alpha' } as never,
@@ -49,14 +50,14 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useUiStore.getState().dashboardSidebarCollapsed).toBe(false);
   });
 
-  it('clicking a workspace in the rail activates it and navigates to its page', () => {
+  it('clicking a workspace in the rail activates it and navigates to its page', async () => {
     renderShell();
 
     fireEvent.click(screen.getByText('Beta'));
 
-    expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
+    await waitFor(() => expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'ws-2' }),
-    );
+    ));
   });
 
   it('clicking the active workspace navigates to its page without re-activating', () => {
@@ -104,5 +105,49 @@ describe('WorkspaceShellNext (#294)', () => {
     fireEvent.click(screen.getByText('areas.translations.title'));
     fireEvent.click(screen.getByText('dashboard.title'));
     expect(useUiStore.getState().location).toEqual({ area: 'dashboard' });
+  });
+
+  describe('with a translation open', () => {
+    beforeEach(() => {
+      useProjectStore.setState({ currentProjectId: 'p1' });
+      useChunksStore.setState({ isProcessing: false });
+      useUiStore.setState({ location: { area: 'dashboard' } });
+    });
+
+    it('marks Translations as the current area, not the place the translation was opened from', () => {
+      renderShell();
+
+      expect(screen.getByRole('button', { name: /areas\.translations\.title/ })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('button', { name: /^dashboard\.title/ })).not.toHaveAttribute('aria-current');
+    });
+
+    it('saves and closes the translation before going to another area', async () => {
+      renderShell();
+
+      fireEvent.click(screen.getByText('areas.library.title'));
+
+      expect(useProjectStore.getState().leaveProject).toHaveBeenCalled();
+      await waitFor(() => expect(useUiStore.getState().location).toEqual({ area: 'library' }));
+    });
+
+    it('stays in the translation when the save before leaving fails', async () => {
+      useProjectStore.setState({ leaveProject: vi.fn().mockResolvedValue(false) });
+      const before = useUiStore.getState().location;
+      renderShell();
+
+      fireEvent.click(screen.getByText('areas.library.title'));
+
+      await waitFor(() => expect(useProjectStore.getState().leaveProject).toHaveBeenCalled());
+      expect(useUiStore.getState().location).toEqual(before);
+    });
+
+    it('turns every destination off while the pipeline runs', () => {
+      useChunksStore.setState({ isProcessing: true });
+      renderShell();
+
+      expect(screen.getByRole('button', { name: /areas\.library\.title/ })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /^dashboard\.title/ })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Beta/ })).toBeDisabled();
+    });
   });
 });

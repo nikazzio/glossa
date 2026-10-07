@@ -6,6 +6,7 @@ import {
   deleteProject,
   getProjectSource,
   saveProjectSource,
+  saveWorkLanguages,
   type Project,
 } from '../services/projectService';
 import {
@@ -30,10 +31,23 @@ import { logger } from '../utils/logger';
 import { runInTransaction } from '../services/dbService';
 import { useWorkspaceStore } from './workspaceStore';
 import { useAnnotationsStore } from './annotationsStore';
-import type { Pipeline, PipelineConfig, TranslationChunk } from '../types';
+import { unversionedChunks, useTranslationHistoryStore } from './translationHistoryStore';
+import { recordManualRevision } from '../services/translationRevisionsService';
+import type { Pipeline, PipelineConfig, TranslationChunk, WorkLanguages } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
 let createPipelineInFlight: Promise<void> | null = null;
+
+function currentProjectSnapshot(): string {
+  const pipeline = usePipelineStore.getState();
+  return buildProjectSnapshot({
+    inputText: pipeline.inputText,
+    inputProcessingText: pipeline.inputProcessingText,
+    sourceFootnotes: pipeline.sourceFootnotes,
+    config: pipeline.config,
+    chunks: useChunksStore.getState().chunks,
+  });
+}
 
 interface ProjectState {
   projects: Project[];
@@ -48,13 +62,20 @@ interface ProjectState {
   lastRunConfig: string | null;
 
   loadProjects: () => Promise<void>;
-  createAndOpen: (name: string, workspaceId: string) => Promise<void>;
+  createAndOpen: (name: string, workspaceId: string, sourceVersionId?: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   openProjectInWorkspace: (id: string, workspaceId: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
+  /** Il salvataggio manuale (dischetto, Ctrl/⌘+S): salva e scrive una versione
+   *  nello storico per ogni frammento il cui testo è cambiato. */
+  saveVersionNow: () => Promise<void>;
   renameCurrentProject: (name: string) => Promise<void>;
+  /** Lingue dell'opera aperta: le mette in vista e, se l'opera esiste già, le salva subito. */
+  updateWorkLanguages: (languages: WorkLanguages) => Promise<void>;
   closeProject: () => void;
+  /** Salva se c'è qualcosa da salvare, poi chiude. `false`: salvataggio fallito, la traduzione resta aperta con l'errore in vista. */
+  leaveProject: () => Promise<boolean>;
   setRunInterrupted: (value: boolean) => void;
   clearResumeState: () => void;
 
@@ -94,7 +115,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ projects });
   },
 
-  createAndOpen: async (name: string, workspaceId: string) => {
+  createAndOpen: async (name: string, workspaceId: string, sourceVersionId?: string) => {
     const pipeline = usePipelineStore.getState();
     const chunks = useChunksStore.getState().chunks;
     const workspaceStore = useWorkspaceStore.getState();
@@ -104,14 +125,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await workspaceStore.setActive(workspace);
     }
 
-    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage, workspace.id);
+    const id = await createProject(name, pipeline.workLanguages, workspace.id, sourceVersionId);
 
     const pipelines = await listPipelines(id);
     const activePipelineId = pipelines[0]?.id ?? null;
 
     // saveProjectSource uses execute() directly — must run outside the transaction
     // to avoid deadlocking on the shared write-serialization queue.
-    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config);
+    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config, pipeline.workLanguages);
     if (activePipelineId) {
       await runInTransaction(async (run) => {
         await saveFullState(id, activePipelineId, pipeline.config, chunks, run);
@@ -133,6 +154,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     // resta senza nome in testata e in barra di stato finché non si cambia
     // sezione.
     await get().loadProjects().catch(() => {});
+  },
+
+  updateWorkLanguages: async (languages) => {
+    const { currentProjectId } = get();
+    if (currentProjectId) await saveWorkLanguages(currentProjectId, languages);
+    usePipelineStore.getState().setWorkLanguages(languages);
   },
 
   renameCurrentProject: async (name: string) => {
@@ -161,6 +188,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     ]);
 
     if (!source) throw new Error(`Project not found: ${id}`);
+    usePipelineStore.getState().setWorkLanguages(source.workLanguages);
 
     const activePipelineId = allPipelines[0]?.id ?? null;
 
@@ -246,7 +274,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (workspaceId !== activeWorkspace?.id) {
       const ws = workspaces.find((w) => w.id === workspaceId);
       if (!ws) throw new Error(`Workspace not found: ${workspaceId}`);
-      get().closeProject();
+      if (!(await get().leaveProject())) return;
       await setActive(ws);
       await get().loadProjects();
     }
@@ -267,6 +295,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     usePipelineStore.getState().resetToDefaults();
     useOperationLogStore.setState({ entries: [], currentProjectId: null, currentPipelineId: null });
     useAnnotationsStore.getState().clearAll();
+    useTranslationHistoryStore.getState().setLatestTexts({});
     set({
       currentProjectId: null,
       pipelines: [],
@@ -278,6 +307,39 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       runInterrupted: false,
       lastRunConfig: null,
     });
+  },
+
+  leaveProject: async () => {
+    if (get().currentProjectId && useChunksStore.getState().isProcessing) return false;
+    if (get().currentProjectId) {
+      // Un salvataggio già partito può non contenere l'ultima modifica: lo si
+      // aspetta e poi si confronta di nuovo. Il suo eventuale errore non va
+      // riportato qui, perché il confronto qui sotto ritenta comunque.
+      if (saveInFlight) await saveInFlight.catch(() => undefined);
+      if (useChunksStore.getState().isProcessing) return false;
+      if (currentProjectSnapshot() !== get().trackedSnapshot) {
+        try {
+          await get().saveCurrentProject();
+        } catch {
+          return false;
+        }
+      }
+    }
+    if (get().currentProjectId && useChunksStore.getState().isProcessing) return false;
+    get().closeProject();
+    return true;
+  },
+
+  saveVersionNow: async () => {
+    await get().saveCurrentProject();
+    const changed = unversionedChunks(
+      useChunksStore.getState().chunks,
+      useTranslationHistoryStore.getState().latestText,
+    );
+    // Una alla volta: ognuna legge l'ultima versione del suo frammento.
+    for (const chunk of changed) {
+      await recordManualRevision(chunk.id, chunk.translationDisplayText);
+    }
   },
 
   setRunInterrupted: (value) => set({ runInterrupted: value }),
@@ -294,13 +356,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       if (chunksStore.isProcessing) throw new Error('Cannot save while the pipeline is processing.');
 
       const pipeline = usePipelineStore.getState();
-      const effectiveSnapshot = buildProjectSnapshot({
-        inputText: pipeline.inputText,
-        inputProcessingText: pipeline.inputProcessingText,
-        sourceFootnotes: pipeline.sourceFootnotes,
-        config: pipeline.config,
-        chunks: chunksStore.chunks,
-      });
+      const effectiveSnapshot = currentProjectSnapshot();
 
       logger.info('saveCurrentProject: start', {
         trigger: name ? 'first-save' : 'manual-or-autosave',
@@ -318,7 +374,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           if (!name?.trim()) throw new Error('Project name required for first save.');
           const { activeWorkspace } = useWorkspaceStore.getState();
           if (!activeWorkspace) throw new Error('No active workspace');
-          currentProjectId = await createProject(name.trim(), pipeline.config.sourceLanguage, pipeline.config.targetLanguage, activeWorkspace.id);
+          currentProjectId = await createProject(name.trim(), pipeline.workLanguages, activeWorkspace.id);
           const pipelines = await listPipelines(currentProjectId);
           activePipelineId = pipelines[0]?.id ?? null;
           newPipelines = pipelines;
@@ -330,6 +386,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           pipeline.inputProcessingText,
           pipeline.sourceFootnotes,
           pipeline.config,
+          pipeline.workLanguages,
         );
 
         if (activePipelineId) {
@@ -366,6 +423,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   // ── Pipeline management ──────────────────────────────────────────────
 
   switchPipeline: async (pipelineId: string) => {
+    if (useChunksStore.getState().isProcessing) return;
     const { currentProjectId, activePipelineId } = get();
     if (!currentProjectId) return;
 
@@ -385,6 +443,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     ]);
 
     if (!pipelineData || !source) return;
+    if (useChunksStore.getState().isProcessing) return;
 
     const { pipeline, config } = pipelineData;
     const mergedConfig: PipelineConfig = {
@@ -426,12 +485,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   createNewPipeline: async (name: string) => {
+    if (useChunksStore.getState().isProcessing) return;
     if (createPipelineInFlight) return;
     const op = (async () => {
       const { currentProjectId, pipelines, activePipelineId } = get();
       if (!currentProjectId) return;
-      const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
-      const newId = await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
+      const newId = await createPipeline(currentProjectId, name);
 
       const initMode = useConfigStore.getState().newPipelineInit;
       if (initMode !== 'defaults' && pipelines.length > 0) {

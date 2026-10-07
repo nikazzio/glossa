@@ -49,6 +49,11 @@ export interface ScopeBreakdownEntry {
   /** stageId for stage entries, undefined for top-level scopes */
   stageId?: string;
   model: string | null;
+  /**
+   * Chiamate al modello completate per questa fase. Non sono «esecuzioni»:
+   * un ciclo audit-rifinitura o un frammento ritradotto contano ogni chiamata.
+   */
+  calls: number;
   stats: OperationLogStats;
 }
 
@@ -63,19 +68,10 @@ export interface GlobalUsageSummary {
     stats: OperationLogStats;
   }>;
   scopeBreakdown: ScopeBreakdownEntry[];
-  translationRuns: number;
-  auditRuns: number;
-  coherenceRuns: number;
 }
 
 export interface ChunkUsageSummary {
   total: OperationLogStats;
-  translationRuns: number;
-  auditRuns: number;
-  coherenceRuns: number;
-  lastTranslationRun: OperationLogRunSummary | null;
-  lastAuditRun: OperationLogRunSummary | null;
-  lastCoherenceRun: OperationLogRunSummary | null;
   scopeBreakdown: ScopeBreakdownEntry[];
 }
 
@@ -244,6 +240,10 @@ const TOP_SCOPE_LABEL_KEYS: Partial<Record<OperationLogScope, string>> = {
   coherence: 'log.scopeCoherence',
 };
 
+function countCalls(entries: OperationLogEntry[]): number {
+  return entries.filter((entry) => entry.phase === 'end' && hasUsage(readUsage(entry))).length;
+}
+
 function buildScopeBreakdown(
   entries: OperationLogEntry[],
   pricingOverrides: Pricing,
@@ -275,7 +275,7 @@ function buildScopeBreakdown(
       const usage = endEntry ? readUsage(endEntry) : null;
       const model = usage?.provider && usage.model ? `${usage.provider} / ${usage.model}` : null;
       const stats = aggregateEntries(stageEntries, pricingOverrides);
-      return { labelKey: stageName, scope: 'stage' as OperationLogScope, stageId, model, stats };
+      return { labelKey: stageName, scope: 'stage' as OperationLogScope, stageId, model, calls: countCalls(stageEntries), stats };
     })
     .filter((r) => r.stats.totalInput > 0 || r.stats.totalOutput > 0);
 
@@ -288,7 +288,7 @@ function buildScopeBreakdown(
       const lastUsage = [...scopeEntries].reverse().map(readUsage).find((u) => u.provider && u.model);
       const model = lastUsage ? `${lastUsage.provider} / ${lastUsage.model}` : null;
       const stats = aggregateEntries(scopeEntries, pricingOverrides);
-      return { labelKey: TOP_SCOPE_LABEL_KEYS[scope]!, scope, model, stats };
+      return { labelKey: TOP_SCOPE_LABEL_KEYS[scope]!, scope, model, calls: countCalls(scopeEntries), stats };
     })
     .filter((r) => r.stats.totalInput > 0 || r.stats.totalOutput > 0);
 
@@ -305,10 +305,6 @@ export function summarizeGlobalUsage(
   const coherenceEntries: OperationLogEntry[] = [];
   const modelNames = new Set<string>();
   const entriesByModel = new Map<string, OperationLogEntry[]>();
-  let translationRuns = 0;
-  let auditRuns = 0;
-  let coherenceRuns = 0;
-
   for (const entry of entries) {
     const usage = readUsage(entry);
     if (usage.provider && usage.model) {
@@ -320,16 +316,9 @@ export function summarizeGlobalUsage(
     }
     const category = categoryForEntry(entry);
     if (!category || entry.phase !== 'end' || !hasUsage(usage)) continue;
-    if (category === 'translation') {
-      translationEntries.push(entry);
-      translationRuns += 1;
-    } else if (category === 'audit') {
-      auditEntries.push(entry);
-      auditRuns += 1;
-    } else {
-      coherenceEntries.push(entry);
-      coherenceRuns += 1;
-    }
+    if (category === 'translation') translationEntries.push(entry);
+    else if (category === 'audit') auditEntries.push(entry);
+    else coherenceEntries.push(entry);
   }
 
   return {
@@ -345,36 +334,6 @@ export function summarizeGlobalUsage(
       }))
       .sort((a, b) => b.stats.totalInput + b.stats.totalOutput - (a.stats.totalInput + a.stats.totalOutput)),
     scopeBreakdown: buildScopeBreakdown(entries, pricingOverrides),
-    translationRuns,
-    auditRuns,
-    coherenceRuns,
-  };
-}
-
-function lastRunForCategory(
-  entries: OperationLogEntry[],
-  category: OperationUsageCategory,
-  pricingOverrides: Pricing,
-): OperationLogRunSummary | null {
-  const categoryEntries = entries.filter((e) => {
-    const usage = readUsage(e);
-    return e.phase === 'end' && hasUsage(usage) && categoryForEntry(e) === category;
-  });
-  if (categoryEntries.length === 0) return null;
-
-  const last = categoryEntries[categoryEntries.length - 1];
-  const lastUsage = readUsage(last);
-  const stats = emptyStats();
-  accumulate(stats, last, lastUsage, pricingOverrides);
-  return {
-    category,
-    at: last.at,
-    chunkId: last.chunkId,
-    stageId: last.stageId,
-    stageName: stageNameFromEntry(last),
-    provider: lastUsage.provider,
-    model: lastUsage.model,
-    stats: finalize(stats),
   };
 }
 
@@ -418,27 +377,8 @@ export function summarizeChunkUsage(
   pricingOverrides: Pricing = {},
 ): ChunkUsageSummary {
   const chunkEntries = entries.filter((entry) => entry.chunkId === chunkId);
-  let translationRuns = 0;
-  let auditRuns = 0;
-  let coherenceRuns = 0;
-
-  for (const entry of chunkEntries) {
-    const usage = readUsage(entry);
-    if (entry.phase !== 'end' || !hasUsage(usage)) continue;
-    const category = categoryForEntry(entry);
-    if (category === 'translation') translationRuns += 1;
-    else if (category === 'audit') auditRuns += 1;
-    else if (category === 'coherence') coherenceRuns += 1;
-  }
-
   return {
     total: aggregateEntries(chunkEntries, pricingOverrides),
-    translationRuns,
-    auditRuns,
-    coherenceRuns,
-    lastTranslationRun: lastRunForCategory(chunkEntries, 'translation', pricingOverrides),
-    lastAuditRun: lastRunForCategory(chunkEntries, 'audit', pricingOverrides),
-    lastCoherenceRun: lastRunForCategory(chunkEntries, 'coherence', pricingOverrides),
     scopeBreakdown: buildScopeBreakdown(chunkEntries, pricingOverrides),
   };
 }

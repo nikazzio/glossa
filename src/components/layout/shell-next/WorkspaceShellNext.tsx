@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
+import { Group, Panel, usePanelCallbackRef } from 'react-resizable-panels';
+import { ResizeHandle } from '../../ui';
 import { useUiStore } from '../../../stores/uiStore';
-import { WorkspaceRailNext } from './WorkspaceRailNext';
+import { RAIL_COLLAPSED_WIDTH, RAIL_MIN_WIDTH, WorkspaceRailNext } from './WorkspaceRailNext';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../motion';
 import { resetStrayResizeCursor } from './resetStrayResizeCursor';
 import { useResizeDragging } from './useResizeDragging';
@@ -13,10 +14,10 @@ import { useResizeDragging } from './useResizeDragging';
  * coerenza visiva con la vista progetto.
  */
 
-const SIDEBAR_DEFAULT = 300;
-const SIDEBAR_COLLAPSED = 64;
-const SIDEBAR_MIN = 280;
-const SIDEBAR_MAX = 520;
+const SIDEBAR_DEFAULT = RAIL_MIN_WIDTH;
+const SIDEBAR_COLLAPSED = RAIL_COLLAPSED_WIDTH;
+const SIDEBAR_MIN = RAIL_MIN_WIDTH;
+const SIDEBAR_MAX = 420;
 
 function clampPanelWidth(width: number, min: number, max: number) {
   return Math.min(Math.max(width, min), max);
@@ -86,28 +87,18 @@ export function WorkspaceShellNext({ children }: WorkspaceShellNextProps) {
         defaultSize={initialWidth.current}
         panelRef={setRailPanel}
         onResize={syncRailFlag}
-        className={`border-r border-editorial-border bg-editorial-page ${
+        className={`overflow-hidden border-r border-editorial-border bg-editorial-page ${
           dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
         }`}
       >
         <WorkspaceRailNext collapsed={collapsed} />
       </Panel>
 
-      <Separator
-        onPointerDown={() => setDragging(true)}
-        className={`group/sep relative z-30 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-          dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
-        }`}
-      >
-        <span
-          aria-hidden="true"
-          className={`h-7 w-px rounded-full transition-colors ${
-            dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-          }`}
-        />
-      </Separator>
+      <ResizeHandle dragging={dragging} onDragStart={() => setDragging(true)} layer="shell" />
 
-      <Panel id="workspace-content" className="relative flex min-w-0">
+      {/* Anche il contenuto scorre insieme alla barra: con la transizione su un
+          solo pannello il bordo dell'altro scattava. */}
+      <Panel id="workspace-content" className={`relative flex min-w-0 ${dragging ? '' : PANEL_FLEX_TRANSITION_CLASS}`}>
         {children}
       </Panel>
     </Group>

@@ -196,7 +196,9 @@
     "backToAnalysis": "Back to Analysis",
     "resize": "Resize sidebar",
     "collapse": "Collapse sidebar",
-    "expand": "Expand sidebar"
+    "expand": "Expand sidebar",
+    "generalMenu": "General menu",
+    "navigation": "Navigation"
   },
   "projectShell": {
     "railLabel": "Project panels",
@@ -231,7 +233,8 @@
     },
     "modeDesc": {
       "standard": "One translation stage + quality audit.",
-      "editorial": "Three stages: translation → refine → format, then quality audit."
+      "editorial": "Three stages: translation → refine → format, then quality audit.",
+      "deepl-hybrid": "DeepL translation, LLM refinement and audit."
     },
     "stageRole": {
       "deepl-translation": "DeepL Translation",
@@ -246,25 +249,24 @@
     },
     "blobContext": "Context memory",
     "blobContextExplainer": "When the text is split into multiple translation blocks, this option decides how much of the previous block the model sees, so it doesn't lose the thread between one block and the next.",
-    "blobOverrideToggle": "Manual override",
+    "blobOverrideToggle": "Manual size",
     "blobContextAutoDesc": "Automatic — ~{{tokens}} tokens based on {{model}}",
-    "blobBudgetTokens": "Token budget",
+    "blobBudgetTokens": "Size",
+    "unitTokens": "tokens",
+    "unitChunks": "chunks",
     "blobContextReset": "Restore automatic",
     "blobComputeFailed": "Context memory computation failed — translation will proceed without cross-chunk context",
-    "blobOverlap": "Overlap (chunks)",
+    "blobOverlap": "Overlap",
     "blobOverlapHint": "How many chunks from the end of the previous block to prepend to the next, to avoid losing the thread at block boundaries.",
     "inheritDefault": "Inherit from project",
-    "personaActive": "System prompt (persona)",
     "stages": "Stages",
     "auditGuard": "Audit Guard",
     "auditPlaceholder": "Audit instructions...",
     "keywordRegistry": "Keyword Registry",
     "source": "Source",
     "target": "Target",
-    "beginPipeline": "Begin Pipeline",
     "run": "Run",
     "audit": "Audit",
-    "executing": "Executing...",
     "stopPipeline": "Request Stop",
     "stopping": "Stopping...",
     "stopRequested": "Stop requested. Glossa will finish the current chunk and then stop.",
@@ -296,8 +298,6 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyFailed": "Copy failed",
-    "runDisabledNoChunks": "Stage some content first",
-    "runDisabledProcessing": "Pipeline is running, please wait…",
     "settingsLockedWhileRunning": "Settings locked while running",
     "words": "Words",
     "paragraphs": "Paragraphs",
@@ -323,15 +323,12 @@
     "unlockSourceHint": "Editing the source will discard this chunk's translation, stage outputs, and audit.",
     "confirmUnlockTitle": "Edit the source text?",
     "confirmUnlockMessage": "The translation, all stage outputs, and the audit for this chunk will be discarded so you can edit. This cannot be undone.",
-    "rerunAll": "Re-run all",
-    "rerunAllHint": "Discard the {{count}} completed translation(s) and run the pipeline from scratch.",
-    "confirmRerunAllTitle": "Re-run the whole pipeline?",
-    "confirmRerunAllMessage": "{{count}} completed translation(s) and their audits will be discarded before the pipeline restarts. This cannot be undone.",
     "runChunkCount": "This run will process {{count}} chunk(s).",
     "testChunkCountHint": "How many ready chunks the test run should process.",
     "increaseTestChunkCount": "Increase test chunk count",
     "decreaseTestChunkCount": "Decrease test chunk count",
-    "resetAll": "Full reset",
+    "resetAll": "Reset all translations",
+    "resetAllNothing": "no translations to reset",
     "confirmResetAllTitle": "Reset all translations?",
     "confirmResetAllMessage": "{{count}} translations and their audits will be deleted. This cannot be undone.",
     "resetAllDone": "Translations reset",
@@ -340,7 +337,6 @@
     "modeProductionShort": "Prod",
     "modeTestHint": "Runs the pipeline on a limited number of chunks. Configuration stays editable.",
     "modeProductionHint": "Runs the pipeline on the entire document.",
-    "modeLockedHint": "Mode locked — real translations exist. Use Full Reset to start over.",
     "retestChunk": "Re-run test",
     "singleChunkCompleted": "Chunk re-translated",
     "singleChunkAudited": "Chunk audit refreshed",
@@ -360,22 +356,20 @@
     "prompt": "Prompt",
     "auditModelLabel": "Audit Model",
     "auditModelHint": "This provider and model are shared by both local quality evaluation and the coherence audit.",
-    "judgePromptLabel": "Judge Prompt",
+    "judgePromptLabel": "Audit prompt",
     "judgePromptHint": "Instructions for local quality, accuracy, and terminology evaluation.",
-    "coherencePromptLabel": "Coherence Prompt",
+    "coherencePromptLabel": "Coherence prompt",
     "coherencePromptHint": "Instructions for the cross-segment audit across the full translated document.",
     "coherencePromptPlaceholder": "Coherence audit instructions...",
     "judgeRefineLoopSectionLabel": "Refine Loop",
     "judgeRefineLoop": "Auto-refine based on audit findings",
     "judgeRefineLoopMaxIter": "Max iterations",
     "providerOptions": {
-      "stageTitle": "Stage runtime",
+      "stageTitle": "Ollama generation options",
       "stageHint": "Provider-specific generation controls for this translation stage only.",
       "temperatureIgnored": "The verdict comes back in a constrained format: for that, temperature stays at zero whatever you write here. It applies to the judge only, not to translations.",
-      "reviewTitle": "Audit runtime",
+      "reviewTitle": "Ollama generation options",
       "reviewHint": "Shared provider-specific generation controls for judge and coherence checks.",
-      "enableOverride": "Override config",
-      "enableOverrideHint": "When disabled, this panel uses the built-in runtime defaults.",
       "enableAdvanced": "Use advanced JSON",
       "enableAdvancedHint": "Use raw provider options and let them override the typed numeric controls where keys overlap.",
       "temperature": "Temperature",
@@ -402,15 +396,21 @@
       "extendedTtlToggle": "Extend to 1 hour",
       "extendedTtlHint": "Keeps the cache valid for an hour instead of 5 minutes — useful when the pipeline has a slow stage (e.g. Ollama) between one Anthropic chunk and the next. Costs 2x on writes instead of 1.25x."
     },
-    "tabSettings": "Settings",
+    "tabSettings": "General",
     "tabStages": "Translation",
-    "tabTranslation": "Translation",
-    "modelLockedHint": "Model locked — existing translations must be preserved. Start a new project to change model.",
+    "tabTranslation": "Stages",
+    "tabMemory": "Memory",
+    "glossarySave": "Save the terms to the dictionary",
+    "reasonNoChanges": "no changes to save",
+    "memoryUnavailableDeepl": "DeepL mode uses neither memory nor examples",
     "modelContextWindowChangedHint": "Context window changed since import — chunk size may no longer be optimal. Consider re-importing the document.",
     "stageModelLabel": "Model",
     "modelDeprecatedHint": "This model is no longer a recommended choice: it may still work, but the shown price and context window may be out of date.",
-    "unlockModelChange": "Unlock model change",
-    "unlockModelChangeWarning": "Changing the model now leaves already-translated chunks on the previous model — the document may end up with inconsistent style/quality across sections.",
+    "unlockModelChange": "Unlock model change — chunks already translated keep the previous model",
+    "lockModelChange": "Lock the model",
+    "ollamaOfflineReload": "Ollama unreachable — reload models",
+    "reasonTranslationsExist": "translations already exist",
+    "reasonMissingKey": "missing key for {{provider}}",
     "modelReasoning": {
       "reasoning": "Reasoning",
       "non_reasoning": "Direct",
@@ -429,75 +429,11 @@
       "neutral": "Usable for {{target}}"
     },
     "tabAudit": "Quality Control",
-    "tabGlossary": "Term Registry",
-    "tabPreview": "Prompt Preview",
+    "tabGlossary": "Glossary",
+    "tabPreview": "Prompt preview",
     "promptPreviewTitle": "Prompt Preview",
-    "promptPreviewHint": "Frontend-only view of the prompt structure built from the current configuration. Runtime placeholders show where chunk text and blob context are injected.",
+    "promptPreviewHint": "Each phase's request, piece by piece in sending order. “Structure” shows placeholders where chunk data goes; “Open chunk” fills them with the chunk open in the Studio, including the checked memory phrases.",
     "promptPreviewEmpty": "No translation stages are enabled yet.",
-    "promptPreviewStatic": "Static",
-    "promptPreviewRuntime": "Runtime",
-    "promptPreviewBlocks": {
-      "system-opener": {
-        "title": "System opener",
-        "hint": "Cached: defines the model role and source/target language pair. Identical for every chunk — stays warm in the provider cache across all stages."
-      },
-      "structural-rules": {
-        "title": "Structural preservation rules",
-        "hint": "Cached: paragraph boundaries, whitespace, and footnote placement rules applied at every stage."
-      },
-      "glossary-constraints": {
-        "title": "Glossary constraints",
-        "hint": "Cached: mandatory terminology enforcement. When a glossary is present this block expands with the full term table."
-      },
-      "markdown-rules": {
-        "title": "Markdown preservation rules",
-        "hint": "Cached: Markdown syntax preservation rules. Only shown when markdown-aware mode is enabled."
-      },
-      "stage-instructions": {
-        "title": "Stage instructions",
-        "hint": "Cached per run: your custom stage prompt followed by the output contract. The output contract is intentionally repeated in the user turn below to reinforce the instruction across both turns."
-      },
-      "blob-context": {
-        "title": "Optional blob context",
-        "hint": "Reference document block reused across chunks in the same blob. It is context-only and belongs in the cacheable prefix."
-      },
-      "current-chunk-id": {
-        "title": "Optional chunk id",
-        "hint": "Runtime chunk identifier injected only when blob chunk tracking is available. It scopes the request to the current chunk."
-      },
-      "source-chunk-text": {
-        "title": "Runtime source text",
-        "hint": "Current chunk payload injected at execution time. For refine, this remains the original source chunk, not the previous translation."
-      },
-      "previous-stage-result": {
-        "title": "Previous stage result",
-        "hint": "Runtime text produced by the previous stage. Refine receives this alongside the original source chunk."
-      },
-      "runtime-task": {
-        "title": "Runtime task instruction",
-        "hint": "Execution-only instruction that tells the model to translate, refine, or format only the current chunk."
-      },
-      "phrase-memory": {
-        "title": "Phrase memory",
-        "hint": "Translation memory pairs matched for this chunk. Appended to stage instructions at execution time — only enabled matches are injected."
-      },
-      "output-contract": {
-        "title": "Runtime output contract",
-        "hint": "Final output requirement repeated in the user turn to reinforce the system instruction. Constrains the reply to the complete stage-specific text result."
-      },
-      "system-post-processor": {
-        "title": "System post-processor",
-        "hint": "Cached: hard constraints for the format stage. Prevents retranslation or wording changes — only minimal formatting repairs are allowed."
-      }
-    },
-    "tabPersona": "Persona",
-    "personaLabel": "Persona",
-    "personaCustomBadge": "Custom",
-    "personaCustomize": "Customize",
-    "personaReset": "Reset to automatic",
-    "languagePairLockedByPersona": "Language pair is locked when a custom persona is active — reset it to edit",
-    "customLanguageToggle": "Use custom language",
-    "customLanguageActive": "Custom language active",
     "customLanguageReset": "Reset to standard",
     "customSourceLanguagePlaceholder": "e.g. Old Norse, Medieval Latin",
     "customTargetLanguagePlaceholder": "e.g. Modern Italian, Contemporary English",
@@ -505,7 +441,6 @@
     "noProjectTitle": "No project open",
     "noProjectHint": "Open or create a project to configure stages, models, audit and glossary.",
     "glossaryEmpty": "No terms in the registry. Use + to add one.",
-    "glossaryOpenProject": "Open a project and assign a dictionary from the Library to manage glossary terms.",
     "glossaryNotes": "Notes",
     "templates": {
       "save": "Save as template",
@@ -516,10 +451,9 @@
       "saved": "Template saved",
       "deleted": "Template deleted",
       "saveFailed": "Failed to save template",
-      "deleteFailed": "Failed to delete template",
       "loadFailed": "Failed to load templates",
-      "deleteConfirmTitle": "Delete template",
-      "deleteConfirmMessage": "Delete template \"{{name}}\"? This action is irreversible."
+      "skipped_one": "Prompt template skipped: unknown category",
+      "skipped_other": "{{count}} prompt templates skipped: unknown category"
     },
     "editPrompt": "Edit prompt",
     "promptCustomBadge": "Custom",
@@ -529,9 +463,6 @@
     "refining": "Refining...",
     "refined": "Prompt refined",
     "refineFailed": "Refinement failed",
-    "refineKeyLabel": "Prompt refinement",
-    "refineKeyMissingHint": "Prompt refinement is disabled for remote providers without API keys. Configure: {{providers}}. Ollama remains available without a key.",
-    "refineKeyReadyHint": "Prompt refinement is ready for configured providers. Ollama does not require an API key.",
     "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window.",
     "deleteTitle": "Delete \"{{name}}\"?",
     "deleteMessage": "All translations associated with this pipeline will be permanently deleted.",
@@ -544,6 +475,8 @@
     "ariaAdd": "Add pipeline",
     "saveFirstToAdd": "Save the project before adding pipelines",
     "pipelineNameLabel": "Pipeline name",
+    "renamePipeline": "Rename the pipeline",
+    "renameFailed": "The pipeline could not be renamed",
     "newPipeline": "New pipeline",
     "pipelineNumber": "Pipeline {{number}}",
     "deletePipeline": "Delete pipeline",
@@ -555,10 +488,9 @@
     "deepl": {
       "confirmDeleteGlossaryTitle": "Delete the DeepL glossary?",
       "confirmDeleteGlossaryMessage": "The glossary “{{name}}” will be permanently deleted from DeepL. This cannot be undone.",
-      "optionsTitle": "Options",
+      "deleteGlossaryFailed": "Could not delete the DeepL glossary",
       "preserveFormatting": "Keep formatting",
       "showBilledCharacters": "Show billed characters",
-      "sectionTranslation": "DeepL translation",
       "modelType": "Translation mode",
       "preferQuality": "Quality (recommended)",
       "qualityOnly": "Quality only",
@@ -571,16 +503,153 @@
       "formalityLess": "Informal",
       "glossary": "DeepL glossary",
       "noGlossary": "No glossary",
+      "glossaryOption": "{{name}} ({{count}} terms)",
       "deleteGlossary": "Delete the DeepL glossary",
       "context": "Translation context",
       "contextPlaceholder": "Optional text that helps DeepL understand what the document is about",
       "glossaryUploaded": "Glossary uploaded to DeepL",
       "glossaryUploadFailed": "Uploading the glossary to DeepL failed",
       "uploadGlossaryTooltip": "Upload the Glossa glossary to DeepL",
-      "uploadGlossaryLabel": "Upload to DeepL",
-      "keyRequired": "Needs the DeepL key, entered in Settings"
+      "keyRequired": "Needs the DeepL key, entered in Settings",
+      "detectSource": "Detect language",
+      "languagesUnavailable": "DeepL language lists are unavailable. The current selection is retained.",
+      "glossariesUnavailable": "DeepL glossary list is unavailable",
+      "glossaryNeedsSource": "Choose a source language in the DeepL stage to upload the glossary.",
+      "requestBody": "DeepL request",
+      "languagePair": "DeepL · languages",
+      "languagePairHint": "Only for the DeepL request; LLMs follow the Translation context and prompts.",
+      "onlyInDeeplMode": "Enabled only in DeepL mode",
+      "chooseTarget": "Choose the target language",
+      "swapUnavailable": "Choose two compatible languages; automatic detection cannot be swapped",
+      "autoShort": "Auto"
     },
-    "configSections": "Configuration sections"
+    "configSections": "Configuration sections",
+    "workBriefLabel": "Translation context",
+    "workBriefHint": "Languages, varieties, goal and register. Translation, refinement, audit and coherence receive it; it cannot be empty.",
+    "workBriefPlaceholder": "E.g. Translate seventeenth-century Venetian into contemporary Italian, preserving the tone and explaining historical terms in notes.",
+    "auditPreviewLabel": "Audit",
+    "coherencePreviewLabel": "Coherence",
+    "phaseNotUsed": "Not used in this mode",
+    "modeShort": {
+      "standard": "Simple",
+      "editorial": "Editorial",
+      "deepl-hybrid": "DeepL"
+    },
+    "operationFailed": "Pipeline operation failed",
+    "promptSource": {
+      "template": "Template “{{name}}”",
+      "default": "Default",
+      "custom": "Custom"
+    },
+    "promptRequired": "the text cannot be empty",
+    "promptParts": {
+      "systemMessage": "System message",
+      "systemMessageHint": "Instructions, rules and resources: identical for every chunk, so the provider caches it and it costs less.",
+      "userMessage": "User message",
+      "userMessageHint": "The chunk to work on and the final request: changes with every chunk.",
+      "kind": {
+        "system": "System prompt",
+        "auto": "Automatic",
+        "linked": "Content",
+        "systemAt": "System prompt · {{place}}",
+        "autoAt": "Automatic · {{place}}",
+        "linkedAt": "Content: {{place}}"
+      },
+      "place": {
+        "general": "General",
+        "stages": "Stages",
+        "quality": "Quality control",
+        "glossary": "Glossary",
+        "memory": "Memory"
+      },
+      "reason": {
+        "noGlossary": "no dictionary assigned",
+        "notMarkdown": "only for documents imported as Markdown",
+        "noExamples": "no examples entered",
+        "onlyRefineLoop": "only when the refine loop revises after an audit",
+        "whenGrouped": "appears only when the document is split into groups of chunks",
+        "notInThisRequest": "not present in this request",
+        "switchedOff": "switched off in this phase"
+      },
+      "role": {
+        "title": "Role",
+        "hint": "Tells the model what it is in this phase."
+      },
+      "translation-context": {
+        "title": "Translation context",
+        "hint": "A system heading followed by the Translation context, written in General."
+      },
+      "structural-rules": {
+        "title": "Structural rules",
+        "hint": "Keep paragraphs, line breaks, spaces, lists and notes."
+      },
+      "glossary-rules": {
+        "title": "Glossary rules",
+        "hint": "The rules are a system text; the term table comes from the dictionary assigned in the Glossary tab."
+      },
+      "glossary-table": {
+        "title": "Glossary",
+        "hint": "A system heading followed by the assigned dictionary table, in the Glossary tab."
+      },
+      "markdown-rules": {
+        "title": "Markdown rules",
+        "hint": "Do not break Markdown asterisks, notes and headings."
+      },
+      "examples": {
+        "title": "Translation examples",
+        "hint": "A system introduction followed by the example pairs entered in the Memory tab."
+      },
+      "neighbour-chunks": {
+        "title": "Neighbouring chunks",
+        "hint": "A system frame around the surrounding chunks’ text, inserted automatically; the amount is set in Stages."
+      },
+      "stage-prompt": {
+        "title": "Prompt",
+        "hint": "A system heading followed by the phase prompt, edited in its tab; for translation and Refine, with memory on, checked phrases are appended."
+      },
+      "output-contract": {
+        "title": "Result request",
+        "hint": "What the model must return."
+      },
+      "review-method": {
+        "title": "Review method",
+        "hint": "How the check must be carried out."
+      },
+      "response-format": {
+        "title": "Response format",
+        "hint": "The structure the app reads: changing it badly makes the check fail."
+      },
+      "chunk-id": {
+        "title": "Chunk identifier",
+        "hint": "Tells which of the neighbouring chunks is the one to work on."
+      },
+      "audit-findings": {
+        "title": "Audit findings",
+        "hint": "A system frame around the problems found by the audit, inserted automatically in the refine loop."
+      },
+      "deepl-request": {
+        "title": "DeepL request",
+        "hint": "The request body sent to DeepL: no prompt, only parameters."
+      },
+      "openPlace": "Open {{place}}, where the content is edited",
+      "unlock": "Unlock to edit",
+      "lock": "Lock again",
+      "unlockGuardedTitle": "Unlock the response format?",
+      "unlockGuardedMessage": "The app reads the model’s answer according to this format: changing it incompatibly makes audit or coherence fail. Reset is always available.",
+      "missingPlaceholder": "placeholders {{names}} are missing",
+      "sharedTranslationRefine": "shared by Translation and Refine",
+      "sharedAll": "shared by every phase that uses it",
+      "user-message": {
+        "title": "User message",
+        "hint": "The chunk to work on and the final request; placeholders in double braces are filled for each chunk."
+      },
+      "switchOff": "Switch this piece off in this phase",
+      "switchOn": "Switch this piece back on"
+    },
+    "promptPreviewMode": "What to show",
+    "promptPreviewStructure": "Structure",
+    "promptPreviewChunk": "Open chunk",
+    "promptPreviewNoChunk": "No chunk open: open or import a document in the Studio."
   },
   "audit": {
     "title": "Audit Logs",
@@ -616,7 +685,6 @@
   },
   "settings": {
     "title": "Settings",
-    "providerConfig": "Provider Configuration",
     "segmentation": "Segmentation Defaults",
     "segmentationHint": "Target chunk size for each preset. Min and max are derived automatically (×0.5 and ×1.5).",
     "chunkPresetShort": "Short",
@@ -635,7 +703,6 @@
     "highlightAuditPhrase": "Audit phrase",
     "highlightAnnotation": "Note",
     "typography": "Typography",
-    "typographyTab": "Typography",
     "discoveryTab": "Source search",
     "uiFont": "Interface font",
     "uiFontHint": "Choose the typeface for the whole interface. Editorial serif values are unaffected.",
@@ -680,7 +747,6 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configuration",
     "eyebrow": "General settings",
-    "providerTab": "Provider",
     "storageTab": "Data",
     "storage": {
       "title": "Data location",
@@ -778,7 +844,7 @@
     "phraseMemoryMaxResults": "Max results",
     "phraseMemoryManualRefreshHint": "Manual refresh remains available in the chunk Memory panel.",
     "fewShotTab": "Translation examples",
-    "fewShotEmptyHint": "Add examples from a locked chunk in the document editor (Audit tab).",
+    "fewShotEmptyHint": "Add examples from a verified segment in the document editor (Review → Audit).",
     "fewShotSourceLabel": "Source text",
     "fewShotTargetLabel": "Translation",
     "fewShotLabelPlaceholder": "Note (optional)",
@@ -922,6 +988,46 @@
       "imageEdgeHint": "Long side of the optimised image. A smaller image is not enlarged.",
       "loadFailed": "Could not read the transcription settings",
       "saveFailed": "Could not save the setting"
+    },
+    "appearanceTab": "Appearance",
+    "modelsTab": "Models",
+    "languagesTab": "Languages",
+    "appearance": {
+      "interface": "Interface",
+      "document": "Document",
+      "colors": "Colors",
+      "documentText": "Document text",
+      "layoutHint": "How source and translation are laid out for reading. Auto chooses from the window width."
+    },
+    "accentColorFor": "Accent, {{scheme}} theme",
+    "wordsUnit": "words",
+    "pipelinesSection": "Pipelines",
+    "models": {
+      "custom": "Custom provider",
+      "apiKey": "API key",
+      "list": "Models",
+      "server": "Server"
+    },
+    "data": {
+      "location": "Folders"
+    },
+    "languages": {
+      "title": "Language list",
+      "hint": "ISO 639-3 languages and Glottolog varieties offered when you choose a work’s languages. The bundled list works offline; updating downloads it again from the official sources.",
+      "update": "Update language list",
+      "updated": "Language list updated: {{added}} new, {{retired}} retired",
+      "updateFailed": "Could not update the language list: the current one stays in use",
+      "loadFailed": "The language list cannot be read",
+      "origin": "List in use",
+      "originHint": "Bundled with the app, or downloaded by an update: the downloaded one takes precedence.",
+      "origin_bundled": "Bundled with the app",
+      "origin_downloaded": "Downloaded",
+      "iso": "ISO 639-3 languages",
+      "isoHint": "Individual languages and macrolanguages from the SIL register, with the date it was retrieved.",
+      "varieties": "Glottolog varieties",
+      "varietiesHint": "Varieties (dialect level) linked to an ISO language, with the date they were retrieved.",
+      "retired": "Retired codes kept",
+      "retiredHint": "Languages gone from the official sources: still readable by name in the works and phrases that use them, but no longer offered."
     }
   },
   "ollama": {
@@ -984,7 +1090,7 @@
     "issueTypeGlossary": "Glossary",
     "lockedRequired": "Lock all chunks before running the coherence audit",
     "translationsRequired": "Complete a translation for every chunk before running the coherence audit",
-    "unlockedWarning": "{{count}} chunk(s) are not locked yet: you can still run the audit, but the result may be less reliable."
+    "unlockedWarning": "{{count}} segment(s) are not verified yet: you can still run the audit, but the result may be less reliable."
   },
   "language": {
     "label": "Language",
@@ -1023,7 +1129,8 @@
       "yearsAgo_one": "{{count}} year ago",
       "yearsAgo_other": "{{count}} years ago"
     },
-    "openLinkFailed": "The link could not be opened in the browser."
+    "openLinkFailed": "The link could not be opened in the browser.",
+    "resizeColumns": "Resize columns"
   },
   "projects": {
     "title": "Projects",
@@ -1066,7 +1173,22 @@
     "updatedYearsAgo_other": "updated {{count}} years ago",
     "loadFailed": "Failed to load project",
     "rename": "Rename the project",
-    "untitled": "Untitled project"
+    "untitled": "Untitled project",
+    "sourceFile": "File to translate",
+    "chooseSourceFile": "Choose the file to translate",
+    "changeSourceFile": "Choose another file",
+    "removeSourceFile": "Remove the file",
+    "noSourceFile": "No file: you can import it from the editor",
+    "readingSourceFile": "Reading the file…",
+    "sourceBook": "Source book and version",
+    "sourceBookUnspecified": "Book not specified",
+    "sourceBookHint": "Explicitly link a Library version. The imported file name does not determine the book.",
+    "chooseSourceBook": "Choose the book",
+    "searchSourceBook": "Search by title or copy",
+    "sourceBookGroup": "Library books",
+    "noSourceBookFound": "No book found",
+    "clearSourceBook": "No book",
+    "sourceBookLoadError": "Could not load available books"
   },
   "transcription": {
     "create": "Create document",
@@ -1123,11 +1245,10 @@
     "viewerOpenFailed": "This copy won't open. Switch back with the controls above.",
     "paneLabel": "Text",
     "pageTitle": "Page {{n}}",
-    "saveSaved": "Saved",
-    "savePending": "Unsaved",
-    "saveSaving": "Saving",
     "saveError": "Save failed",
     "saveRetry": "Retry",
+    "saveNow": "Save a version to the history now (Ctrl+S)",
+    "saveNowNothing": "No changes to save",
     "textPlaceholder": "Write the transcribed text here...",
     "inspectorLabel": "Transcription tools",
     "inspectorPanelTitle": "Tools",
@@ -1136,27 +1257,25 @@
       "history": "History",
       "summary": "Summary",
       "assist": "OCR",
-      "metadata": "Metadata",
       "log": "Transcription log"
     },
     "meta": {
       "page": "Page",
       "pageLabel": "Page label",
-      "status": "Status",
-      "revisionCount": "Saved revisions",
-      "segmentId": "Segment id",
-      "sourcePageId": "Linked page",
-      "sourcePageIdUnset": "not linked"
+      "status": "Status"
     },
     "summary": {
-      "title": "Project summary",
       "pagesWithText": "Transcribed pages",
       "words": "Transcribed words",
       "verifiedPages": "Verified pages",
       "progress": "Progress",
       "ocr": "Automatic recognition",
       "runs": "Completed readings",
-      "loadFailed": "Could not load the summary"
+      "loadFailed": "Could not load the summary",
+      "documentTitle": "Document summary",
+      "pageSection": "Page",
+      "pageVersions": "Saved versions",
+      "retry": "Retry"
     },
     "authorLabels": {
       "user": "Manual correction",
@@ -1170,7 +1289,7 @@
       "noModelConfigured": "Choose a provider and a model that can read images.",
       "loading": "Loading…",
       "documentModel": "Model",
-      "documentPrompt": "Prompt",
+      "documentPrompt": "Document OCR prompt",
       "readThisPage": "Read page {{page}}",
       "inheritWorkspace": "Inherit from workspace",
       "saveFailed": "Could not save OCR settings",
@@ -1198,13 +1317,88 @@
         "image": "Image",
         "prompt": "Prompt",
         "end": "Outcome"
-      }
-    }
+      },
+      "loadFailed": "Could not read the transcription log.",
+      "retry": "Retry",
+      "groupedOn": "Grouped by page: press for a single list",
+      "groupedOff": "Single list: press to group by page"
+    },
+    "unlinkSource": "Unlink the work",
+    "noSourceFound": "No work found",
+    "versionNumber": "Version {{number}}",
+    "currentBadge": "Current",
+    "verifiedVersionBadge": "Verified",
+    "finishRenameFirst": "Finish renaming the other version first",
+    "cannotDeleteCurrentOrVerified": "The current or verified version can't be deleted",
+    "clearHistoryNothing": "No old versions to delete",
+    "noOtherRevisions": "No other saves.",
+    "versionNameRequired": "Type a name for the version",
+    "commandBlocked": "{{command}} — {{reason}}",
+    "blockedEmptyPage": "Write some text before verifying",
+    "blockedPageLoading": "Page loading",
+    "blockedReading": "Reading in progress"
   },
   "areas": {
     "translations": {
       "title": "Translations",
-      "sidebarHint": "Projects and pipelines"
+      "sidebarHint": "Projects and pipelines",
+      "emptyMessage": "The Translations catalogue has no content yet.",
+      "emptyHint": "Create a translation with the «+» next to the title and pick the file to translate right away.",
+      "catalog": {
+        "shelves": {
+          "title": "Shelves",
+          "all": "All",
+          "recent": "Recent",
+          "toStart": "Not started",
+          "inProgress": "In progress",
+          "verified": "Verified"
+        },
+        "filters": {
+          "searchPlaceholder": "Search by name…",
+          "searchLabel": "Search translations",
+          "clear": "Clear filters",
+          "all": {
+            "workspaceId": "All workspaces",
+            "languagePair": "All languages"
+          },
+          "facet": {
+            "workspaceId": "Workspace",
+            "languagePair": "Languages"
+          },
+          "sortLabel": "Sort",
+          "sort": {
+            "name": "By name",
+            "edited": "Last edited",
+            "progress": "By progress"
+          },
+          "noMatches": "No translation matches the filters."
+        },
+        "grouping": {
+          "label": "Group",
+          "none": "No groups",
+          "workspace": "By workspace",
+          "languagePair": "By languages",
+          "missing": {
+            "workspace": "Unknown workspace"
+          }
+        },
+        "table": {
+          "name": "Name",
+          "languages": "Languages",
+          "workspace": "Workspace",
+          "progress": "Translated",
+          "verified": "Verified",
+          "edited": "Last edited"
+        },
+        "noText": "No text imported",
+        "chunksTranslated": "{{done}}/{{total}} segments translated",
+        "verifiedCount": "{{count}} verified",
+        "rename": "Rename",
+        "renameLabel": "Translation name",
+        "renameFailed": "Could not rename the translation",
+        "newTranslation": "New translation",
+        "loadFailed": "Could not read the translations"
+      }
     },
     "library": {
       "title": "Library",
@@ -1628,7 +1822,79 @@
       "title": "Transcriptions",
       "sidebarHint": "OCR and source prep",
       "emptyMessage": "The Transcriptions catalogue has no content yet.",
-      "emptyHint": "Create a document to start transcribing, or start from a work in the Library."
+      "emptyHint": "Create a document to start transcribing, or start from a work in the Library.",
+      "catalog": {
+        "shelves": {
+          "title": "Shelves",
+          "all": "All",
+          "recent": "Recent",
+          "toStart": "Not started",
+          "inProgress": "In progress",
+          "verified": "Verified",
+          "unlinked": "No work",
+          "archived": "Archived"
+        },
+        "filters": {
+          "searchPlaceholder": "Search by name, author, title, year…",
+          "searchLabel": "Search transcriptions",
+          "clear": "Clear filters",
+          "all": {
+            "workspaceId": "All workspaces",
+            "providerKey": "All libraries",
+            "century": "All centuries"
+          },
+          "facet": {
+            "workspaceId": "Workspace",
+            "providerKey": "Library",
+            "century": "Century"
+          },
+          "sortLabel": "Sort",
+          "sort": {
+            "title": "By name",
+            "creator": "By author",
+            "year": "By year",
+            "edited": "Last edited",
+            "progress": "By progress"
+          },
+          "noMatches": "No transcription matches the filters."
+        },
+        "grouping": {
+          "label": "Group",
+          "none": "No groups",
+          "workspace": "By workspace",
+          "provider": "By library",
+          "missing": {
+            "workspace": "Unknown workspace",
+            "provider": "No library",
+            "none": ""
+          }
+        },
+        "table": {
+          "name": "Name",
+          "creator": "Author",
+          "work": "Work",
+          "year": "Year",
+          "workspace": "Workspace",
+          "provider": "Library",
+          "progress": "Written",
+          "verified": "Verified"
+        },
+        "pagesWritten": "{{done}}/{{total}} written",
+        "pagesWrittenCount_one": "{{count}} page written",
+        "pagesWrittenCount_other": "{{count}} pages written",
+        "verifiedCount": "{{count}} verified",
+        "openWork": "Open the work in the Library",
+        "noWork": "No Library work linked",
+        "rename": "Rename",
+        "renameLabel": "Transcription name",
+        "renameFailed": "Could not rename the transcription",
+        "archive": "Archive",
+        "restore": "Restore",
+        "archiveFailed": "Could not archive the transcription",
+        "restoreFailed": "Could not restore the transcription",
+        "newTranscription": "New transcription",
+        "loadFailed": "Could not read the transcriptions"
+      }
     },
     "analysis": {
       "title": "Analysis",
@@ -1728,9 +1994,9 @@
     },
     "namePlaceholder": "Workspace name",
     "descriptionPlaceholder": "Workspace description",
-    "embeddingChangeWarning": "Model changed. Regenerate embeddings to apply.",
+    "embeddingChangeWarning": "After saving, search uses the selected model. Texts without this embedding remain in the catalogue but do not appear among similar phrases.",
     "regenerateEmbeddings": "Regenerate all embeddings",
-    "regenerateEmbeddingsHint": "Re-embeds all memory entries with the current model ({{model}}).",
+    "regenerateEmbeddingsHint": "Calculate embeddings with {{model}} for every phrase in this workspace through OpenAI, incurring API costs. Embeddings from other models are preserved. Continue?",
     "embeddingsRegenerated": "{{count}} entries successfully re-embedded.",
     "embeddingsRegenerateFailed": "Embedding regeneration failed.",
     "settings": {
@@ -1741,12 +2007,6 @@
       "ocrDefaultPromptHint": "Every document starts from this. In the Studio the prompt is changed from any page and applies to the whole document.",
       "ocrDefaultModel": "Default OCR model",
       "ocrDefaultPrompt": "Default OCR prompt"
-    },
-    "translationsArea": {
-      "sort": {
-        "updatedAt": "Recent",
-        "name": "Name"
-      }
     },
     "hub": {
       "lockedArea": "Coming in version 2.0"
@@ -1847,6 +2107,7 @@
     "import": "Import text file",
     "imported": "File imported successfully",
     "importError": "Import failed",
+    "languagesSaveAfterImportFailed": "The work’s languages could not be saved",
     "pipelineSaveAfterImportFailed": "Pipeline config could not be saved",
     "backupExportSuccess": "Backup saved",
     "backupImportSuccess": "Restore complete",
@@ -1881,6 +2142,8 @@
     "importCoherenceOk": "All text accounted for",
     "importCoherenceWarning": "~{{pct}}% of words may be missing after chunking — check the settings",
     "importModelLabel": "Model",
+    "importSegmentationLabel": "Splitting into chunks",
+    "importViewLabel": "Preview view",
     "chunkShort": "Short",
     "chunkShortTitle": "~400 words per chunk — maximum granularity",
     "chunkMedium": "Medium",
@@ -2011,17 +2274,17 @@
     "projectHomeUnits": "Units loaded",
     "projectHomeMode": "Pipeline mode",
     "previousChunk": "Previous chunk",
+    "jumpBackChunks": "Back {{count}} segments",
+    "jumpForwardChunks": "Forward {{count}} segments",
     "nextChunk": "Next chunk",
     "leftPage": "Source page",
     "rightPage": "Translation page",
     "stageTrace": "Stage Trace",
     "noStageTrace": "No output available for this stage.",
     "viewStageResult": "View output: {{stage}}",
-    "lockTranslation": "Lock candidate translation",
-    "unlockTranslation": "Unlock candidate translation",
-    "translationLockedTitle": "Translation validated and locked",
-    "translationLockedBody": "This translation is protected from accidental edits. You can unlock it from the green check button in the chunk toolbar.",
-    "translationLockedBadge": "Validated",
+    "lockTranslation": "Mark as verified",
+    "unlockTranslation": "Return to draft",
+    "translationLockedBadge": "Verified",
     "currentChunkBadge": "Current chunk",
     "translationStaleBadge": "Source changed",
     "configDrawerHint": "Language, models, translation stages and glossary for the current project.",
@@ -2035,6 +2298,19 @@
     "searchInTranslation": "Search candidate",
     "clearPaneSearch": "Clear search",
     "searchInPane": "Search this text",
+    "reasonRunning": "translation running",
+    "chunkTranslating": "Translation in progress…",
+    "reasonChunkProcessing": "segment being translated",
+    "reasonNoTranslation": "no translation to verify",
+    "reasonHasDocument": "the translation already has a document",
+    "reasonNoDocument": "no document to export",
+    "reasonStageNotRun": "stage not run yet",
+    "reasonDiffOn": "turn comparison off to view a stage",
+    "reasonDiffOff": "turn comparison on",
+    "reasonNoStageRun": "no stage run yet",
+    "reasonNoSourceText": "segment has no text",
+    "reasonNoDocumentToTranslate": "no document to translate",
+    "searchInDocument": "Search the document",
     "searchEmptyTitle": "Document search",
     "searchEmptyBody": "Type a word or phrase to search across all chunks — source text, translation, and audit findings.",
     "searchNoResults": "No results found.",
@@ -2046,9 +2322,26 @@
     "insightsTabStats": "Stats",
     "insightsTabCoherence": "Coherence",
     "insightsTabGlossary": "Glossary",
+    "glossaryTermCount_one": "{{count}} term",
+    "glossaryTermCount_other": "{{count}} terms",
     "insightsTabNotes": "Notes",
+    "insightsTabReview": "Review",
+    "insightsTabDocument": "Document",
+    "reviewSourceNotes": "Source notes",
+    "reviewHistory": "History",
+    "historyAuthor": {
+      "model": "Pipeline",
+      "human": "Manual"
+    },
+    "historyEmpty": "No versions yet: the first comes from the pipeline or the disk.",
+    "historyLoadFailed": "Could not load history. Try opening the tab again.",
+    "reasonVerified": "translation verified: return it to draft",
+    "versionSaveFailed": "Version not written to the history",
+    "saveNow": "Save a version to the history now",
+    "reviewViewsLabel": "Segment review",
     "insightsTabOperations": "Console",
     "chunkPanelTitle": "Chunk",
+    "studioInspectorLabel": "Translation tools",
     "openChunkPanel": "Open chunk panel",
     "operationsEmpty": "No frontend operation logs yet.",
     "operationsEmptyFiltered": "No rows for the selected fragment or filters.",
@@ -2077,9 +2370,6 @@
     "chunkSummaryLastAudit": "Audit",
     "chunkSummaryNoTranslation": "No translation recorded for this chunk yet.",
     "chunkSummaryNoAudit": "No audit recorded for this chunk yet.",
-    "summaryTranslationRuns": "translation runs",
-    "summaryAuditRuns": "audit runs",
-    "summaryCoherenceRuns": "coherence runs",
     "summaryStageBreakdown": "Stage breakdown",
     "summaryPrevStep": "Previous step",
     "summaryNextStep": "Next step",
@@ -2094,7 +2384,6 @@
     "summaryMiss": "miss",
     "translationCacheLabel": "Translation cache",
     "auditCacheLabel": "Audit cache",
-    "sourceLockedTitle": "Source not editable",
     "sourceLockedBody": "This text stays read-only. Use the pencil button above to enable editing.",
     "enableSourceEditing": "Edit source",
     "disableSourceEditing": "Lock source",
@@ -2122,24 +2411,14 @@
     "watchdogCancel": "Cancel & retry",
     "insightsTabMemory": "Memory",
     "insightsTabReferences": "References",
-    "insightsTabPromptPreview": "Preview",
     "viewOptions": "View options",
-    "chunkTabLockedForAudit": "Available after the chunk is translated",
-    "chunkTabLockedForMemory": "Available after the chunk is translated"
+    "chunkTabLockedForAudit": "Available after the chunk is translated"
   },
   "promptPreview": {
-    "title": "Message preview",
-    "stageLabel": "Stage to preview",
-    "buildButton": "Build preview",
-    "building": "Building…",
-    "systemLabel": "System instructions",
-    "userLabel": "User message",
-    "copyBlock": "Copy this block",
     "copiedToClipboard": "Copied to clipboard",
-    "emptyNoChunk": "Select a chunk to build the preview.",
-    "emptyBeforeBuild": "Press \"Build preview\" to see the full message for this stage.",
-    "deeplNotice": "This stage uses DeepL: it doesn't generate a text message for a language model.",
-    "buildFailed": "Couldn't build the preview."
+    "copyBlock": "Copy this block",
+    "translationRequired": "the chunk has no translation yet",
+    "unavailable": "Preview unavailable"
   },
   "help": {
     "title": "User guide",
@@ -2158,9 +2437,18 @@
         "intro": "The Transcription Studio is the focused mode for writing and correcting a document's text: viewer on the left, text in the middle, tools on the right.",
         "blocks": [
           {
-            "title": "Creating a document",
+            "title": "The Transcriptions catalogue",
             "paragraphs": [
-              "From Transcriptions, choose \"New document\" and give it a title.",
+              "The Transcriptions page gathers the transcriptions of every workspace and is organised like the Library: shelves on the right, search and quick filters above the list, three views (list, covers, table) at the end of the title row.",
+              "Each row shows the transcription name in italics and, below it, the transcribed work: author, year, place and printer, title. When the name is the work's own title it is not repeated. At the end of the row: workspace, pages written out of the work's total, verified pages and the completion bar.",
+              "The shelves are All, Recent (edited in the last 30 days), Not started, In progress, Verified (every page verified), No work (started from scratch) and Archived. Quick filters narrow by workspace, library and century of the work; you can sort by name, author, year, last edit or progress, and group by workspace or library.",
+              "Clicking a row opens the Studio. Hovering a row shows its commands: open the work in the Library, rename (the name turns into a field: Enter saves, Esc cancels), archive or restore, delete. In covers and table view the same commands are in the three-dots menu."
+            ]
+          },
+          {
+            "title": "Creating a transcription",
+            "paragraphs": [
+              "From the Transcriptions page, use the + command next to the title and give it a name.",
               "From a workspace Overview, the Transcriptions section shows only that workspace's documents: open one from the list or use the + command to create one already assigned there.",
               "You can also link it right away to a work already in the Library, searching by title in the same dialog — optional, without it the document stays a single block of text with no viewer.",
               "From a work's page in the Library you can instead create a transcription directly from that digitization.",
@@ -2171,14 +2459,14 @@
             "title": "The viewer on the left, one text per page",
             "paragraphs": [
               "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning — change page, and the text on the right changes with it: each page has its own block of text and its own history. A document created from scratch has no digitization to show: a notice appears in place of the viewer, and it stays a single block of text.",
-              "At the top, a document tied to a work presents it as its Library page does: author, year, place, and printer above, the title below, with the link out to the library's site. The three-dot command offers only \"Remove transcription\": downloading, verifying, or archiving the work stay commands of the Library page."
+              "At the top, a document tied to a work presents it as its Library page does: author, year, place, and printer above, the title below, with the link out to the library's site. On the right, the bin deletes the transcription after confirmation: downloading, verifying, or archiving the work stay commands of the Library page."
             ]
           },
           {
             "title": "Writing and saving",
             "paragraphs": [
-              "Text saves after 30 seconds without changes. The indicator distinguishes unsaved text from a save in progress, completed, or failed. Changing page or leaving the Studio normally saves pending text immediately; a forced shutdown before a save can lose the latest edits.",
-              "When the text is ready, mark it as verified with the lock next to the \"Page N\" title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command."
+              "Text saves after 30 seconds without changes. The indicator at the bottom right, in the status bar, distinguishes unsaved text from a save in progress, completed, or failed; hover it to read the time of the last save. To save a version to the history right away, use the disk at the top of the page, or Ctrl + S even while typing; the command stays off when there is nothing new to save. Changing page or leaving the Studio normally saves pending text immediately; a forced shutdown before a save can lose the latest edits.",
+              "When the text is ready, mark it as verified with the check next to the page title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command. When the check is off, hover it to read why: empty page, loading, or being read. If a save fails, the disk turns red and retries it."
             ]
           },
           {
@@ -2190,7 +2478,7 @@
           {
             "title": "Switching source, images or PDF",
             "paragraphs": [
-              "If the work has both copies, two commands in the viewer's bar switch between them. If they declare the same number of pages the switch is smooth, same numbering. If the number doesn't match, on the secondary copy the viewer detaches from the text: browse it freely, while the text pages through its own arrows next to the \"Page N\" title. Switching back to the main copy restores the link on its own.",
+              "If the work has both copies, two commands in the viewer's bar switch between them. If they declare the same number of pages the switch is smooth, same numbering. If the number doesn't match, on the secondary copy the viewer detaches from the text: browse it freely, while the text pages through its own arrows, which appear next to the page title only when text and viewer are detached. Switching back to the main copy restores the link on its own. In a narrow window the viewer's secondary commands (copy switch, detach, local files only, open the page on the site) move into the three-dots menu.",
               "A third command detaches the link regardless of page counts, even while staying on the main copy: handy for glancing at a different page without moving where you're writing."
             ]
           },
@@ -2201,21 +2489,21 @@
               "The command stays disabled until the conditions are met: the page must belong to a digitization linked to the document, and you need a provider and a model that can read images, chosen for the document or inherited from the workspace settings. The reason a command is disabled is in its own tooltip.",
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
               "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt.",
-              "Under the model two small circles choose the image sent: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
-              "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a pill in the top row names the page being read.",
+              "Under the model two small circles choose the image sent: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
+              "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a gold label in the top row names the page being read.",
               "Reading is queued like a download: you find it in the jobs panel while it runs, and you can pause or cancel it the same way. A passing problem is retried on its own; a wrong key or an empty answer is not, because retrying would give the same answer. An empty answer usually means the model found no text on the page.",
               "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens, estimated cost and the number of the revision created. On top there are search, filters by row type and by level, and grouping by page."
             ]
           },
           {
-            "title": "History, summary and metadata",
+            "title": "History and summary",
             "paragraphs": [
-              "Every save stays in that page's history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
-              "The command on each history entry brings that version's text back as a new save, without overwriting earlier versions. Changing page changes the history shown, too.",
+              "The right column has three tabs: History, OCR and Summary. It opens on History.",
+              "Every save stays in that page's history: for each version you see who wrote it — manual correction, automatic recognition, or import —, when, and whether it is the current or the verified version.",
+              "The command on each version brings its text back as a new save, without overwriting earlier versions. Changing page changes the history shown, too.",
               "You can consolidate a version and give it an editable name: it appears in the upper section without duplicating the text. Remove the name to return it to ordinary history.",
-              "You can delete an older version individually after confirmation, or clear the page's ordinary history. Cleanup keeps consolidated, current, and verified versions. The last two cannot be deleted; deleting a version removes the ability to restore its text.",
-              "The Summary tab shows pages with text, word count, verified pages, and progress, then completed OCR readings, tokens, and estimated cost, like the Translation summary.",
-              "The Metadata tab, next to History, shows the raw data saved for the current page — position, label, status, revision count — useful to see what's recorded today."
+              "You can delete an older version individually after confirmation, or clear the page's ordinary history. Cleanup keeps consolidated, current, and verified versions. The last two cannot be deleted, and the disabled command says why; deleting a version removes the ability to restore its text.",
+              "The Summary starts from the open page — number, the library's page label if any, status and saved versions — then the document: pages with text, word count, verified pages and progress, completed OCR readings, tokens and estimated cost."
             ]
           }
         ]
@@ -2227,19 +2515,24 @@
           {
             "title": "Choosing a mode",
             "paragraphs": [
-              "Standard runs translation and assessment. Editorial adds draft revision, called Refine, and formatting, called Format. DeepL Hybrid uses DeepL for the initial translation, with optional LLM revision and LLM assessment.",
+              "Standard runs translation and assessment. Editorial adds draft revision, called Refine, and formatting, called Format. DeepL Hybrid uses DeepL for the initial translation, followed by LLM refinement and assessment.",
               "Choose the mode before producing results. The control is locked when processing or existing translations prevent a change."
             ]
           },
           {
             "title": "Configuring stages",
-            "paragraphs": [],
+            "paragraphs": [
+              "The Studio bar shows work / pipeline and, as an icon, the Simple, Editorial or DeepL mode (name in the tooltip). Long names are truncated; hover shows the full name. The pipeline name opens the menu to select, create, rename or delete; the gear opens options. On the right, before the commands, the work’s language pair appears in short, the same for all its pipelines. Pipeline operations are blocked while processing.",
+              "The red icon at the bottom of the window resets all translations and their audits, after a confirmation. It is off, with the reason, while the pipeline runs or when there is nothing to reset.",
+              "Next to each prompt title you see where its text comes from: Default, Custom or the name of the saved template in use."
+            ],
             "steps": [
-              "Open pipeline configuration and set the source and target languages.",
-              "If you use a persona, describe the intended role, languages and register. This text replaces the default opening instructions.",
-              "In Translation and Quality control, choose the providers, models and instructions for active stages.",
-              "Assign the glossary and check selected memory references.",
-              "Inspect the prompt preview before running the pipeline."
+              "Open the configuration with the gear in the Studio's top row, or with Ctrl + comma. The title is the pipeline name; the tabs are General, Stages, Quality control, Memory, Glossary and Prompt preview.",
+              "In General choose the mode and edit the Translation context with the pencil: audience and register. Languages are not set here: they are the work’s Languages. Confirm with the checkmark or discard with X. It is never empty: it starts from a default text (English into Italian) that you can rewrite or replace with a saved template; the circular arrow restores it. Translation, refinement, audit and coherence receive it; languages are never added automatically to LLM prompts. The DeepL pair stays visible and is enabled only in DeepL mode. Unused stages are disabled; switching modes preserves their configuration.",
+              "In Stages and Quality control choose service, model and instructions for each stage. Once translations exist the model is closed by the lock: opening it leaves already translated chunks on the previous model. Explanations appear when you hover titles and rows.",
+              "In Memory set phrase memory and translation examples (DeepL mode does not use them); in Glossary assign the dictionary and save its terms with the disk icon.",
+              "Prompt preview shows each phase’s request piece by piece, each marked as fixed, yours, data or automatic with where it is changed; absent pieces stay disabled with the reason. Audit and Coherence show complete messages, DeepL the API request body. Expand text with the eye and copy it in full with the clipboard. Placeholders represent chunk data and optional context. The backend builds requests as for execution, without contacting services. Unused stages are disabled; audit and coherence remain available with DeepL.",
+              "Pipelines have no language pair of their own: in the DeepL stage choose the pair for standard translation. Automatic source detection is available, but a glossary requires an explicit source. DeepL Context is separate from the Translation context. Previews and logs show the API body; the configuration preview uses a chunk-text placeholder."
             ]
           },
           {
@@ -2247,13 +2540,18 @@
             "paragraphs": [
               "Use Test on a representative segment to inspect the result while keeping configuration editable. Then switch to production and choose whether to process one segment or several.",
               "The estimate beside the controls applies to the selected action. It is approximate: usage depends on the submitted text and response. Statistics show available usage data after processing.",
-              "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unlocked segments can replace their results."
+              "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unverified segments can replace their results. During execution you cannot switch pipelines or create a new one. Memory, Review and Document remember the selected subtab when you visit another tab.",
+              "To see the real request for a chunk, open it in the Studio and choose “Open chunk” in Prompt preview: the same pieces fill with its text, neighbouring chunks, checked memory phrases and previous translation; Audit and Coherence use the current translation and say so when there is none. If models, prompts, the Translation context or DeepL options change after an interruption, resuming tells you.",
+              "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free.",
+              "In the Studio's Memory tab, References shows similar phrases already in memory, with where they come from; the circled check decides which to use in the translation. Memory opens once the translation is verified: saved pairs are removed with the bin, new ones are checked and added with the disk, which never deletes anything.",
+              "In Prompt preview, Structure mode, system prompts (roles, rules, headings, response format, user message) are locked: unlock them to edit like the other prompts, with System templates and reset. The lock closes when the window closes; the response format asks for an extra confirmation.",
+              "In the same view the switch of an optional piece turns it off for that phase only; a switched-off piece stays as a grey line, from which you turn it back on."
             ]
           },
           {
             "title": "Reusing instructions",
             "paragraphs": [
-              "Save a prompt as a template to reuse it in other work. Templates are separated by context, such as translation, assessment or persona.",
+              "Save a prompt as a template to reuse it in other work: while editing, the bookmark asks for a name (Enter saves, Esc cancels) and the book opens the list of saved templates, with search; a click applies the one you pick. Templates are organised by context, such as stage instructions, assessment or the Translation context, and are deleted from the language resources.",
               "The wand control rewrites the prompt through the configured service. Review the proposed text before using it: it is model-generated and may change your instructions."
             ]
           }
@@ -2264,10 +2562,21 @@
         "intro": "The document view places source and translation side by side. Editor controls let you edit text, check formatting and compare stage outputs.",
         "blocks": [
           {
+            "title": "The translation studio",
+            "paragraphs": [
+              "The main bar stays on the left: from there you move to another area, and the translation closes. While the pipeline is running its entries are off.",
+              "The top row leads back to the catalogue and shows the translation name, the open pipeline and the mode icon: click the work name to rename it, the pipeline name opens the menu to select, rename, create or delete one, the gear opens its options. On the right are the work’s language pair in short with the icon that opens “Languages of the work”, then import, export, the workspace language resources and delete.",
+              "The Tools column on the right starts with translate, Multiple chunks with the number of segments and the costs. Below are Glossary, Memory (similar phrases and extraction), Preview, Review (Audit, Notes, Source notes and History) and Document (Index, Statistics and Coherence). Collapsed, it keeps only the translate button visible."
+            ]
+          },
+          {
             "title": "Importing and dividing text",
             "paragraphs": [
-              "Use Import in the project sidebar. Supported formats are TXT and Markdown up to 50 MiB, DOCX up to 100 MiB and PDF up to 50 MiB. DOCX extraction is experimental; PDFs must contain text rather than images alone.",
+              "Use Import in the studio’s top row. Supported formats are TXT and Markdown up to 50 MiB, DOCX up to 100 MiB and PDF up to 50 MiB. DOCX extraction is experimental; PDFs must contain text rather than images alone.",
               "Check the preview before confirming. Automatic segmentation divides text using a target word count. Markdown provides additional heading options.",
+              "The import window opens large. On the left are Work languages, Model and Chunk splitting; on the right the counts, the card or segment view (two small round icons) and the chunk preview at full height. At the bottom are the word check, Cancel and Import.",
+              "Work languages apply to all its pipelines. For each side, Source and Target, you can choose the Language (historical ones too, searchable by Italian name, English name or code), the Variety (only those of the chosen language, for example medieval Latin; disabled until you choose a language) and a free Note on period, area or hand. All are optional and the x clears a field. A new work starts with source not specified and target Italian; if the Library knows the book’s language, it is proposed as the source.",
+              "You can change them later from the Studio top row: click the languages icon on the right, next to the pair, edit, and press Confirm (nothing is saved otherwise). This is blocked while the pipeline runs. If phrases saved from this work have other languages, Glossa asks whether to update them: text and measures do not change and the previous version stays in the history.",
               "Choose a size appropriate for the text and review segment boundaries. Text files using an encoding other than UTF-8 must be converted before import."
             ]
           },
@@ -2275,16 +2584,19 @@
             "title": "Editing and formatting",
             "paragraphs": [
               "The editor menu provides writing, preview and split views, text size, copying and Markdown tools. Use the controls for bold, italic, headings, lists and footnotes.",
-              "Inspect and compare stage outputs to see where the text changed. Enable source editing only when you need to correct the original; its translation will be flagged for updating.",
-              "Settings → Typography controls fonts, size, line spacing and appearance. Translation settings include layout and highlighting."
+              "Inspect and compare stage outputs to see where the text changed: the controls sit in a column in the right margin of the translation page, next to the scrollbar. At the top the stages in pipeline order, then comparison and the pairs to compare; the one you are viewing is highlighted. Enable source editing with the pencil only when you need to correct the original; its translation will be flagged for updating, with the ochre “Source changed” label next to the title.",
+              "When the translation is ready, mark it as verified with the check next to the “Candidate translation” title: it turns green, the text locks and automatic translation of unverified segments skips it. Marking it as verified also clears “needs updating”: it means you checked it against the current original. Return it to draft with the same control. When a control is off, hover it to read why.",
+              "Review → History lists the segment’s versions, newest first: who produced it (Pipeline or Manual), when, and which is current and which verified. A version is written at every pipeline pass, at every save with the disk if the text changed, and on verification. Restore puts the text back on the page and writes it as a new version, without deleting the others; it is off on a verified translation. Versions cannot be deleted and cannot be named yet.",
+              "Settings → Appearance sets theme, accent, interface font, document text (size, line height, reading layout) and highlights. Settings → Languages shows the language list in use and downloads it again from the official sources; retired languages stay readable."
             ]
           },
           {
             "title": "Reading status indicators",
             "paragraphs": [
-              "The circles above the document select segments. The central mark shows whether a segment is ready, processing, completed or in error.",
-              "Corner indicators identify audit findings, notes, a locked translation and source changes. The triangle marks the current segment. The tooltip provides a full summary.",
-              "The Insight panel contains the document index, search, statistics, consistency and glossary. The segment sidebar contains References, Preview, Audit, Memory and Notes."
+              "Above the document a window of seven circles keeps the open segment still in the middle. Single arrows move to the neighbouring segment, double ones jump by seven; the wheel over the circles scrolls them, a click opens one. On the right are the open segment's stage indicators and the magnifier to search the whole document. The central mark shows whether a segment is ready, processing, completed or in error.",
+              "Corner indicators identify audit findings, notes, a verified translation (green) and a source changed after translation (ochre). The triangle marks the current segment. The tooltip provides a full summary.",
+              "Glossary and Document (Index, Statistics, Coherence) cover the whole document; Memory and Review the open segment. They all live in the Tools column.",
+              "You cannot leave the Studio while translation is running: wait until it finishes or stop processing. If saving fails, use “Retry”; technical details remain in the log. Disabled tabs stay reachable with Tab so you can read why they are unavailable, but cannot be opened."
             ]
           },
           {
@@ -2306,9 +2618,9 @@
             "paragraphs": [],
             "steps": [
               "Open Language Resources in the workspace and select Dictionaries.",
-              "Create a dictionary or choose an existing resource.",
-              "Enter the source term, required translation and any notes. You can also import CSV or TSV, checking the preview and whether to merge or replace entries.",
-              "Assign the dictionary to the project and check its entries in the Insight panel’s Glossary tab."
+              "Create a dictionary or choose an existing resource. The pencil beside the title edits it on the same row.",
+              "Use +: the new entry appears at the top with focus on its term. The pencil edits a pair; the notebook opens notes. The check finishes editing the entry; the disk saves the dictionary. You can also import CSV or TSV.",
+              "Assign the dictionary to the project and check its entries in the Tools column’s Glossary tab."
             ]
           },
           {
@@ -2322,8 +2634,24 @@
             "title": "Checking terminology",
             "paragraphs": [
               "The pipeline receives instructions to follow the glossary. Still check the result: a model may ignore or misapply an entry.",
-              "The Glossary legend distinguishes source terms, matching translations and missing translations. Highlighting shows textual matches, not a check of meaning.",
+              "With highlighting on, the Glossary legend distinguishes source terms, matching translations and missing translations. Highlighting shows textual matches, not a check of meaning.",
               "The glossary specifies required wording. Phrase memory instead suggests references to select for each segment."
+            ]
+          },
+          {
+            "title": "Managing prompt templates",
+            "paragraphs": [
+              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Translation context, System, Memory or OCR. If a saved template has a scope the app no longer recognises, it is left out of the list and a notice names it; the other templates stay available.",
+              "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
+              "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
+            ]
+          },
+          {
+            "title": "General resources and editing scope",
+            "paragraphs": [
+              "In General language resources, the workspace filter shows all linked dictionaries, including shared ones. You always edit originals here; filtering only changes the list.",
+              "In an open dictionary the sharing icon identifies the shared original; the shield identifies local corrections. The hint explains where changes apply. Local corrections affect only the guest workspace; the adjacent plus explains that new entries are added to the shared original.",
+              "The disk and “Save and close” respect this scope. A save error keeps the window open; “Close without saving” discards edits. Rename and delete affect the shared original. Choose a destination workspace to create, import or copy from general resources."
             ]
           }
         ]
@@ -2335,26 +2663,39 @@
           {
             "title": "Using saved phrases",
             "paragraphs": [
-              "Open References for the segment. When memory is enabled, Glossa searches the workspace’s resources for matches. You can adjust the similarity threshold.",
-              "Select only relevant pairs. They will be included when you translate or reprocess the segment. Unselected pairs are excluded."
+              "Open Memory → References for the chunk. Glossa filters only by the target language and compares texts with an embedding matching the workspace model, dimensions and input profile. Adjust the threshold with the slider or, one hundredth at a time, with − and +; then select relevant references.",
+              "Each reference shows similarity and origin (“this document”, “another work in the workspace” or “another workspace”), then the original in book type and the translation below, with the language code in the margin and, at the top, the language pair with its varieties; one line gives work and chunk, and the “i” icon shows workspace, book and model. Results from this document come first, then the workspace, then the rest. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
+              "The globe next to refresh extends the search to other workspaces and unassigned phrases; the choice is remembered per workspace and is no longer in workspace settings. The target language and embedding compatibility still apply. Viewing a phrase does not link it to this workspace."
             ]
           },
           {
             "title": "Saving new phrases",
             "paragraphs": [],
             "steps": [
-              "Review and lock the segment’s translation.",
-              "Open Memory. Previously saved phrases appear selected.",
-              "Choose Extract phrases to generate proposals, or enter a pair manually.",
-              "Edit the text and select the pairs to keep.",
-              "Save the selection. A previously saved phrase that you deselected is removed from the collection."
+              "Review the segment’s translation and mark it as verified.",
+              "Open Memory → Memory. Saved pairs are read-only and each has its own trash command.",
+              "Extract new proposals or add a pair manually.",
+              "Edit new pairs and select those to keep.",
+              "Use the disk command to add selected pairs. Existing pairs remain saved; use their own trash command and confirm to remove them."
             ]
           },
           {
             "title": "Using a style example",
             "paragraphs": [
               "A style example contains an entire segment and its translation. It guides the pipeline, while phrase memory retrieves individual relevant pairs.",
-              "After locking a segment, open Audit and use the control to add it as an example. Review or remove it in pipeline settings. You can keep up to five examples."
+              "After marking a segment as verified, open Audit and use the control to add it as an example. Review or remove it in pipeline settings. You can keep up to five examples."
+            ]
+          },
+          {
+            "title": "Browsing the collection",
+            "paragraphs": [
+              "Open Linguistic resources → Memories. Filter by workspace, all or unassigned; search texts and tags, or select a tag. General resources start with all entries; workspace resources start with the current workspace.",
+              "Pairs show source and translation side by side, with languages, an origin title and tags. Each entry uses one muted background, including its expanded details. The details control opens full provenance, date, editable tags and measurements. Select a model there and use plus to add it or the circular arrow to recalculate it; other models remain. OpenAI calculation requires a key and incurs costs, described in the confirmation. Each available embedding has its own row; the calculation command shows a spinner while running.",
+              "The pencil edits both memory texts without changing the original translation. Editing only the translation preserves embeddings. Editing the source recalculates all available embeddings and archives the previous revision. If any calculation fails, no changes are saved.",
+              "Add manual tags separated by semicolons. After confirmation, the bin removes the memory text, revisions and embeddings. The dictionary command copies the pair into the selected dictionary. CSV export preserves text, tags, provenance and models for visible phrases only.",
+              "When creating a translation, you can select a Library book and version. Without this choice, the book is “Not specified”. It is not inferred from the imported filename and page numbers are not invented.",
+              "If you edit the archived source, provenance continues to describe the initial extraction and the “Archived source” row identifies the edit. The book text does not change.",
+              "Deleting a translation preserves archived texts, book and provenance. They appear as unassigned memory entries and indicate that the translation is no longer available."
             ]
           }
         ]
@@ -2367,17 +2708,17 @@
             "title": "Checking and correcting",
             "paragraphs": [],
             "steps": [
-              "Open Audit after translation and read findings about terminology, accuracy, fluency, grammar and consistency.",
+              "Open Review → Audit after translation and read findings about terminology, accuracy, fluency, grammar and consistency.",
               "Check each finding against the text. A passage link may not locate the exact phrase.",
               "Edit the translation or rerun the stage that needs revision.",
               "Use Re-evaluate to update the assessment without translating everything again.",
-              "Lock the translation when you approve it."
+              "Mark the translation as verified when you approve it."
             ]
           },
           {
             "title": "Checking document consistency",
             "paragraphs": [
-              "After completing the segments, run the consistency check from the Insight panel. It compares translated passages for terminology and style variations.",
+              "After completing the segments, run the consistency check from Document → Coherence in the Tools column. It compares translated passages for terminology and style variations.",
               "This check is separate from assessing accuracy against the source. A positive rating does not replace human review."
             ]
           }
@@ -2392,7 +2733,7 @@
             "paragraphs": [
               "Select a passage in the translation and choose Add annotation from the context menu. You can also add an unanchored note in the segment’s Notes tab.",
               "Audit findings can be converted into annotations. Choose Comment, Doubt, Problem or Approved according to the note’s purpose.",
-              "Approved is a note type; it does not lock the translation. Use the lock control to protect a translation from reprocessing."
+              "Approved is a note type; it does not verify the translation. Use the check next to the page title to protect a translation from reprocessing."
             ]
           },
           {
@@ -2418,7 +2759,7 @@
           {
             "title": "Checking what is sent",
             "paragraphs": [
-              "In the segment’s Preview tab, choose a stage and build its message. Read the instructions and text without calling the model or incurring translation charges.",
+              "In pipeline options, Prompt preview in “Open chunk” mode shows each phase’s message for the chunk open in the Studio. Read its instructions and text without calling the model or incurring charges.",
               "Revision receives the source and draft. Formatting receives only translated text. Consistency review compares translated passages."
             ]
           },
@@ -2427,14 +2768,15 @@
             "paragraphs": [
               "Some services can reuse repeated request content through a cache. Savings depend on the service, model and actual reuse; they are not guaranteed.",
               "Anthropic caching is off by default. You can enable it in the pipeline and choose extended retention, considering how often you reuse the same instructions.",
-              "Statistics show tokens, cache usage and calculated costs when those data are available. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead."
+              "Statistics show tokens, cache usage and calculated costs when those data are available. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead.",
+              "In the Tools column, under the commands, one line shows the next run estimate and what was spent on the open segment; a click opens the cost panel, with a per-stage table for each. Spent also counts model calls: a re-translated segment or a review loop adds calls, so they are not runs."
             ]
           }
         ]
       },
       "providers": {
         "title": "Configuring providers",
-        "intro": "Configure services under Settings → Provider, then choose a provider and model for each pipeline stage.",
+        "intro": "Configure services under Settings → Models, then choose a provider and model for each pipeline stage.",
         "blocks": [
           {
             "title": "Remote services",
@@ -2470,7 +2812,7 @@
             "steps": [
               "Install Ollama and download a model compatible with your hardware.",
               "Start the Ollama server if your installation does not start it automatically.",
-              "Open Settings → Provider → Ollama and check the URL and connection status.",
+              "Open Settings → Models → Ollama and check the URL and connection status.",
               "Refresh the model list, then select Ollama and the model for the required stages.",
               "Try one segment and check speed, quality and memory usage."
             ]
@@ -2487,13 +2829,14 @@
       },
       "shortcuts": {
         "title": "Shortcuts and controls",
-        "intro": "On macOS, use Cmd instead of Ctrl. Global shortcuts, except Ctrl + Enter, do not apply while you are typing in an editable field.",
+        "intro": "On macOS, use Cmd instead of Ctrl. Global shortcuts, except Ctrl + Enter and Ctrl + S in the Studios, do not apply while you are typing in an editable field.",
         "blocks": [
           {
             "title": "Translation and project",
             "paragraphs": [
               "Ctrl + Enter starts the selected translation action, including from a text field. Segment mode requires a selected segment.",
-              "Ctrl + S saves the existing project and modified language resources. Project saving waits while processing is active.",
+              "Ctrl + S saves the open translation and modified language resources, even while typing on the pages. During automatic translation, saving the translation is deferred.",
+              "In the transcription Studio, Ctrl + S saves a version of the page to the history right away, even while typing on the page.",
               "Ctrl + E opens export when the document has segments. Ctrl + comma opens pipeline configuration."
             ]
           },
@@ -2556,7 +2899,7 @@
             "title": "Starting a translation",
             "paragraphs": [],
             "steps": [
-              "Open Settings → Provider and configure the service you want to use. For Ollama, check that the server is running and a model is installed.",
+              "Open Settings → Models and configure the service you want to use. For Ollama, check that the server is running and a model is installed.",
               "Create a workspace and a project within it. A workspace groups projects and resources used together.",
               "Import a document and check its text and segment boundaries in the preview.",
               "Set the languages and pipeline, then try translating one segment.",
@@ -2568,6 +2911,8 @@
             "paragraphs": [
               "The Dashboard shows recent activity, items requiring attention and current jobs. Its other two tabs search across multiple sources or within one source, including by identifier.",
               "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
+              "The left bar holds the Dashboard, the areas in working order and the workspaces; at the bottom the general menu: save all, language resources, settings, help and language. Collapsed, the icons remain and a click opens the page without expanding it.",
+              "Library, Transcriptions and Translations each have their own ink: petrol, sepia and indigo. You see it in the area icon in the left sidebar, in the short rule under the large title and in a slightly different background paper. State colours do not change: green always marks what is selected or active.",
               "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed.",
               "The Dashboard cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
             ]
@@ -2586,17 +2931,27 @@
         "intro": "A workspace organises projects and shared resources. Each translation project belongs to one workspace.",
         "blocks": [
           {
+            "title": "The Translations catalogue",
+            "paragraphs": [
+              "The Translations page gathers the translations of every workspace and is laid out like the Transcriptions page: shelves on the right, search and quick filters above the list, three views (list, covers, table) at the end of the title row.",
+              "Each row shows the translation name in italics and, below it, the source and target languages. At the end of the row: workspace, translated segments out of the total, verified segments and the completion bar, green when every segment is verified. A translation with no imported text says so instead of the counts.",
+              "The shelves are All, Recent (edited in the last 30 days), Not started (no segment translated), In progress and Verified (every segment verified). Quick filters narrow by workspace and language pair; the workspace filter stays when you leave the page and come back. You can sort by name, last edit or progress, and group by workspace or language pair.",
+              "Clicking a row opens the translation in the editor. Hovering a row shows its commands: rename (the name becomes a field: Enter saves, Esc cancels) and delete. In the cover and table views the same commands sit in the three-dot menu."
+            ]
+          },
+          {
             "title": "Creating and identifying a project",
             "paragraphs": [
-              "Create a project from a workspace page or the Translations area, choosing its destination workspace. Change the workspace name, description and icon in its settings.",
+              "Create a translation with the «+» next to the Translations title, or from the workspace page. The window asks for the name, the workspace (unless it already knows it) and, optionally, the file to translate, in the same formats as the editor import. The file is read as soon as you choose it: if it cannot be read, for example a scanned PDF with no text or a file not in UTF-8, the reason appears under the field and nothing is created. The chosen book shows its title in its row; the book icon opens a searchable list (title, with the copy below) and the x removes it. Pressing Create opens the translation in the editor with the import preview, where you choose Work languages and segments; if you close the preview the translation stays empty and you can import the file later from the editor. The workspace name, description and icon are edited in its settings.",
               "A project can contain multiple pipelines with separate settings and results. Select the pipeline you want to work on before changing its configuration."
             ]
           },
           {
             "title": "Saving your work",
             "paragraphs": [
-              "Existing projects are saved automatically after changes when processing allows it. Check the status bar: a save error needs attention.",
-              "You can request a save with Ctrl + S outside text fields. Use Cmd on macOS. Project saving is deferred while processing is active."
+              "A translation saves itself shortly after the last edit, as a whole: source text and every segment. The status bar, bottom right, shows its state: saved, unsaved changes, saving or error; hover it to read the time of the last save and, after an error, the reason.",
+              "To save right away use the disk at the top of the translation page (on the source page when only the source is open), or Ctrl + S even while typing on the pages; use Cmd on macOS. Besides saving, the disk writes a version to the history of every segment changed since its last version; automatic saving writes none. The disk stays off when there is nothing to save and no new version to write and while automatic translation runs, because the pipeline saves by itself at the end. If a save fails, the disk turns red and retries it.",
+              "Going back to the catalogue, or elsewhere from the main bar or the path at the top, saves the translation before closing it. If that save fails you stay in the translation with the error in view, instead of losing the last edit."
             ]
           },
           {
@@ -2761,7 +3116,7 @@
           {
             "title": "Data directory and file repository",
             "paragraphs": [
-              "Settings → Data separates the data directory, containing projects and catalogue data, from the image repository. The repository can be on an external drive.",
+              "Settings → Data → Folders separates the data directory, containing projects and catalogue data, from the image repository. The repository can be on an external drive.",
               "Changing the data directory copies the database and requires a restart to use the new location. Changing the repository does not move existing downloads: choose an empty directory or an existing Glossa repository.",
               "Keep the database on a local drive. If you synchronise the repository, configure the service to retain files on your computer; online placeholders are not enough."
             ]
@@ -2793,7 +3148,7 @@
               "The file holds work records, annotations, transcriptions, translations with their history, glossaries and phrase memory, searches with the results they returned, the operations log, services configured by hand, and the list of exported documents."
             ],
             "steps": [
-              "Open Settings → Backup.",
+              "Open Settings → Data → Backup & Restore.",
               "Choose password protection to encrypt the contents, or Glossa-only format, which is not encrypted.",
               "Choose where to save the file and wait for confirmation.",
               "For a password-protected backup, also keep the recovery code shown after saving somewhere outside the application."
@@ -2874,14 +3229,56 @@
     "newTemplate": "New",
     "saveTemplate": "Save template",
     "templateNamePlaceholder": "Template name...",
-    "templateContextLabel": "Template scope",
-    "templateWorkflowLabel": "Template workflow",
+    "templateNameLabel": "Name",
+    "editTemplate": "Edit template",
+    "templateSearch": "Search templates",
+    "templateLoadError": "Could not load templates",
+    "templateSaveError": "Could not save the template",
+    "templateDuplicate": "A template with this name, scope and workflow already exists. Edit it or use a different name.",
+    "templateDefaultModel": "Model",
+    "templateDefaultModelHint": "Optional. Also used to refine the prompt.",
+    "templateWorkflowHint": "Translation or transcription.",
+    "templateOcrHint": "Instructions for reading pages.",
+    "noDefaultModel": "None",
+    "workInProgress": "operation in progress",
+    "promptRequired": "enter prompt text first",
+    "refineModelRequired": "choose a provider and model to refine",
+    "refineKeyRequired": "missing {{provider}} API key",
+    "templateFieldsRequired": "enter a name and prompt text",
+    "memorySearch": "Search phrases",
+    "memoryModelUnavailable": "phrase embedding model unavailable",
+    "modelNotRecorded": "Not recorded",
+    "memoryModelMissingHint": "This phrase has no recorded embedding model, so its original model cannot be verified. It remains visible and follows the current search rules. Editing is disabled until it is recalculated in its own workspace.",
+    "phrasesRequired": "enter both phrases",
+    "saveDictionaryFirst": "save dictionary changes first",
+    "createdAt": "Saved",
+    "dictionaryLoadError": "Could not load dictionaries",
+    "dictionarySearch": "Search dictionaries",
+    "chooseWorkspace": "choose a destination workspace",
+    "destinationWorkspace": "Destination workspace",
+    "dictionaryNameRequired": "enter a dictionary name",
+    "renameDictionary": "Rename the shared original",
+    "editOriginalHint": "You edit the shared original.",
+    "editWorkspaceHint": "Corrections apply in this workspace.",
+    "editingWhat": "You are editing",
+    "sharedOriginal": "Shared original",
+    "localCorrections": "Local corrections",
+    "appliesWhere": "Changes apply to",
+    "linkedWorkspaces": "All linked workspaces",
+    "newEntriesWhere": "New entries are added to",
+    "newEntriesSharedHint": "New entries are added to the shared original.",
+    "noChanges": "no changes to save",
+    "finishEditing": "save or cancel the current edit",
+    "discardDraftTitle": "Discard the current edit?",
+    "discardDraftMessage": "Your current edit has not been saved. Closing will discard it.",
+    "discardDraft": "Discard edit",
+    "templateContextLabel": "Scope",
+    "templateWorkflowLabel": "Workflow",
     "templateRefineProviderLabel": "Provider to refine the prompt",
     "templatePromptPlaceholder": "Prompt text...",
-    "templateStageHint": "Stage templates only appear in translation stages and can store a default provider and model.",
-    "templateAuditHint": "Audit templates are shared by both the Judge Prompt and the Coherence Prompt and can store the default audit provider and model.",
-    "templatePersonaHint": "Persona templates are used in the Persona section of the project configuration, at the top of the pipeline.",
-    "templateMemoryHint": "Memory templates are used by the workspace extractor that builds aligned phrase-memory pairs.",
+    "templateStageHint": "Instructions for translation stages.",
+    "templateAuditHint": "Instructions for quality and coherence checks.",
+    "templateMemoryHint": "Instructions for extracting bilingual pairs.",
     "templateDeleteTitle": "Delete template",
     "templateDeleteMessage": "Delete template \"{{name}}\"?",
     "csvImportTitle": "Import CSV",
@@ -2940,7 +3337,33 @@
     "addedToGlossary": "Added to glossary",
     "addToGlossaryError": "Error adding to glossary",
     "exportCsv": "Export CSV",
-    "exportCsvError": "Failed to export CSV"
+    "exportCsvError": "Failed to export CSV",
+    "embeddingModels": "Text embeddings",
+    "embeddingModelsHint": "Each model measures this revision of the source. Adding one preserves the others; search uses only the active workspace model.",
+    "recalculateMeasure": "Recalculate this embedding",
+    "addMeasure": "Add an embedding",
+    "measureDimensions": "{{count}} dimensions",
+    "noMeasures": "No embeddings",
+    "textTags": "Text tags",
+    "textTagsHint": "Reusable manual tags. Separate them with a semicolon.",
+    "noTags": "No tags",
+    "editTags": "Edit tags",
+    "filterByTag": "Filter by tag",
+    "allTags": "All tags",
+    "measureTitle": "Calculate embedding",
+    "measureMessage": "The embedding will be calculated with {{model}} through OpenAI, incurring API costs. Embeddings from other models will remain available.",
+    "measureSaved": "Embedding saved",
+    "sourceRecalculateMessage": "Editing the source will recalculate {{count}} embeddings through OpenAI, incurring API costs. The previous revision remains archived. If any calculation fails, no changes will be saved.",
+    "measureRunning": "Calculating embedding…",
+    "memoryDetails": "Provenance, tags and measurements",
+    "finishEntry": "Finish editing — save the dictionary with Save",
+    "sharedScopeHint": "Changes apply to all linked workspaces.",
+    "localScopeHint": "Corrections apply only to {{workspace}}.",
+    "expandPrompt": "Read the full prompt",
+    "collapsePrompt": "Collapse the prompt",
+    "searchEditingHint": "Finish editing to search.",
+    "templateSystem": "System",
+    "templateSystemHint": "System texts of pipeline prompts (roles, rules, response formats). Applied from Prompt preview after unlocking the piece."
   },
   "stats": {
     "cacheHitRateHint": "Percentage of tokens served from the provider cache. Higher means lower cost.",
@@ -2962,19 +3385,61 @@
     "resetAll": "Reset all",
     "overrideModel": "Model",
     "overrideInput": "Input $/1M",
-    "overrideOutput": "Output $/1M"
+    "overrideOutput": "Output $/1M",
+    "estimateDetails": "Estimated cost details",
+    "actualDetails": "Chunk usage details",
+    "calls": "Calls",
+    "cost": "Cost",
+    "cacheShort": "cache {{rate}}",
+    "panelTitle": "Costs: estimate and usage",
+    "estimateShort": "Estimate",
+    "spentShort": "Spent",
+    "estimateTitle": "Next run estimate",
+    "spentTitle": "Spent on this segment",
+    "scopeDocument": "whole document",
+    "scopeChunk": "this segment",
+    "scopeFirstChunks": "first {{count}} segments",
+    "noUsage": "No usage recorded for this segment.",
+    "callsHint": "Completed model calls per stage across the whole document: every segment, every re-translation and every review loop counts as a call."
   },
-  "languages": {
-    "English": "English",
-    "Italian": "Italian",
-    "Spanish": "Spanish",
-    "French": "French",
-    "German": "German",
-    "Portuguese": "Portuguese",
-    "Japanese": "Japanese",
-    "Chinese": "Chinese",
-    "Korean": "Korean",
-    "Russian": "Russian"
+  "workLanguages": {
+    "title": "Languages of the work",
+    "source": "Source",
+    "target": "Target",
+    "sourceHint": "The language of the original text. It fills in from the book’s language when the Library knows it.",
+    "targetHint": "The language of the translation. Memory References only suggest phrases translated into this language.",
+    "language": "Language",
+    "languageHint": "ISO 639-3 code, the register used by library catalogues. Historical languages included.",
+    "variety": "Variety",
+    "varietyHint": "Variety of the language according to Glottolog, such as Medieval Latin or Old Italian.",
+    "note": "Note",
+    "noteHint": "Whatever code and variety do not say: period, area, hand.",
+    "notePlaceholder": "e.g. Tuscan, 14th century",
+    "notSpecified": "not specified",
+    "chooseLanguage": "Choose the language",
+    "chooseVariety": "Choose the variety",
+    "clearLanguage": "Remove the language",
+    "clearVariety": "Remove the variety",
+    "searchLanguage": "Search by name or code",
+    "searchVariety": "Search the variety",
+    "groupUsed": "Already used in the workspace",
+    "groupHistorical": "Historical languages",
+    "groupAll": "All",
+    "groupVarieties": "Varieties",
+    "typeToSearchAll": "Type to search all languages.",
+    "noResults": "No language found",
+    "varietyNeedsLanguage": "choose the language first",
+    "noVarieties": "Glottolog lists no varieties for this language",
+    "loading": "language list loading",
+    "edit": "Edit the languages of the work",
+    "saveFailed": "The languages of the work could not be saved",
+    "relabelTitle": "Update the saved phrases?",
+    "relabelMessage_one": "Memory holds {{count}} phrase saved from this work with languages other than the ones just confirmed. Give it the work’s languages? Text and measures stay the same; the previous version stays in the history.",
+    "relabelMessage_other": "Memory holds {{count}} phrases saved from this work with languages other than the ones just confirmed. Give them the work’s languages? Text and measures stay the same; the previous version stays in the history.",
+    "relabelConfirm": "Update",
+    "relabelDone_one": "{{count}} phrase updated",
+    "relabelDone_other": "{{count}} phrases updated",
+    "relabelFailed": "The languages of the saved phrases could not be updated"
   },
   "log": {
     "scopePipeline": "Pipeline",
@@ -3020,12 +3485,24 @@
     "dismiss": "Dismiss"
   },
   "memory": {
-    "coldStartTitle": "No matches found",
-    "coldStartBodyShort": "Similar saved phrases for this segment will appear here, if any are found.",
-    "copyTranslationTitle": "Copy translation",
-    "appliedToClipboard": "Translation copied to clipboard",
-    "enableMatch": "Use this match in the pipeline",
-    "matchToggleLabel": "Use match",
+    "threshold": "Threshold",
+    "thresholdHint": "Minimum similarity for a phrase to appear among References. Then tick the phrases to use for translating this chunk.",
+    "thresholdDown": "Lower the threshold by 0.01",
+    "thresholdUp": "Raise the threshold by 0.01",
+    "reference": {
+      "original": "Original",
+      "translation": "Translation",
+      "chunk": "chunk {{number}}",
+      "details": "Full provenance"
+    },
+    "searchAllWorkspacesOff": "Search other workspaces too: References now come only from this document and its workspace",
+    "searchAllWorkspacesOn": "Search this workspace only: References now also come from other workspaces",
+    "searchScopeSaveFailed": "Could not change where References search",
+    "circle": {
+      "document": "this document",
+      "workspace": "another work in the workspace",
+      "elsewhere": "another workspace"
+    },
     "extractTermButton": "Add to glossary",
     "extractTermTitle": "Extract term",
     "sourcePhraseShort": "Source",
@@ -3043,16 +3520,13 @@
     "searchFailedRateLimit": "Too many requests to the provider right now: try again in a few seconds.",
     "searchFailedConfig": "API key missing or invalid: check Settings.",
     "searchFailedNetwork": "No or unstable connection: check your network and try again.",
-    "memoriesLabel": "memories",
     "loadingMemories": "Checking saved memories…",
     "chunkAlreadySaved_one": "This chunk already has {{count}} saved phrase.",
     "chunkAlreadySaved_other": "This chunk already has {{count}} saved phrases.",
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} matches",
     "matchBadge": "{{count}} match",
-    "similarityThreshold": "Similarity threshold",
     "extractButton": "Extract phrases",
-    "extractDisabledLockHint": "Lock this segment's translation to extract phrases.",
     "extracting": "Extracting phrases…",
     "extractFailed": "Phrase extraction failed",
     "extractFailedQuota": "API credit exhausted: check the provider's plan and billing, then try again.",
@@ -3060,7 +3534,7 @@
     "extractFailedConfig": "API key missing or invalid: check Settings.",
     "extractFailedNetwork": "No or unstable connection: check your network and try again.",
     "addFewShotButton": "Use as style example",
-    "addFewShotDisabledLockHint": "Lock this chunk's translation to use it as a style example.",
+    "addFewShotDisabledLockHint": "Mark this segment's translation as verified to use it as a style example.",
     "addFewShotSuccess": "Example added to the pipeline",
     "addFewShotAlreadyAdded": "This chunk is already a pipeline example",
     "addFewShotCapReached": "You've reached the maximum number of examples: remove one from the pipeline Settings",
@@ -3074,10 +3548,42 @@
     "confirmSaveButton": "Save",
     "toggleSavedListShow": "Show already saved phrases",
     "toggleSavedListHide": "Hide already saved phrases",
-    "savedCandidateLabel": "Already saved",
     "referencesGlossaryHint": "The entire project glossary is always included when translating this segment.",
     "referencesMemorySectionTitle": "Similar phrases in memory",
-    "selectionHint": "Select the phrases to use for translating this segment."
+    "addCheckedToMemory": "Add the checked pairs to memory",
+    "reasonNoNewChecked": "no new pair checked",
+    "reasonNotVerified": "translation not verified",
+    "inMemoryBadge": "In memory",
+    "manualPair": "written by hand",
+    "inMemoryCount_one": "pair in memory",
+    "inMemoryCount_other": "pairs in memory",
+    "removeFromMemory": "Remove from memory",
+    "removeConfirmTitle": "Remove the pair from memory?",
+    "removeConfirmMessage": "The pair will no longer be offered as a reference.",
+    "removeFailed": "Could not remove the pair from memory",
+    "savedLoadFailed": "Could not read the chunk memory",
+    "chunkEmpty": "No pairs: extract the phrases or add one",
+    "addPair": "Add pair",
+    "useInTranslation": "Use in translation",
+    "noSimilar": "No similar phrases in memory",
+    "provenance": {
+      "workspace": "Workspace",
+      "thisWorkspace": "This workspace",
+      "noWorkspace": "No workspace",
+      "unknownWorkspace": "Workspace no longer present",
+      "translation": "Translation",
+      "unknownTranslation": "Translation no longer present",
+      "chunk": "Chunk",
+      "origin": "Origin",
+      "imported": "Imported",
+      "book": "Book",
+      "noBook": "Not specified",
+      "translationRemoved": "Translation no longer available",
+      "originWorkspace": "Original workspace",
+      "bookVersion": "Book version",
+      "textVersion": "Archived source",
+      "sourceEdited": "Edited after extraction"
+    }
   },
   "glossary": {
     "translation": "Translation",
@@ -3095,6 +3601,8 @@
     "addButton": "Add annotation",
     "placeholder": "Describe the issue, doubt, or observation...",
     "anchorLabel": "Anchor to text (optional)",
+    "clearAnchor": "Remove the text anchor",
+    "typeLabel": "Note type",
     "anchorPlaceholder": "Paste the phrase it refers to...",
     "saveButton": "Add",
     "updateButton": "Save",
@@ -3327,7 +3835,8 @@
     "hideFinished": "Hide the {{count}} finished from the panel"
   },
   "models": {
-    "provider": "Model service"
+    "provider": "Model service",
+    "deprecatedShort": "superseded"
   },
   "systemLog": {
     "tab": "System",

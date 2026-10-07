@@ -8,7 +8,7 @@ import { showPreflightDialog } from '../../stores/preflightStore';
 import { withRetry, friendlyError, is429Error } from '../../utils/retry';
 import { pipelineLog } from '../../utils/pipelineLogging';
 import { useOperationLogStore } from '../../stores/operationLogStore';
-import type { PromptInfo, TokenUsage, TranslationChunk } from '../../types';
+import type { PipelineStageConfig, PromptInfo, TokenUsage, TranslationChunk } from '../../types';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
@@ -24,7 +24,7 @@ import {
 } from '../../services/pipelineProvenance';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../../models/catalog';
-import { toDeeplCode } from '../../constants';
+import { getDeeplOptions, resolveDeeplLanguages } from '../../pipeline/deeplConfig';
 import { stripFootnoteMarkers } from '../../utils/footnoteExtractor';
 import { buildBlobContext } from './blobContext';
 import type { BatchRunMode, ChunkOutcome } from './blobContext';
@@ -63,13 +63,19 @@ function buildProviderChecks(config: ReturnType<typeof usePipelineStore.getState
   ];
 }
 
+function receivesMemory(stage: PipelineStageConfig): boolean {
+  const role = stage.role ?? 'translation';
+  return stage.provider !== 'deepl' && (role === 'translation' || role === 'refine');
+}
+
 function appendMemoryBlock(
   config: ReturnType<typeof usePipelineStore.getState>['config'],
   memoryBlock?: string,
 ) {
   if (!memoryBlock) return config.stages;
+  // Solo traduzione e Refine: Format corregge la forma e DeepL non ha prompt.
   return config.stages.map((stage) =>
-    stage.enabled ? { ...stage, prompt: `${stage.prompt}\n\n${memoryBlock}` } : stage,
+    stage.enabled && receivesMemory(stage) ? { ...stage, prompt: `${stage.prompt}\n\n${memoryBlock}` } : stage,
   );
 }
 
@@ -275,13 +281,12 @@ export async function executePipelineForChunk(
     const liveChunks = useChunksStore.getState().chunks;
     const stageRole = stage.role ?? 'translation';
     const isFormatStage = stageRole === 'format';
+    const deeplLanguages = stage.provider === 'deepl' ? resolveDeeplLanguages(stage) : undefined;
     const blobContext = isFormatStage
       ? undefined
       : buildBlobContext(liveChunks, chunk.id, (c) => c.sourceProcessingText || undefined);
     const effectiveConfig = {
       ...config,
-      ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
-      ...(!config.persona && stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
       ...(blobContext ? { blobContext, blobCurrentChunkId: chunk.id } : {}),
     };
     lastEffectiveConfig = effectiveConfig;
@@ -303,19 +308,22 @@ export async function executePipelineForChunk(
     try {
       let capturedUsage: TokenUsage | undefined;
       let capturedBilledCharacters: number | undefined;
+      let detectedDeeplSource: string | undefined;
       const stageResult = await withRetry(
         async () => {
           capturedUsage = undefined;
           capturedBilledCharacters = undefined;
+          detectedDeeplSource = undefined;
           updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-          if (stage.provider === 'deepl') {
-            const deeplResult = await deeplService.runDeeplStage({
+          if (deeplLanguages) {
+            const input = {
               text: stageText,
-              sourceLang: effectiveConfig.sourceLanguage ? toDeeplCode(effectiveConfig.sourceLanguage) : undefined,
-              targetLang: toDeeplCode(effectiveConfig.targetLanguage),
-              deeplConfig: stage.providerOptions?.deepl,
-            });
+              deeplConfig: getDeeplOptions(stage),
+            };
+            onPrompt({ systemPrompt: '', userPrompt: await deeplService.previewDeeplStage(input) });
+            const deeplResult = await deeplService.runDeeplStage(input);
             capturedBilledCharacters = deeplResult.billedCharacters;
+            detectedDeeplSource = deeplResult.detectedSourceLanguage;
             return { content: deeplResult.content };
           }
           if (stage.provider === 'ollama') {
@@ -391,8 +399,12 @@ export async function executePipelineForChunk(
         usage: capturedUsage,
         billedCharacters: capturedBilledCharacters,
         durationMs: stageDuration,
-        sourceLanguage: effectiveConfig.sourceLanguage,
-        targetLanguage: effectiveConfig.targetLanguage,
+        sourceLanguage: deeplLanguages
+          ? deeplLanguages.sourceLang || detectedDeeplSource || null
+          : usePipelineStore.getState().workLanguages.source.code,
+        targetLanguage: deeplLanguages
+          ? deeplLanguages.targetLang
+          : usePipelineStore.getState().workLanguages.target.code,
         input: stageText,
         output: result,
         workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
@@ -425,8 +437,12 @@ export async function executePipelineForChunk(
           provider: stage.provider,
           model: stage.model,
           durationMs: stageDurationMs,
-          sourceLanguage: effectiveConfig.sourceLanguage,
-          targetLanguage: effectiveConfig.targetLanguage,
+          sourceLanguage: deeplLanguages
+            ? deeplLanguages.sourceLang || null
+            : usePipelineStore.getState().workLanguages.source.code,
+          targetLanguage: deeplLanguages
+            ? deeplLanguages.targetLang
+            : usePipelineStore.getState().workLanguages.target.code,
           input: stageText,
           workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
         },

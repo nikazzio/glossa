@@ -1,311 +1,111 @@
-import React, { useEffect, useState } from 'react';
-import { Trash2, BookmarkPlus, Check, X, Wand2, Loader2, LayoutGrid, Languages, Scale, Bot, Brain } from 'lucide-react';
+import { reportUiError } from '../../utils/reportUiError';
+import { useEffect, useState } from 'react';
+import { Bot, Brain, FileText, Lock, Eye, Languages, LayoutGrid, Minimize2, Pencil, Plus, Scale, ScanText, Trash2, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
-import { useConfigStore } from '../../stores/configStore';
-import { usePipelineStore } from '../../stores/pipelineStore';
-import type { ModelProvider, PromptTemplateContext, PromptTemplateWorkflow } from '../../types';
-import { llmService } from '../../services/llmService';
-import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
-import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { IconButton, Select } from '../ui';
+import type { PromptTemplate, PromptTemplateContext } from '../../types';
+import { CatalogSearchField, Hint, IconButton, TabStrip } from '../ui';
+import { PromptTemplateForm, templateContextLabel } from './PromptTemplateForm';
 
-const WORKFLOW_OPTIONS = ['translation', 'transcription'] as const;
+const CONTEXTS = ['stage', 'audit', 'brief', 'system', 'memory', 'ocr'] as const;
+const ICONS = { stage: Languages, audit: Scale, brief: FileText, system: Lock, memory: Brain, ocr: ScanText };
 
-const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona', 'memory'] as const;
-type FilterValue = (typeof FILTER_OPTIONS)[number];
-
-const FILTER_ICONS: Record<FilterValue, React.ReactNode> = {
-  all: <LayoutGrid size={14} />,
-  stage: <Languages size={14} />,
-  audit: <Scale size={14} />,
-  persona: <Bot size={14} />,
-  memory: <Brain size={14} />,
-};
-
-export function PromptTemplatesTab() {
+export function PromptTemplatesTab({ onEditingChange, onBusyChange }: { onEditingChange?: (value: boolean) => void; onBusyChange?: (value: boolean) => void } = {}) {
   const { t } = useTranslation();
-  const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
-  const ollamaModels = useConfigStore((s) => s.ollamaModels);
-  const { config } = usePipelineStore();
-  const [newName, setNewName] = useState('');
-  const [newPrompt, setNewPrompt] = useState('');
-  const [newContext, setNewContext] = useState<PromptTemplateContext>('stage');
-  const [creating, setCreating] = useState(false);
-  const [filterContext, setFilterContext] = useState<FilterValue>('all');
-  const [newWorkflow, setNewWorkflow] = useState<PromptTemplateWorkflow>('translation');
-  const [isRefining, setIsRefining] = useState(false);
-  const { statuses: keyStatuses } = useProviderKeyStatus();
-  const getProviderModels = (provider: ModelProvider) => getSelectableModelIds(provider, ollamaModels);
-
-  const firstActiveStage = config.stages.find((s) => s.enabled);
-  const stageDefaultProvider: ModelProvider = (firstActiveStage?.provider as ModelProvider) ?? 'gemini';
-  const stageDefaultModel = firstActiveStage?.model ?? (getProviderModels(stageDefaultProvider)[0] ?? '');
-  const auditDefaultProvider: ModelProvider = config.judgeProvider;
-  const auditDefaultModel = config.judgeModel;
-  const [refineProvider, setRefineProvider] = useState<ModelProvider>(stageDefaultProvider);
-  const [refineModel, setRefineModel] = useState<string>(stageDefaultModel);
-
-  const modelOptions = getProviderModels(refineProvider);
-  const canRefine = canRefineWithProvider(refineProvider, keyStatuses);
-  const refineLabel = formatProviderModelLabel(refineProvider, refineModel);
-
-  const filterLabel = (value: FilterValue) => {
-    if (value === 'all') return t('common.all');
-    if (value === 'stage') return t('pipeline.tabStages');
-    if (value === 'audit') return t('pipeline.tabAudit');
-    if (value === 'memory') return t('workspace.settings.memoryTab');
-    return t('pipeline.tabPersona');
-  };
-
-  const contextLabel = (context: PromptTemplateContext) => {
-    if (context === 'audit') return t('pipeline.tabAudit');
-    if (context === 'persona') return t('pipeline.tabPersona');
-    if (context === 'memory') return t('workspace.settings.memoryTab');
-    return t('pipeline.tabStages');
-  };
-
-  const contextBadgeClass = (context: PromptTemplateContext) => {
-    if (context === 'audit') return 'border-l-editorial-warning bg-editorial-warning/12 text-editorial-warning';
-    if (context === 'persona') return 'border-l-editorial-muted bg-editorial-textbox/45 text-editorial-muted';
-    if (context === 'memory') return 'border-l-editorial-success bg-editorial-success/10 text-editorial-success';
-    return 'border-l-editorial-accent bg-editorial-accent/12 text-editorial-accent';
-  };
-
-  const handleRefine = async () => {
-    if (!newPrompt.trim() || !refineModel.trim()) return;
-    setIsRefining(true);
-    try {
-      const refined = await llmService.refinePrompt(newPrompt, refineProvider, refineModel, newContext);
-      setNewPrompt(refined);
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsRefining(false);
-    }
-  };
-
+  const { templates, isLoaded, loadTemplates, saveTemplate, updateTemplate, deleteTemplate } = usePromptTemplateStore();
+  const [search, setSearch] = useState('');
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [context, setContext] = useState<PromptTemplateContext | 'all'>('all');
+  const [editor, setEditor] = useState<PromptTemplate | 'new' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [refining, setRefining] = useState(false);
+  useEffect(() => { onEditingChange?.(editor !== null); return () => onEditingChange?.(false); }, [editor, onEditingChange]);
+  useEffect(() => { onBusyChange?.(busy || refining); return () => onBusyChange?.(false); }, [busy, refining, onBusyChange]);
   useEffect(() => {
-    if (!isLoaded) loadTemplates();
-  }, [isLoaded, loadTemplates]);
-
-  useEffect(() => {
-    if (newContext === 'audit') {
-      setRefineProvider(auditDefaultProvider);
-      setRefineModel(auditDefaultModel);
-      return;
-    }
-    setRefineProvider(stageDefaultProvider);
-    setRefineModel(stageDefaultModel);
-  }, [newContext, auditDefaultProvider, auditDefaultModel, stageDefaultProvider, stageDefaultModel]);
-
-  const filtered = templates.filter((tmpl) => {
-    return filterContext === 'all' || tmpl.context === filterContext;
-  });
-
-  const handleSave = async () => {
-    if (!newName.trim() || !newPrompt.trim()) return;
-    try {
-      await saveTemplate(newName.trim(), newPrompt.trim(), newContext, newWorkflow, refineModel, refineProvider);
-      toast.success(t('pipeline.templates.saved'));
-      setNewName('');
-      setNewPrompt('');
-      setCreating(false);
-    } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), { description: err instanceof Error ? err.message : String(err) });
-    }
-  };
-
-  const handleDelete = async (id: string, name: string) => {
-    const ok = await confirm({
-      title: t('library.templateDeleteTitle'),
-      message: t('library.templateDeleteMessage', { name }),
-      confirmLabel: t('common.delete'),
-      danger: true,
+    if (!isLoaded) void loadTemplates().catch((error: unknown) => {
+      reportUiError(t('library.templateLoadError'), error);
     });
-    if (!ok) return;
+  }, [isLoaded, loadTemplates, t]);
+  const tabs = [
+    { id: 'all', label: t('common.all'), icon: <LayoutGrid size={14} />, disabled: editor !== null || busy || refining },
+    ...CONTEXTS.map((id) => {
+      const Icon = ICONS[id];
+      return { id, label: templateContextLabel(id, t), icon: <Icon size={14} />, disabled: editor !== null || busy || refining };
+    }),
+  ];
+  const filtered = templates.filter((template) =>
+    (context === 'all' || template.context === context)
+    && `${template.name} ${template.prompt}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
+  );
+  const handleSave = async (input: Omit<PromptTemplate, 'id' | 'createdAt'>) => {
+    if (busy) return;
+    const duplicate = templates.find((template) => template.name === input.name
+      && template.context === input.context && template.workflow === input.workflow
+      && (editor === 'new' || template.id !== editor?.id));
+    if (duplicate) { toast.error(t('library.templateDuplicate')); return; }
+    setBusy(true);
     try {
-      await deleteTemplate(id);
-      toast.success(t('pipeline.templates.deleted'));
-    } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), { description: err instanceof Error ? err.message : String(err) });
-    }
+      if (editor && editor !== 'new') await updateTemplate(editor.id, input);
+      else await saveTemplate(input.name, input.prompt, input.context, input.workflow, input.defaultModel, input.defaultProvider);
+      setEditor(null);
+      toast.success(t('pipeline.templates.saved'));
+    } catch (error: unknown) {
+      reportUiError(t('library.templateSaveError'), error);
+    } finally { setBusy(false); }
   };
-
+  const handleDelete = async (template: PromptTemplate) => {
+    const ok = await confirm({ title: t('library.templateDeleteTitle'),
+      message: t('library.templateDeleteMessage', { name: template.name }),
+      confirmLabel: t('common.delete'), danger: true });
+    if (!ok) return;
+    setBusy(true);
+    try { await deleteTemplate(template.id); toast.success(t('pipeline.templates.deleted')); }
+    catch (error: unknown) { reportUiError(t('errors.somethingWentWrong'), error); }
+    finally { setBusy(false); }
+  };
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {FILTER_OPTIONS.map((ctx) => {
-            const isActive = filterContext === ctx;
-            return (
-              <IconButton
-                key={ctx}
-                size="md"
-                tone={isActive ? 'accent' : 'default'}
-                title={filterLabel(ctx)}
-                onClick={() => setFilterContext(ctx)}
-                ariaPressed={isActive}
-              >
-                {FILTER_ICONS[ctx]}
-              </IconButton>
-            );
-          })}
-          <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-          <span className="self-center font-display text-sm italic text-editorial-ink">
-            {filterLabel(filterContext)}
-          </span>
+          <TabStrip tabs={tabs} activeId={context} onChange={(id) => setContext(id as typeof context)} ariaLabel={t('library.templateContextLabel')} idPrefix="template-context" />
+          <span className="font-display text-sm italic text-editorial-ink">{tabs.find((tab) => tab.id === context)?.label}</span>
         </div>
-        <IconButton
-          size="md"
-          onClick={() => setCreating(true)}
-          title={t('library.newTemplate')}
-        >
-          <BookmarkPlus size={13} />
-        </IconButton>
+        <IconButton onClick={() => setEditor('new')} disabled={editor !== null || busy} title={t('library.newTemplate')}><Plus size={14} /></IconButton>
       </div>
-
-      {creating && (
-        <div className="space-y-4 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-5">
-          <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
-            <input
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo template)
-              autoFocus
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={t('library.templateNamePlaceholder')}
-              className="rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            />
-            <Select
-              value={newContext}
-              onChange={(value) => setNewContext(value as PromptTemplateContext)}
-              className="font-mono"
-              ariaLabel={t('library.templateContextLabel')}
-              options={[
-                { value: 'stage', label: t('pipeline.tabStages') },
-                { value: 'audit', label: t('pipeline.tabAudit') },
-                { value: 'persona', label: t('pipeline.tabPersona') },
-                { value: 'memory', label: t('workspace.settings.memoryTab') },
-              ]}
-            />
-            <Select
-              value={newWorkflow}
-              onChange={(value) => setNewWorkflow(value as PromptTemplateWorkflow)}
-              className="font-mono"
-              ariaLabel={t('library.templateWorkflowLabel')}
-              options={WORKFLOW_OPTIONS.map((w) => ({
-                value: w,
-                label: w === 'translation' ? t('workflow.translation') : t('workflow.transcription'),
-              }))}
-            />
-          </div>
-          <p className="text-xs leading-relaxed text-editorial-muted">
-            {newContext === 'audit'
-              ? t('library.templateAuditHint')
-              : newContext === 'persona'
-                ? t('library.templatePersonaHint')
-                : newContext === 'memory'
-                  ? t('library.templateMemoryHint')
-                : t('library.templateStageHint')}
-          </p>
-
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                {t('pipeline.prompt')}
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={refineProvider}
-                  onChange={(value) => {
-                    const p = value as ModelProvider;
-                    setRefineProvider(p);
-                    setRefineModel(getProviderModels(p)[0] ?? '');
-                  }}
-                  className="font-mono"
-                  ariaLabel={t('library.templateRefineProviderLabel')}
-                  options={LLM_PROVIDER_ORDER.map((p) => ({ value: p, label: p }))}
-                />
-                <Select
-                  value={refineModel}
-                  onChange={setRefineModel}
-                  className="max-w-[160px] font-mono"
-                  ariaLabel={t('pipeline.stageModelLabel')}
-                  options={modelOptions.map((m) => ({ value: m, label: m }))}
-                />
-                <IconButton
-                  onClick={handleRefine}
-                  disabled={isRefining || !newPrompt.trim() || !canRefine}
-                  title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  size="sm"
-                >
-                  {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+      <CatalogSearchField disabled={editor !== null || busy || refining} disabledReason={t('library.searchEditingHint')} value={search} onChange={setSearch} placeholder={t('library.templateSearch')} label={t('library.templateSearch')} />
+      {editor === 'new' && <div className="linguistic-resource rounded-md bg-surface-resource p-4"><PromptTemplateForm busy={busy} onSave={handleSave} onCancel={() => setEditor(null)} onRefiningChange={setRefining} /></div>}
+      <div id={`template-context-panel-${context}`} role="tabpanel" aria-labelledby={`template-context-tab-${context}`} className="space-y-3">
+        {filtered.length === 0 && <p className="py-8 text-center text-sm italic text-editorial-muted">{t('library.noTemplates')}</p>}
+        {filtered.map((template) => {
+          const ContextIcon = ICONS[template.context];
+          const previewOpen = previewId === template.id;
+          return <article key={template.id} className="space-y-3 linguistic-resource rounded-md bg-surface-resource p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1.5">
+                <h3 className="break-words font-display text-lg italic text-editorial-ink">{template.name}</h3>
+                <div className="flex items-center gap-2 text-editorial-muted">
+                  <Hint label={templateContextLabel(template.context, t)}><ContextIcon size={13} /></Hint>
+                  <Hint label={t(`workflow.${template.workflow}`)}><Workflow size={13} /></Hint>
+                  {template.defaultModel && <Hint label={`${template.defaultProvider ?? ''} ${template.defaultModel}`.trim()}><Bot size={13} /></Hint>}
+                </div>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <IconButton size="sm" onClick={() => setPreviewId(previewOpen ? null : template.id)}
+                  aria-expanded={previewOpen} aria-controls={`prompt-preview-${template.id}`} title={t(previewOpen ? 'library.collapsePrompt' : 'library.expandPrompt')}>
+                  {previewOpen ? <Minimize2 size={14} /> : <Eye size={14} />}
                 </IconButton>
+                <IconButton size="sm" onClick={() => setEditor(template)} disabled={editor !== null || busy} title={`${t('common.edit')}: ${template.name}`}><Pencil size={14} /></IconButton>
+                <IconButton size="sm" onClick={() => void handleDelete(template)} disabled={editor !== null || busy} title={`${t('common.delete')}: ${template.name}`}><Trash2 size={14} /></IconButton>
               </div>
             </div>
-            <textarea
-              value={newPrompt}
-              onChange={(e) => setNewPrompt(e.target.value)}
-              placeholder={t('library.templatePromptPlaceholder')}
-              rows={6}
-              className="w-full resize-y rounded-md border border-editorial-border bg-editorial-bg/70 px-4 py-3 text-[13px] leading-relaxed font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            />
-          </div>
-
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              onClick={() => setCreating(false)}
-              className="flex items-center gap-2 rounded-md border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <X size={13} /> {t('common.cancel')}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!newName.trim() || !newPrompt.trim()}
-              className="flex items-center gap-2 rounded-md bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Check size={13} /> {t('library.saveTemplate')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {filtered.length === 0 && !creating ? (
-        <p className="border-y border-dashed border-editorial-border/70 py-8 text-center text-sm italic text-editorial-muted/70">
-          {t('library.noTemplates')}
-        </p>
-      ) : null}
-
-      <div className="space-y-3">
-        {filtered.map((tmpl) => (
-          <div
-            key={tmpl.id}
-            className="space-y-3 border-l-4 border-l-editorial-accent/30 border-y border-editorial-border/70 bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-accent"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <span className={`inline-block border-l-2 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] ${contextBadgeClass(tmpl.context)}`}>
-                  {contextLabel(tmpl.context)}
-                </span>
-                <div className="font-display text-base italic text-editorial-ink">{tmpl.name}</div>
-              </div>
-              <IconButton
-                onClick={() => handleDelete(tmpl.id, tmpl.name)}
-                title={t('common.delete')}
-                ariaLabel={`${t('common.delete')}: ${tmpl.name}`}
-                size="sm"
-              >
-                <Trash2 size={16} />
-              </IconButton>
-            </div>
-            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap bg-editorial-textbox/20 px-4 py-3 text-[12px] leading-relaxed font-mono text-editorial-ink/80 custom-scrollbar">
-              {tmpl.prompt}
-            </pre>
-          </div>
-        ))}
+            {editor !== null && editor !== 'new' && editor.id === template.id
+              ? <PromptTemplateForm key={template.id} template={template} busy={busy} onSave={handleSave} onCancel={() => setEditor(null)} onRefiningChange={setRefining} />
+              : <div>
+                <p id={`prompt-preview-${template.id}`} className={`whitespace-pre-wrap break-words text-sm leading-relaxed text-editorial-ink ${previewOpen ? '' : 'line-clamp-3'}`}>{template.prompt}</p>
+              </div>}
+          </article>; })}
       </div>
     </div>
   );
