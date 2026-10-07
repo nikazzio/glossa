@@ -312,7 +312,9 @@ testo nel suggerimento e per chi legge con la voce.
   dell'etichetta accanto si legge come una nota a margine invece che come la
   scelta fatta. La larghezza si lascia al contenuto, senza numeri fissi, salvo
   un tetto per i testi lunghi.
-- Scelte esclusive con nome usano `SegmentedControl`.
+- Scelte esclusive con nome: `ChoiceDots` (o `SettingChoiceRow` nelle
+  impostazioni) e `Select`; `SegmentedControl` resta solo nella finestra di
+  creazione della trascrizione, da convertire.
 - Ogni campo di ricerca usa `CatalogSearchField` (anche nei pannelli e nei
   fogli dello Studio): `onKeyDown` per Esc, `focusOnMount` quando si apre da un
   comando esplicito.
@@ -594,11 +596,27 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
 ### Impostazioni
 
 - Radice: `space-y-10`, `role="tabpanel"`, `aria-labelledby`.
-- Sezione: `space-y-4` con `SectionLabel`.
-- Elenchi: righe piatte separate, niente card o pill.
+- Sezione: `PanelSection` (titolo con il filetto sotto, comandi della sezione
+  nello slot `actions`), come nella scheda dell'opera della Biblioteca. Sotto,
+  l'elenco usa `SECTION_SETTING_LIST_CLASSNAME`: il filetto del titolo fa da
+  bordo superiore, quindi un filetto fra le righe e uno solo in fondo. Mai due
+  elenchi a filetti attaccati: righe della stessa sezione stanno in un elenco
+  solo; un `ToggleRow` dentro un elenco va in un contenitore `py-2.5`.
+- Elenchi: righe piatte separate, niente card o pill. Una riga isolata senza
+  titolo sopra ha filetto sopra e sotto.
 - Una scheda che raccoglie argomenti diversi si divide in **sotto-linguette**
-  (`TabStrip`) invece di diventare un rotolo unico: accanto alla fila,
-  l'etichetta della linguetta attiva in `font-display italic`.
+  con `SettingsSubTabs` invece di diventare un rotolo unico: fila `TabStrip`,
+  accanto l'etichetta della linguetta attiva in `font-display italic`.
+- Ogni impostazione è una riga (`SettingRow`) dentro una lista a filetti:
+  niente caselle affiancate, riquadri cliccabili o paragrafi fissi (la
+  spiegazione va nel `hint` della riga o del `SectionLabel`).
+- Scelta esclusiva: `SettingChoiceRow` (cerchietti `ChoiceDots` con il nome
+  della scelta accanto) quando le opzioni hanno un'icona naturale, `Select`
+  `md` quando sono solo parole. Mai i riquadri larghi di `SegmentedControl`.
+- Una cartella è una `FolderRow`, riga di un elenco: nome, percorso mono sotto,
+  icona cartella a destra per sceglierne un'altra.
+- Sotto-linguette (`SettingsSubTabs`) senza filetto proprio: la separazione la
+  dà il titolo della prima sezione.
 - Salvataggio al cambio, salvo input intermedi che richiedono conferma
   esplicita. In quel caso mostrare stato non salvato e comando di ripristino.
 - Ordine generale: modalità, coppia DeepL sempre visibile (disabilitata fuori DeepL), Descrizione comune del lavoro.

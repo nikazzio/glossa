@@ -28,7 +28,7 @@ Italian; public documentation is published in Italian and English.
 | `src/components/` | UI by domain (`library`, `transcription`, `translation`, `pipeline`, `document`, `settings`, …); shared primitives in `src/components/ui/` |
 | `src/stores/`, `src/hooks/`, `src/services/` | Zustand stores (global state only), domain hooks, data and Tauri-command services |
 | `src/i18n/it.json`, `src/i18n/en.json` | All UI strings, including the in-app guide (`help.*`) |
-| `src/languages/` | Bundled ISO 639-3 and Glottolog language lists; regenerate with `node scripts/update-languages.mjs` |
+| `src/languages/` | Bundled ISO 639-3 and Glottolog language lists; regenerate with `npx tsx scripts/update-languages.ts` (in the app: Settings → Languages) |
 | `src-tauri/src/` | Backend modules by domain (`llm`, `deepl`, `vector`, `federation`, `iiif`, `ocr`, `jobs`, …) |
 | `src-tauri/migrations/` | SQLx migrations, fingerprinted in `src-tauri/migrations.lock` |
 | `docs-dev/` | Developer documentation; start from `docs-dev/README.md` |

@@ -21,7 +21,7 @@ RPM packages for Linux. Check the assets attached to your chosen release.
 
 Remote translation services require their own credentials. Local processing
 requires a running Ollama server and a downloaded model. Configure your
-connection under **Settings → Provider**.
+connection under **Settings → Models**.
 
 ## Your first translation project
 

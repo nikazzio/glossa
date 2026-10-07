@@ -10,6 +10,7 @@ mod iiif;
 mod images;
 mod jobs;
 mod keystore;
+mod languages;
 mod llm;
 mod ocr;
 mod optimize;
@@ -172,6 +173,9 @@ pub fn run() {
             db::execute_transaction,
             storage_config::get_data_dir,
             storage_config::choose_data_dir_folder,
+            languages::languages_fetch_sources,
+            languages::languages_read_saved,
+            languages::languages_save,
             llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,

@@ -683,7 +683,6 @@
   },
   "settings": {
     "title": "Impostazioni",
-    "providerConfig": "Configurazione Provider",
     "segmentation": "Segmentazione Predefinita",
     "segmentationHint": "Parole obiettivo per ciascun preset. Minimo e massimo vengono derivati automaticamente (×0,5 e ×1,5).",
     "chunkPresetShort": "Brevi",
@@ -702,7 +701,6 @@
     "highlightAuditPhrase": "Frase audit",
     "highlightAnnotation": "Nota",
     "typography": "Tipografia",
-    "typographyTab": "Tipografia",
     "discoveryTab": "Ricerca fonti",
     "uiFont": "Font interfaccia",
     "uiFontHint": "Scegli il carattere dell'intera interfaccia. I valori serif editoriali non vengono toccati.",
@@ -747,7 +745,6 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
     "eyebrow": "Impostazioni generali",
-    "providerTab": "Provider",
     "storageTab": "Dati",
     "storage": {
       "title": "Posizione dati",
@@ -989,6 +986,46 @@
       "imageEdgeHint": "Lato lungo dell’immagine ottimizzata. Un’immagine più piccola non viene ingrandita.",
       "loadFailed": "Impossibile leggere le impostazioni delle trascrizioni",
       "saveFailed": "Impossibile salvare l’impostazione"
+    },
+    "appearanceTab": "Aspetto",
+    "modelsTab": "Modelli",
+    "languagesTab": "Lingue",
+    "appearance": {
+      "interface": "Interfaccia",
+      "document": "Documento",
+      "colors": "Colori",
+      "documentText": "Testo dei documenti",
+      "layoutHint": "Come si dispongono originale e traduzione nella lettura. Auto sceglie in base alla larghezza della finestra."
+    },
+    "accentColorFor": "Accento, tema {{scheme}}",
+    "wordsUnit": "parole",
+    "pipelinesSection": "Pipeline",
+    "models": {
+      "custom": "Provider personalizzato",
+      "apiKey": "Chiave API",
+      "list": "Modelli",
+      "server": "Server"
+    },
+    "data": {
+      "location": "Cartelle"
+    },
+    "languages": {
+      "title": "Elenco delle lingue",
+      "hint": "Lingue ISO 639-3 e varietà Glottolog offerte quando scegli le lingue di un’opera. L’elenco incluso funziona senza rete; l’aggiornamento lo riscarica dalle fonti ufficiali.",
+      "update": "Aggiorna elenco lingue",
+      "updated": "Elenco lingue aggiornato: {{added}} nuove, {{retired}} ritirate",
+      "updateFailed": "Aggiornamento dell’elenco lingue non riuscito: resta quello in uso",
+      "loadFailed": "Elenco delle lingue non leggibile",
+      "origin": "Elenco in uso",
+      "originHint": "Incluso nell’app, oppure scaricato con l’aggiornamento: quello scaricato prevale.",
+      "origin_bundled": "Incluso nell’app",
+      "origin_downloaded": "Scaricato",
+      "iso": "Lingue ISO 639-3",
+      "isoHint": "Lingue individuali e macrolingue del registro SIL, con la data in cui è stato preso.",
+      "varieties": "Varietà Glottolog",
+      "varietiesHint": "Varietà (livello dialetto) collegate a una lingua ISO, con la data in cui sono state prese.",
+      "retired": "Codici ritirati conservati",
+      "retiredHint": "Lingue sparite dalle fonti ufficiali: restano leggibili per nome nelle opere e nelle frasi che le usano, ma non si propongono più."
     }
   },
   "ollama": {
@@ -2551,7 +2588,7 @@
               "Puoi ispezionare gli output delle fasi e confrontarli per capire dove è cambiato il testo: i comandi stanno in colonna nel margine destro del foglio della traduzione, accanto alla barra di scorrimento. In alto le fasi nell'ordine della pipeline, poi il confronto e le coppie da confrontare; quella che stai guardando è evidenziata. Abilita la modifica dell’originale con la matita solo quando devi correggere il sorgente: la traduzione viene segnalata come da aggiornare, con l’etichetta ocra «Sorgente modificata» accanto al titolo.",
               "Quando la traduzione è pronta, segnala come verificata con la spunta accanto al titolo «Traduzione candidata»: diventa verde, il testo si blocca e la traduzione automatica dei soli frammenti non verificati la salta. Segnarla come verificata toglie anche il «da aggiornare»: vuol dire che l’hai controllata sull’originale di adesso. Riporta in bozza con lo stesso comando. Se un comando è spento, passandoci sopra leggi il motivo.",
               "Revisione → Storico elenca le versioni del frammento, dalla più recente: chi l’ha prodotta (Pipeline o Manuale), quando, e quale è la corrente e quale la verificata. Una versione nasce a ogni passata della pipeline, a ogni salvataggio col dischetto se il testo è cambiato e alla verifica. Il comando di ripristino riporta il testo nel foglio e lo scrive come versione nuova, senza cancellare le altre; è spento su una traduzione verificata. Le versioni non si eliminano e non si possono ancora nominare.",
-              "Impostazioni → Tipografia regola caratteri, dimensioni, interlinea e aspetto. Le impostazioni delle traduzioni comprendono layout ed evidenziazioni."
+              "Impostazioni → Aspetto regola tema, accento, carattere dell’interfaccia, testo dei documenti (dimensione, interlinea, disposizione della lettura) ed evidenziazioni. Impostazioni → Lingue mostra l’elenco delle lingue in uso e lo riscarica dalle fonti ufficiali; le lingue ritirate restano leggibili."
             ]
           },
           {
@@ -2740,7 +2777,7 @@
       },
       "providers": {
         "title": "Configurare i servizi",
-        "intro": "Configura i servizi in Impostazioni → Provider, poi scegli il provider e il modello nelle fasi della pipeline.",
+        "intro": "Configura i servizi in Impostazioni → Modelli, poi scegli il provider e il modello nelle fasi della pipeline.",
         "blocks": [
           {
             "title": "Servizi remoti",
@@ -2776,7 +2813,7 @@
             "steps": [
               "Installa Ollama e scarica un modello compatibile con il tuo hardware.",
               "Avvia il server Ollama, se la tua installazione non lo avvia automaticamente.",
-              "Apri Impostazioni → Provider → Ollama e verifica l’URL e lo stato della connessione.",
+              "Apri Impostazioni → Modelli → Ollama e verifica l’URL e lo stato della connessione.",
               "Aggiorna l’elenco dei modelli, quindi scegli Ollama e il modello nelle fasi desiderate.",
               "Prova un frammento e controlla tempi, qualità e consumo di memoria."
             ]
@@ -2863,7 +2900,7 @@
             "title": "Per iniziare una traduzione",
             "paragraphs": [],
             "steps": [
-              "Apri Impostazioni → Provider e configura il servizio che vuoi usare. Per Ollama, verifica che il server sia avviato e che un modello sia installato.",
+              "Apri Impostazioni → Modelli e configura il servizio che vuoi usare. Per Ollama, verifica che il server sia avviato e che un modello sia installato.",
               "Crea un workspace e un progetto al suo interno. Il workspace raccoglie progetti e risorse da usare insieme.",
               "Importa un documento e controlla il testo e la suddivisione in frammenti nell’anteprima.",
               "Configura lingue e pipeline, quindi prova la traduzione su un frammento.",
@@ -3079,7 +3116,7 @@
           {
             "title": "Cartella dati e deposito",
             "paragraphs": [
-              "Impostazioni → Dati distingue la cartella dati, con progetti e catalogo, dal deposito delle immagini. Il deposito può essere su un disco esterno.",
+              "Impostazioni → Dati → Cartelle distingue la cartella dati, con progetti e catalogo, dal deposito delle immagini. Il deposito può essere su un disco esterno.",
               "Cambiare la cartella dati copia il database e richiede il riavvio per usare la nuova posizione. Cambiare deposito non sposta i download esistenti: scegli una cartella vuota o un deposito Glossa già presente.",
               "Mantieni il database su disco locale. Se sincronizzi il deposito, imposta il servizio perché conservi i file anche sul computer: i soli segnaposto online non bastano."
             ]
@@ -3111,7 +3148,7 @@
               "Il file contiene schede delle opere, annotazioni, trascrizioni, traduzioni con il loro storico, glossari e memoria di frasi, ricerche con i risultati ottenuti, storico delle operazioni, servizi configurati a mano ed elenco dei documenti esportati."
             ],
             "steps": [
-              "Apri Impostazioni → Backup.",
+              "Apri Impostazioni → Dati → Backup e ripristino.",
               "Scegli il backup con password per proteggere il contenuto, oppure il formato Solo Glossa, che non è cifrato.",
               "Scegli dove salvare il file e attendi la conferma.",
               "Se hai usato una password, conserva anche il codice di recupero mostrato al termine, fuori dall’applicazione."

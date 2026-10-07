@@ -21,7 +21,7 @@ verifica gli allegati della release scelta.
 
 Per usare un servizio di traduzione remoto occorrono le relative credenziali.
 Per l’elaborazione locale occorrono un server Ollama in esecuzione e un modello
-già scaricato. La scelta si configura in **Impostazioni → Provider**.
+già scaricato. La scelta si configura in **Impostazioni → Modelli**.
 
 ## Primo progetto di traduzione
 

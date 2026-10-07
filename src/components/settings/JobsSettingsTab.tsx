@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Layers, RotateCw } from 'lucide-react';
-import { SectionLabel, Select, SettingRow, ToggleRow } from '../ui';
+import { Select, SettingRow, ToggleRow, PanelSection } from '../ui';
 import {
   getAutoResumeDownloads,
   getJobLimits,
@@ -71,13 +71,13 @@ export function JobsSettingsTab() {
       aria-labelledby="settings-tab-jobs"
       className="space-y-10"
     >
-      <section className="space-y-4">
-        <SectionLabel icon={Layers} label={t('settings.jobs.limits')} />
-        <div className="divide-y divide-rule border-y border-rule">
+      <PanelSection icon={Layers} label={t('settings.jobs.limits')}>
+        <div className="divide-y divide-rule border-b border-rule">
           {limits &&
             RESOURCE_CLASSES.map((resource) => (
               <SettingRow key={resource} label={t(`settings.jobs.resource.${resource}`)}>
                 <Select
+                  size="md"
                   value={String(limits[resource])}
                   onChange={(value) => changeLimit(resource, value)}
                   ariaLabel={t(`settings.jobs.resource.${resource}`)}
@@ -92,11 +92,10 @@ export function JobsSettingsTab() {
               </SettingRow>
             ))}
         </div>
-      </section>
+      </PanelSection>
 
-      <section className="space-y-4">
-        <SectionLabel icon={RotateCw} label={t('settings.jobs.reopening')} />
-        <div className="border-y border-rule py-3">
+      <PanelSection icon={RotateCw} label={t('settings.jobs.reopening')}>
+        <div className="border-b border-rule py-2.5">
           <ToggleRow
             icon={<RotateCw size={13} />}
             label={t('settings.jobs.autoResume')}
@@ -104,7 +103,7 @@ export function JobsSettingsTab() {
             onChange={() => void changeAutoResume(!autoResume)}
           />
         </div>
-      </section>
+      </PanelSection>
     </div>
   );
 }

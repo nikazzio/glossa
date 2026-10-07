@@ -7,11 +7,10 @@ Aggiornata: 5 ottobre 2026.
 - Sequenza: Impostazioni generali → menu generale nella colonna sinistra
   (#485 C) → integrazione #490 → `feat/translation-studio-layout` (#488) →
   `main`.
-- **Prossimo refactor UI/UX: Impostazioni generali.** Dentro va anche il
-  comando «Aggiorna elenco lingue», che riscarica dalle fonti ufficiali
-  l'elenco ISO 639-3 e le varietà Glottolog (oggi incluso nell'app e
-  rigenerabile solo da `scripts/update-languages.mjs`), conservando i codici
-  ritirati.
+- **Impostazioni generali: rifatte** (otto linguette in ordine di lavoro,
+  sotto-linguette, righe uniformi, linguetta Lingue con «Aggiorna elenco
+  lingue» che conserva i codici ritirati). Resta da convertire ai cerchietti la
+  scelta a riquadri della finestra «Crea trascrizione».
 - **Rimandati ad altre sessioni:** sblocco del prompt delle fasi quando esistono
   frammenti tradotti (oggi si cambia solo il modello); consolidamento delle
   migrazioni 0004-0008 prima dell'unione con `main`.

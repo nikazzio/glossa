@@ -59,7 +59,8 @@ napoletano, siciliano…) sono lingue separate con sole varietà moderne; non
 esistono varietà d’area medievali, per cui si usa la nota. Per un trattato di
 scherma volgare del Quattrocento: italiano + italiano antico + nota, oppure la
 lingua regionale + nota. L’elenco delle lingue è incluso nell’app e funziona
-senza rete; non c’è ancora un comando per aggiornarlo.
+senza rete; **Impostazioni → Lingue** mostra l’elenco in uso e lo riscarica
+dalle fonti ufficiali, conservando come ritirate le lingue che non ci sono più.
 
 Dove si impostano: nella finestra di importazione e nella riga in cima allo
 Studio. Lì, a destra prima dei comandi, la coppia compare con le varietà

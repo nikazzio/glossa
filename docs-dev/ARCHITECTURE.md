@@ -535,13 +535,19 @@ dell'utente o sistema, seguito anche mentre l'app è aperta): lo usano
 `ThemeSync` (classe `dark` su `<html>`), l'accento e le evidenziazioni
 applicati a runtime.
 
-**Impostazioni.** `uiStore.settingsTab` ha una sola linguetta per la Biblioteca
-(`library`), che al suo interno si divide in tre sotto-linguette — ritmi di
-rete, biblioteche, immagini — tenute in stato locale. Le vecchie `download` e
-`libraries` non esistono più; la linguetta disattivata «in arrivo» resta solo per
-le Trascrizioni. La bozza di un profilo di rete vive nella finestra e non nella
-scheda, perché la scheda si smonta cambiando linguetta, e il profilo in modifica
-si ritrova dalla bozza al rientro.
+**Impostazioni.** Valgono per tutta l'app; quelle di un workspace stanno in
+`WorkspaceSettingsModal`. `uiStore.settingsTab` (non persistito) ha otto
+linguette, nella fila comune `TabStrip`: `appearance`, `library`,
+`transcriptions`, `translations`, `models`, `languages`, `data`, `jobs`. Le
+schede con argomenti diversi usano `SettingsSubTabs` (sotto-linguette in stato
+locale): Aspetto (interfaccia, documento, evidenziazioni), Biblioteca (ritmi di
+rete, biblioteche, immagini), Modelli (un provider per linguetta, provider
+personalizzato, prezzi), Dati (cartelle e deposito, cache di rete, backup). Ogni
+scheda legge da sé i propri store; le scelte esclusive sono `SettingChoiceRow`
+(`ChoiceDots` con il nome della scelta) o `Select`. La bozza di un profilo di
+rete vive nella finestra e non nella scheda, perché la scheda si smonta
+cambiando linguetta, e il profilo in modifica si ritrova dalla bozza al rientro.
+Il controllo pre-avvio con problemi apre direttamente Modelli.
 
 ## Trascrizioni
 
@@ -980,8 +986,16 @@ da `saveProjectSource`, `createProject` e `projectStore.updateWorkLanguages`
 (`saveWorkLanguages`). Colonne vuote = non indicata. Elenco incluso in
 `src/languages/data` (ISO 639-3 dal registro SIL, varietà Glottolog di livello
 «dialect» collegate alla loro lingua ISO, nomi italiani da CLDR), rigenerato da
-`scripts/update-languages.mjs`; caricato a richiesta come testo grezzo e
-validato (`languages/catalog.ts`, `useLanguageCatalog`). Interfaccia unica
+`npx tsx scripts/update-languages.ts`. Costruzione e unione stanno in
+`languages/build.ts`, condiviso con «Aggiorna elenco lingue» (Impostazioni →
+Lingue): il backend scarica le due fonti (`languages_fetch_sources`, fuori dai
+limiti CORS), il frontend costruisce l'elenco, i codici spariti restano con il
+segno «ritirato» (nominati, non più proposti) e il risultato si salva in
+`<cartella dati>/languages/` (`languages_save`, scrittura via file temporaneo).
+`loadLanguageCatalog` preferisce l'elenco salvato (`languages_read_saved`) e
+ricade su quello incluso; caricato a richiesta come testo grezzo e validato
+(`languages/catalog.ts`, `useLanguageCatalog`); `catalog.info` dice origine,
+date, conteggi e ritirati. Interfaccia unica
 `WorkLanguagesFields` in `ImportPreviewDialog` (colonna sinistra) e nella
 finestra di `WorkLanguagesControl` (salva solo con Conferma; partenza vuota
 proposta dalla lingua del libro con `matchLanguage`). Dopo ogni Conferma

@@ -683,7 +683,6 @@
   },
   "settings": {
     "title": "Settings",
-    "providerConfig": "Provider Configuration",
     "segmentation": "Segmentation Defaults",
     "segmentationHint": "Target chunk size for each preset. Min and max are derived automatically (×0.5 and ×1.5).",
     "chunkPresetShort": "Short",
@@ -702,7 +701,6 @@
     "highlightAuditPhrase": "Audit phrase",
     "highlightAnnotation": "Note",
     "typography": "Typography",
-    "typographyTab": "Typography",
     "discoveryTab": "Source search",
     "uiFont": "Interface font",
     "uiFontHint": "Choose the typeface for the whole interface. Editorial serif values are unaffected.",
@@ -747,7 +745,6 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configuration",
     "eyebrow": "General settings",
-    "providerTab": "Provider",
     "storageTab": "Data",
     "storage": {
       "title": "Data location",
@@ -989,6 +986,46 @@
       "imageEdgeHint": "Long side of the optimised image. A smaller image is not enlarged.",
       "loadFailed": "Could not read the transcription settings",
       "saveFailed": "Could not save the setting"
+    },
+    "appearanceTab": "Appearance",
+    "modelsTab": "Models",
+    "languagesTab": "Languages",
+    "appearance": {
+      "interface": "Interface",
+      "document": "Document",
+      "colors": "Colors",
+      "documentText": "Document text",
+      "layoutHint": "How source and translation are laid out for reading. Auto chooses from the window width."
+    },
+    "accentColorFor": "Accent, {{scheme}} theme",
+    "wordsUnit": "words",
+    "pipelinesSection": "Pipelines",
+    "models": {
+      "custom": "Custom provider",
+      "apiKey": "API key",
+      "list": "Models",
+      "server": "Server"
+    },
+    "data": {
+      "location": "Folders"
+    },
+    "languages": {
+      "title": "Language list",
+      "hint": "ISO 639-3 languages and Glottolog varieties offered when you choose a work’s languages. The bundled list works offline; updating downloads it again from the official sources.",
+      "update": "Update language list",
+      "updated": "Language list updated: {{added}} new, {{retired}} retired",
+      "updateFailed": "Could not update the language list: the current one stays in use",
+      "loadFailed": "The language list cannot be read",
+      "origin": "List in use",
+      "originHint": "Bundled with the app, or downloaded by an update: the downloaded one takes precedence.",
+      "origin_bundled": "Bundled with the app",
+      "origin_downloaded": "Downloaded",
+      "iso": "ISO 639-3 languages",
+      "isoHint": "Individual languages and macrolanguages from the SIL register, with the date it was retrieved.",
+      "varieties": "Glottolog varieties",
+      "varietiesHint": "Varieties (dialect level) linked to an ISO language, with the date they were retrieved.",
+      "retired": "Retired codes kept",
+      "retiredHint": "Languages gone from the official sources: still readable by name in the works and phrases that use them, but no longer offered."
     }
   },
   "ollama": {
@@ -2551,7 +2588,7 @@
               "Inspect and compare stage outputs to see where the text changed: the controls sit in a column in the right margin of the translation page, next to the scrollbar. At the top the stages in pipeline order, then comparison and the pairs to compare; the one you are viewing is highlighted. Enable source editing with the pencil only when you need to correct the original; its translation will be flagged for updating, with the ochre “Source changed” label next to the title.",
               "When the translation is ready, mark it as verified with the check next to the “Candidate translation” title: it turns green, the text locks and automatic translation of unverified segments skips it. Marking it as verified also clears “needs updating”: it means you checked it against the current original. Return it to draft with the same control. When a control is off, hover it to read why.",
               "Review → History lists the segment’s versions, newest first: who produced it (Pipeline or Manual), when, and which is current and which verified. A version is written at every pipeline pass, at every save with the disk if the text changed, and on verification. Restore puts the text back on the page and writes it as a new version, without deleting the others; it is off on a verified translation. Versions cannot be deleted and cannot be named yet.",
-              "Settings → Typography controls fonts, size, line spacing and appearance. Translation settings include layout and highlighting."
+              "Settings → Appearance sets theme, accent, interface font, document text (size, line height, reading layout) and highlights. Settings → Languages shows the language list in use and downloads it again from the official sources; retired languages stay readable."
             ]
           },
           {
@@ -2740,7 +2777,7 @@
       },
       "providers": {
         "title": "Configuring providers",
-        "intro": "Configure services under Settings → Provider, then choose a provider and model for each pipeline stage.",
+        "intro": "Configure services under Settings → Models, then choose a provider and model for each pipeline stage.",
         "blocks": [
           {
             "title": "Remote services",
@@ -2776,7 +2813,7 @@
             "steps": [
               "Install Ollama and download a model compatible with your hardware.",
               "Start the Ollama server if your installation does not start it automatically.",
-              "Open Settings → Provider → Ollama and check the URL and connection status.",
+              "Open Settings → Models → Ollama and check the URL and connection status.",
               "Refresh the model list, then select Ollama and the model for the required stages.",
               "Try one segment and check speed, quality and memory usage."
             ]
@@ -2863,7 +2900,7 @@
             "title": "Starting a translation",
             "paragraphs": [],
             "steps": [
-              "Open Settings → Provider and configure the service you want to use. For Ollama, check that the server is running and a model is installed.",
+              "Open Settings → Models and configure the service you want to use. For Ollama, check that the server is running and a model is installed.",
               "Create a workspace and a project within it. A workspace groups projects and resources used together.",
               "Import a document and check its text and segment boundaries in the preview.",
               "Set the languages and pipeline, then try translating one segment.",
@@ -3079,7 +3116,7 @@
           {
             "title": "Data directory and file repository",
             "paragraphs": [
-              "Settings → Data separates the data directory, containing projects and catalogue data, from the image repository. The repository can be on an external drive.",
+              "Settings → Data → Folders separates the data directory, containing projects and catalogue data, from the image repository. The repository can be on an external drive.",
               "Changing the data directory copies the database and requires a restart to use the new location. Changing the repository does not move existing downloads: choose an empty directory or an existing Glossa repository.",
               "Keep the database on a local drive. If you synchronise the repository, configure the service to retain files on your computer; online placeholders are not enough."
             ]
@@ -3111,7 +3148,7 @@
               "The file holds work records, annotations, transcriptions, translations with their history, glossaries and phrase memory, searches with the results they returned, the operations log, services configured by hand, and the list of exported documents."
             ],
             "steps": [
-              "Open Settings → Backup.",
+              "Open Settings → Data → Backup & Restore.",
               "Choose password protection to encrypt the contents, or Glossa-only format, which is not encrypted.",
               "Choose where to save the file and wait for confirmation.",
               "For a password-protected backup, also keep the recovery code shown after saving somewhere outside the application."

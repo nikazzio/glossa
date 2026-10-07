@@ -56,8 +56,9 @@ Italo-Romance languages (Venetian, Lombard, Ligurian, Neapolitan, Sicilian…)
 are separate languages with modern varieties only; there are no medieval area
 varieties, so use the note. For a 15th-century vernacular fencing treatise:
 Italian + Old Italian + note, or the regional language + note. The language
-list ships with the app and works offline; there is no in-app command to update
-it yet.
+list ships with the app and works offline; **Settings → Languages** shows the
+list in use and downloads it again from the official sources, keeping languages
+that are gone as retired.
 
 Where to set them: in the import window and in the top row of the Studio.
 There, on the right before the commands, the pair appears with its varieties

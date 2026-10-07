@@ -10,7 +10,7 @@ service involved. Keep other parameters unchanged while investigating one cause.
 ## Connection or credentials
 
 If a stage does not start, check its key, model and, for Custom, selected
-profile under **Settings → Provider**. Authentication errors, unavailable
+profile under **Settings → Models**. Authentication errors, unavailable
 models and exhausted quotas require different actions. Custom remote endpoints
 must use HTTPS; HTTP is accepted only for supported local addresses.
 

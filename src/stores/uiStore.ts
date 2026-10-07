@@ -51,14 +51,14 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab =
-  | 'translations'
+  | 'appearance'
+  | 'library'
   | 'transcriptions'
-  | 'provider'
-  | 'typography'
-  | 'storage'
-  | 'backup'
-  | 'jobs'
-  | 'library';
+  | 'translations'
+  | 'models'
+  | 'languages'
+  | 'data'
+  | 'jobs';
 
 export interface HLColorSet {
   sourceTerm: string;
@@ -365,7 +365,7 @@ export const useUiStore = create<UiState>()(
       documentLineHeight: 'normal',
       selectedChunkId: null,
       showSettings: false,
-      settingsTab: 'translations',
+      settingsTab: 'appearance',
       showHelp: false,
       helpSection: 'overview',
       showConfigDrawer: false,

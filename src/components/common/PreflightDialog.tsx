@@ -27,7 +27,7 @@ export function PreflightDialog() {
             <DialogCancelButton
               onClick={() => {
                 resolve(false);
-                setShowSettings(true);
+                setShowSettings(true, 'models');
               }}
             >
               <Settings size={14} aria-hidden="true" />
