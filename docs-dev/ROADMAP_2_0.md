@@ -2,18 +2,17 @@
 
 Aggiornata: 5 ottobre 2026.
 
-## Prossimi passi concordati (5 ottobre 2026)
+## Prossimi passi concordati (7 ottobre 2026)
 
-- Sequenza: Impostazioni generali → menu generale nella colonna sinistra
-  (#485 C) → integrazione #490 → `feat/translation-studio-layout` (#488) →
-  `main`.
-- **Impostazioni generali: rifatte** (otto linguette in ordine di lavoro,
-  sotto-linguette, righe uniformi, linguetta Lingue con «Aggiorna elenco
-  lingue» che conserva i codici ritirati). Resta da convertire ai cerchietti la
-  scelta a riquadri della finestra «Crea trascrizione».
-- **Rimandati ad altre sessioni:** sblocco del prompt delle fasi quando esistono
-  frammenti tradotti (oggi si cambia solo il modello); consolidamento delle
-  migrazioni 0004-0008 prima dell'unione con `main`.
+- Fatti: Impostazioni generali (otto linguette, linguetta Lingue con «Aggiorna
+  elenco lingue» che conserva i codici ritirati) e barra di sinistra (#485 C:
+  menu generale in fondo, collasso fluido).
+- Integrazione: #490 → `feat/translation-studio-layout` (#488) → `main`. Il
+  consolidamento delle migrazioni 0004-0008 si fa insieme all'unione su `main`.
+- **Prossimo lavoro UI/UX: Dashboard.**
+- **Rimandati:** sblocco del prompt delle fasi quando esistono frammenti
+  tradotti (oggi si cambia solo il modello); scelta a cerchietti nella finestra
+  «Crea trascrizione».
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 
