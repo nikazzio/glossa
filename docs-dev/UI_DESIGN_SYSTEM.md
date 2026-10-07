@@ -421,6 +421,16 @@ muted; tronca da sola e il testo intero va nel suggerimento. Accanto a un
 comando lascia `mr-2` di respiro. Nelle righe di frase sta nella riga di testa,
 non nel margine dei codici, così le frasi restano allineate.
 
+### Costi
+
+Stima e consumo usano `CostTable` (`components/pipeline`): una riga per fase con
+nome, modello mono sotto, token (cache sotto) e costo, totale in fondo; per il
+consumo anche le chiamate. Nessun carosello, nessuna carta. Nello Studio la riga
+sotto i comandi è un solo pulsante senza suggerimento (le cifre si leggono già)
+che apre un `ClickPopover` con le due tabelle: solo titoli e tabelle, né
+paragrafi né suggerimenti dentro (sarebbe un secondo riquadro sopra il primo).
+Il consumo non si colora: il verde resta per scelta e stato attivo.
+
 ### Completamento in una riga di elenco
 
 Quanto di una cosa è già disponibile si dice con una **riga di dati a

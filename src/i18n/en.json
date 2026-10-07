@@ -2370,9 +2370,6 @@
     "chunkSummaryLastAudit": "Audit",
     "chunkSummaryNoTranslation": "No translation recorded for this chunk yet.",
     "chunkSummaryNoAudit": "No audit recorded for this chunk yet.",
-    "summaryTranslationRuns": "translation runs",
-    "summaryAuditRuns": "audit runs",
-    "summaryCoherenceRuns": "coherence runs",
     "summaryStageBreakdown": "Stage breakdown",
     "summaryPrevStep": "Previous step",
     "summaryNextStep": "Next step",
@@ -2772,7 +2769,7 @@
               "Some services can reuse repeated request content through a cache. Savings depend on the service, model and actual reuse; they are not guaranteed.",
               "Anthropic caching is off by default. You can enable it in the pipeline and choose extended retention, considering how often you reuse the same instructions.",
               "Statistics show tokens, cache usage and calculated costs when those data are available. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead.",
-              "In the Tools column, hover over estimated cost or chunk usage to open details. The estimate follows the selected mode and block count; usage refers to the open chunk."
+              "In the Tools column, under the commands, one line shows the next run estimate and what was spent on the open segment; a click opens the cost panel, with a per-stage table for each. Spent also counts model calls: a re-translated segment or a review loop adds calls, so they are not runs."
             ]
           }
         ]
@@ -3390,7 +3387,20 @@
     "overrideInput": "Input $/1M",
     "overrideOutput": "Output $/1M",
     "estimateDetails": "Estimated cost details",
-    "actualDetails": "Chunk usage details"
+    "actualDetails": "Chunk usage details",
+    "calls": "Calls",
+    "cost": "Cost",
+    "cacheShort": "cache {{rate}}",
+    "panelTitle": "Costs: estimate and usage",
+    "estimateShort": "Estimate",
+    "spentShort": "Spent",
+    "estimateTitle": "Next run estimate",
+    "spentTitle": "Spent on this segment",
+    "scopeDocument": "whole document",
+    "scopeChunk": "this segment",
+    "scopeFirstChunks": "first {{count}} segments",
+    "noUsage": "No usage recorded for this segment.",
+    "callsHint": "Completed model calls per stage across the whole document: every segment, every re-translation and every review loop counts as a call."
   },
   "workLanguages": {
     "title": "Languages of the work",

@@ -212,6 +212,11 @@ Unavailable tabs remain reachable with Tab so their labels explain why they
 cannot be opened. Arrow keys skip them. Circular selectors remain reachable
 even when the currently selected option is unavailable.
 
-Hover over estimated cost or usage in Tools to open details. The estimate follows
-the selected mode and block count; usage refers to the open chunk. The block
-count does not represent repeated translations.
+In the Tools column, under the commands, one line shows the next run estimate
+and what was spent on the open segment. A click opens the cost panel: two tables
+with one row per stage (model, tokens, cost). The estimate follows the selected
+mode and block count and is indicative. The spent table also shows model
+**calls** per stage: a re-translated segment or a review loop adds calls, so the
+number does not count runs. The block count does not represent repeated
+translations. The Statistics tab shows the same per-stage table for the whole
+document.

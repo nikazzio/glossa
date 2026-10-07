@@ -1,5 +1,5 @@
-import { CircleDollarSign, Coins } from 'lucide-react';
-import { useMemo } from 'react';
+import { CircleDollarSign, Coins, type LucideIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useChunksStore } from '../../../stores/chunksStore';
@@ -10,16 +10,14 @@ import { useConfigStore } from '../../../stores/configStore';
 import { useOperationLogStore } from '../../../stores/operationLogStore';
 import { estimatePipelineCost } from '../../../utils/costEstimate';
 import { summarizeChunkUsage, formatUsd } from '../../../utils/operationLogStats';
-import { CostBreakdownPanel, formatCost } from '../../pipeline/CostBadge';
-import { IconButton, Popover, ScopeBreakdownCarousel } from '../../ui';
+import { CostTable, estimateRows, formatCost, usageRows } from '../../pipeline/CostTable';
+import { ClickPopover, SectionLabel } from '../../ui';
 
 /**
- * Stima costo (prima di tradurre) + consumo reale del frammento aperto (dopo)
- * — vivevano sparse (un badge nascosto sul pulsante grande, e una fascia nella
- * colonna centrale); ora un solo posto, accanto alla navigazione fra
- * frammenti. Le due righe restano separate: stima e reale sono unità di
- * misura diverse per costruzione, non hanno senso affiancate come se fossero
- * comparabili 1:1.
+ * Stima del prossimo lancio e consumo reale del frammento aperto, in una riga
+ * sotto i comandi di esecuzione. Un clic apre un solo pannello con le due
+ * tabelle per fase: restano separate, perché stima e consumo non sono
+ * confrontabili riga per riga.
  */
 export function ChunkCostPanel() {
   const { t } = useTranslation();
@@ -61,7 +59,6 @@ export function ChunkCostPanel() {
     ? currentChunk.totalInputTokens + currentChunk.totalOutputTokens
     : 0;
   const currentChunkUsd = currentChunk?.totalUsd ?? 0;
-  const hasCurrentChunkUsage = currentChunkTokens > 0 || currentChunkUsd > 0;
 
   const pipelineCostEstimate = useMemo(
     () => estimatePipelineCost(
@@ -80,50 +77,72 @@ export function ChunkCostPanel() {
     [currentChunk, config, pricingOverrides],
   );
   const runActionCostEstimate = workMode === 'chunk' ? chunkCostEstimate : pipelineCostEstimate;
+  const estimateScope = workMode === 'chunk'
+    ? t('cost.scopeChunk')
+    : isLimitedRun ? t('cost.scopeFirstChunks', { count: runChunkCount }) : t('cost.scopeDocument');
+  const estimateTotal = runActionCostEstimate.isFree ? t('cost.free') : runActionCostEstimate.totalUsd === null
+    ? t('cost.unknown') : formatCost(runActionCostEstimate.totalUsd);
+  const hasEstimate = runActionCostEstimate.stages.length > 0;
+  const estimateTableRows = estimateRows(runActionCostEstimate, t('cost.free'), t('cost.unknown'));
+  const usageTableRows = currentChunkUsage ? usageRows(currentChunkUsage.scopeBreakdown, t) : [];
+  const [open, setOpen] = useState(false);
+
+  if (!hasEstimate && !currentChunk) return null;
 
   return (
-    <div className="flex min-w-0 flex-1 items-center justify-between gap-3 text-xs">
-      {runActionCostEstimate.stages.length > 0 && (
-        <Popover side="left" align="start" className="w-72 p-3" trigger={
-          <span className="flex min-w-0 items-center gap-1 text-editorial-muted">
-            <IconButton title={t('cost.estimateDetails')}><CircleDollarSign size={14} /></IconButton>
-            <span className="truncate">
-              {runActionCostEstimate.isFree ? t('cost.free') : runActionCostEstimate.totalUsd === null
-                ? t('cost.unknown') : formatCost(runActionCostEstimate.totalUsd)}
+    // Un solo comando, senza suggerimento al passaggio: le cifre si leggono
+    // già, e un clic apre il pannello con il dettaglio di stima e consumo.
+    <ClickPopover open={open} onOpenChange={setOpen} side="left" align="start" className="w-[26rem] max-w-[90vw]"
+      trigger={
+        <button type="button" aria-pressed={open} aria-label={t('cost.panelTitle')}
+          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-md py-1 text-xs text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
+          {hasEstimate && (
+            <span className="flex min-w-0 items-center gap-1.5">
+              <CircleDollarSign size={13} className="shrink-0" aria-hidden="true" />
+              <span className="truncate">{t('cost.estimateShort')} <span className="tabular-nums text-editorial-ink">{estimateTotal}</span></span>
             </span>
-          </span>
-        }>
-          <CostBreakdownPanel estimate={runActionCostEstimate} />
-        </Popover>
-      )}
-      {/* Stima a sinistra, consumo a destra, ognuna larga quanto la sua
-          scritta: il passaggio del mouse apre il dettaglio solo lì sopra. */}
-      {currentChunk && (
-        <Popover
-          side="bottom"
-          align="start"
-          className="w-72 px-3"
-          trigger={
-            <div
-              className={`flex w-fit min-w-0 cursor-default items-center gap-1.5 ${
-                hasCurrentChunkUsage ? 'text-editorial-accent' : 'text-editorial-muted'
-              }`}
-            >
-              <IconButton title={t('cost.actualDetails')}><Coins size={14} /></IconButton>
-              <span className="truncate">
-                {currentChunkTokens.toLocaleString()} · {formatUsd(currentChunkUsd)}
-              </span>
-            </div>
-          }
-        >
-          {currentChunkUsage && currentChunkUsage.scopeBreakdown.length > 0 ? (
-            <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
-          ) : (
-            <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
           )}
-        </Popover>
-      )}
+          {currentChunk && (
+            <span className="flex min-w-0 items-center gap-1.5">
+              <Coins size={13} className="shrink-0" aria-hidden="true" />
+              <span className="truncate">
+                {t('cost.spentShort')}{' '}
+                <span className="tabular-nums text-editorial-ink">{currentChunkTokens.toLocaleString()} tok · {formatUsd(currentChunkUsd)}</span>
+              </span>
+            </span>
+          )}
+        </button>
+      }>
+      <div className="max-h-[70vh] space-y-5 overflow-y-auto p-4">
+        {hasEstimate && (
+          <section className="space-y-2">
+            <PanelHeading icon={CircleDollarSign} title={t('cost.estimateTitle')} scope={estimateScope} />
+            <CostTable rows={estimateTableRows}
+              total={{ tokens: estimateTableRows.reduce((sum, row) => sum + row.tokens, 0), cost: estimateTotal }} />
+          </section>
+        )}
+        {currentChunk && (
+          <section className="space-y-2">
+            <PanelHeading icon={Coins} title={t('cost.spentTitle')} />
+            {usageTableRows.length > 0 && currentChunkUsage ? (
+              <CostTable showCalls rows={usageTableRows}
+                total={{ tokens: currentChunkUsage.total.totalInput + currentChunkUsage.total.totalOutput, cost: formatUsd(currentChunkUsage.total.totalUsd) }} />
+            ) : (
+              <p className="text-xs text-editorial-muted">{t('cost.noUsage')}</p>
+            )}
+          </section>
+        )}
+      </div>
+    </ClickPopover>
+  );
+}
 
+/** Titolo di sezione: nessun suggerimento, il pannello è già un riquadro aperto. */
+function PanelHeading({ icon, title, scope }: { icon: LucideIcon; title: string; scope?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 border-b border-rule pb-1.5">
+      <SectionLabel icon={icon} label={title} />
+      {scope && <span className="truncate font-display text-xs italic text-editorial-ink">{scope}</span>}
     </div>
   );
 }

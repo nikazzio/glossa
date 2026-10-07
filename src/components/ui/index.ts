@@ -18,7 +18,6 @@ export { Tooltip, type TooltipSide } from './Tooltip';
 export { Hint } from './Hint';
 export { Popover } from './Popover';
 export { ClickPopover } from './ClickPopover';
-export { ScopeBreakdownCarousel } from './ScopeBreakdownCarousel';
 export { StatRow } from './StatRow';
 export { StatBlock } from './StatBlock';
 export { Highlighted } from './Highlighted';

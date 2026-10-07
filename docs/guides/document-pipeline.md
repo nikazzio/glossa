@@ -219,6 +219,11 @@ Le schede disattivate restano raggiungibili col tabulatore, così puoi leggere i
 motivo nell’etichetta. Non si attivano; le frecce passano alle schede disponibili.
 I selettori circolari restano raggiungibili anche se la scelta corrente non è disponibile.
 
-Nella colonna Strumenti, passa sulla stima o sui consumi per aprire il dettaglio.
-La stima segue modalità e numero di blocchi selezionati; i consumi sono quelli
-del frammento aperto. Il numero di blocchi non indica ripetizioni della traduzione.
+Nella colonna Strumenti, sotto i comandi, una riga riporta la stima del
+prossimo lancio e lo speso sul frammento aperto. Un clic apre il pannello dei
+costi: due tabelle con una riga per fase (modello, token, costo). La stima segue
+modalità e numero di blocchi selezionati ed è indicativa. Lo speso riporta anche
+le **chiamate** al modello per fase: un frammento ritradotto o un ciclo di
+revisione aggiungono chiamate, quindi il numero non conta le esecuzioni. Il
+numero di blocchi non indica ripetizioni della traduzione. La scheda Statistiche
+mostra la stessa tabella per fase sull’intero documento.

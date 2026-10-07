@@ -2370,9 +2370,6 @@
     "chunkSummaryLastAudit": "Audit",
     "chunkSummaryNoTranslation": "Nessuna traduzione registrata per questo chunk.",
     "chunkSummaryNoAudit": "Nessun audit registrato per questo chunk.",
-    "summaryTranslationRuns": "run traduzione",
-    "summaryAuditRuns": "run audit",
-    "summaryCoherenceRuns": "run coerenza",
     "summaryStageBreakdown": "Breakdown per fase",
     "summaryPrevStep": "Step precedente",
     "summaryNextStep": "Step successivo",
@@ -2772,7 +2769,7 @@
               "Alcuni servizi possono riutilizzare parti ripetute delle richieste tramite una cache. Il risparmio dipende dal servizio, dal modello e dal riuso effettivo: non è garantito.",
               "La cache Anthropic è disattivata per impostazione predefinita. Puoi abilitarla nella pipeline e scegliere una durata estesa, valutando quanto spesso riusi le stesse istruzioni.",
               "Le statistiche mostrano token, cache e costi calcolati quando questi dati sono disponibili. Un token è un’unità di testo usata dal modello, non necessariamente una parola. DeepL misura invece i caratteri fatturati.",
-              "Nella colonna Strumenti, passa sul costo stimato o sui consumi del frammento per aprire il dettaglio. La stima segue la modalità e il numero di blocchi selezionati; i consumi riguardano il frammento aperto."
+              "Nella colonna Strumenti, sotto i comandi, una riga riporta stima del prossimo lancio e speso sul frammento aperto; un clic apre il pannello dei costi, con una tabella per fase per ciascuno. Lo speso conta anche le chiamate al modello: un frammento ritradotto o un ciclo di revisione ne aggiungono, quindi non sono esecuzioni."
             ]
           }
         ]
@@ -3390,7 +3387,20 @@
     "overrideInput": "Ingresso $/1M",
     "overrideOutput": "Uscita $/1M",
     "estimateDetails": "Dettaglio della stima",
-    "actualDetails": "Dettaglio dei consumi del frammento"
+    "actualDetails": "Dettaglio dei consumi del frammento",
+    "calls": "Chiamate",
+    "cost": "Costo",
+    "cacheShort": "cache {{rate}}",
+    "panelTitle": "Costi: stima e consumo",
+    "estimateShort": "Stima",
+    "spentShort": "Speso",
+    "estimateTitle": "Stima del prossimo lancio",
+    "spentTitle": "Speso su questo frammento",
+    "scopeDocument": "documento intero",
+    "scopeChunk": "questo frammento",
+    "scopeFirstChunks": "primi {{count}} frammenti",
+    "noUsage": "Nessun consumo registrato per questo frammento.",
+    "callsHint": "Chiamate al modello completate per fase, su tutto il documento: ogni frammento, ogni ritraduzione e ogni ciclo di revisione conta una chiamata."
   },
   "workLanguages": {
     "title": "Lingue dell’opera",

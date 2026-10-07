@@ -6,6 +6,7 @@ import {
   Cpu,
   FileText,
   Gauge,
+  Layers,
   Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +21,8 @@ import {
   summarizeGlobalUsage,
 } from '../../../utils/operationLogStats';
 import type { TranslationChunk } from '../../../types';
-import { PANEL_BODY_CLASSNAME, PanelSection, StatRow, ScopeBreakdownCarousel } from '../../ui';
+import { PANEL_BODY_CLASSNAME, PanelSection, StatRow } from '../../ui';
+import { CostTable, usageRows } from '../../pipeline/CostTable';
 
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -60,10 +62,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   const hasPersistedUsage =
     totalTokens > 0
     || usageSummary.overall.totalCached > 0
-    || usageSummary.overall.totalDurationMs > 0
-    || usageSummary.translationRuns > 0
-    || usageSummary.auditRuns > 0
-    || usageSummary.coherenceRuns > 0;
+    || usageSummary.overall.totalDurationMs > 0;
 
   if (chunks.length === 0) {
     return (
@@ -133,9 +132,6 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           )}
           <StatRow label={t('header.estimatedCost')} value={formatUsd(usageSummary.overall.totalUsd)} />
           <StatRow label={t('log.totalDuration')} value={usageSummary.overall.totalDurationMs > 0 ? formatDurationMs(usageSummary.overall.totalDurationMs) : '—'} />
-          <StatRow label={t('document.summaryTranslationRuns')} value={usageSummary.translationRuns.toLocaleString()} />
-          <StatRow label={t('document.summaryAuditRuns')} value={usageSummary.auditRuns.toLocaleString()} />
-          <StatRow label={t('document.summaryCoherenceRuns')} value={usageSummary.coherenceRuns.toLocaleString()} />
         </dl>
         {!hasPersistedUsage && (
           <p className="text-xs leading-relaxed text-editorial-muted">
@@ -145,10 +141,10 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </PanelSection>
 
       {usageSummary.scopeBreakdown.length > 0 && (
-        <ScopeBreakdownCarousel
-          entries={usageSummary.scopeBreakdown}
-          title={t('document.summaryStageBreakdown')}
-        />
+        <PanelSection icon={Layers} label={t('document.summaryStageBreakdown')} hint={t('cost.callsHint')}>
+          <CostTable showCalls rows={usageRows(usageSummary.scopeBreakdown, t)}
+            total={{ tokens: totalTokens, cost: formatUsd(usageSummary.overall.totalUsd) }} />
+        </PanelSection>
       )}
     </div>
   );

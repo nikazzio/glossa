@@ -1169,8 +1169,11 @@ pallini fuori finestra restano montati per lo scorrimento ma con `tabIndex`
 passivo), `StageStatusRow` (spie delle fasi del frammento aperto, aprono
 `StageTraceDialog`) e la lente che apre `SearchTab` sotto la fila (regione,
 non più linguetta; Esc dal campo la chiude), a destra `TranslationInspector`: `InspectorShell` con `beforeTabs`
-per l'esecuzione (`PipelineSidebarRunSection` + `ChunkCostPanel`, il cui dettaglio
-della stima si apre a sinistra del riquadro) e cinque
+per l'esecuzione (`PipelineSidebarRunSection` + `ChunkCostPanel`: una riga
+stima/speso che con un clic apre a sinistra un `ClickPopover` con due
+`CostTable`; il consumo viene da `summarizeChunkUsage`, che per ogni fase dà
+`calls` = chiamate completate, non esecuzioni; il registro non segna a quale
+esecuzione appartiene una chiamata) e cinque
 linguette (Glossario, Memoria, Anteprima, Revisione, Documento) su un solo
 stato, `uiStore.studioTab` (`TranslationStudioTab` =
 linguette del frammento ∪ linguette del documento). `studioGroupViews` conserva
