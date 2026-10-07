@@ -328,8 +328,8 @@ testo nel suggerimento e per chi legge con la voce.
 - Lingue di un'opera: `WorkLanguagesFields`, due sezioni (Partenza, Arrivo) di
   `SettingRow`: Lingua e Varietà con valore in `font-display`, codice mono
   piccolo, `SearchPicker` e «x»; Nota con campo in linea. Nella riga in cima
-  allo Studio la coppia sta a destra, prima dei comandi dell'opera: testo
-  corsivo muted (solo i nomi; varietà e note nel suggerimento) e un
+  allo Studio la coppia sta a destra, prima dei comandi dell'opera:
+  `LanguagePairLabel` (nomi e varietà; le note nel suggerimento) e un
   `IconButton` lingue che apre la finestra con Annulla/Conferma, mai salvata
   all'uscita; poi `CommandRule`. Il tipo di pipeline è solo un'icona con nome e
   spiegazione nel suggerimento.
