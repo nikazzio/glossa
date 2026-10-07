@@ -26,23 +26,42 @@ fn glossaries_endpoint(api_key: &str) -> String {
     format!("https://{}/v3/glossaries", deepl_host(api_key))
 }
 
+pub(crate) fn build_translate_request(
+    input: &DeeplStageInput,
+) -> Result<DeeplTranslateRequest, String> {
+    let cfg = &input.deepl_config;
+    let target_lang = cfg
+        .target_lang
+        .as_deref()
+        .unwrap_or("")
+        .trim()
+        .to_uppercase();
+    if target_lang.is_empty() {
+        return Err("Choose a target language in the DeepL settings.".to_string());
+    }
+    Ok(DeeplTranslateRequest {
+        text: vec![input.text.clone()],
+        source_lang: cfg
+            .source_lang
+            .as_ref()
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.trim().to_uppercase()),
+        target_lang,
+        model_type: cfg.model_type.clone(),
+        formality: cfg.formality.clone(),
+        context: cfg.context.clone(),
+        preserve_formatting: cfg.preserve_formatting,
+        glossary_id: cfg.glossary_id.clone(),
+        show_billed_characters: cfg.show_billed_characters.unwrap_or(true),
+    })
+}
+
 pub async fn translate(
     client: &Client,
     api_key: &str,
     input: &DeeplStageInput,
 ) -> Result<DeeplStageOutput, String> {
-    let cfg = input.deepl_config.as_ref();
-    let body = DeeplTranslateRequest {
-        text: vec![input.text.clone()],
-        source_lang: input.source_lang.clone(),
-        target_lang: input.target_lang.clone(),
-        model_type: cfg.and_then(|c| c.model_type.clone()),
-        formality: cfg.and_then(|c| c.formality.clone()),
-        context: cfg.and_then(|c| c.context.clone()),
-        preserve_formatting: cfg.and_then(|c| c.preserve_formatting),
-        glossary_id: cfg.and_then(|c| c.glossary_id.clone()),
-        show_billed_characters: cfg.and_then(|c| c.show_billed_characters).unwrap_or(true),
-    };
+    let body = build_translate_request(input)?;
 
     let url = translate_endpoint(api_key);
     let resp = client
@@ -277,5 +296,58 @@ mod tests {
         let url = glossaries_endpoint("myprokey");
         assert!(url.contains("api.deepl.com"), "got: {url}");
         assert!(!url.contains("api-free"), "got: {url}");
+    }
+
+    fn stage_input(source: Option<&str>, target: Option<&str>) -> DeeplStageInput {
+        DeeplStageInput {
+            text: "Lorem ipsum".to_string(),
+            deepl_config: crate::deepl::types::DeeplConfig {
+                source_lang: source.map(str::to_string),
+                target_lang: target.map(str::to_string),
+                model_type: None,
+                formality: Some("more".to_string()),
+                context: None,
+                preserve_formatting: Some(true),
+                glossary_id: Some("g-1".to_string()),
+                show_billed_characters: None,
+            },
+        }
+    }
+
+    #[test]
+    fn build_translate_request_rejects_missing_or_blank_target() {
+        assert!(build_translate_request(&stage_input(Some("la"), None)).is_err());
+        assert!(build_translate_request(&stage_input(Some("la"), Some("  "))).is_err());
+    }
+
+    #[test]
+    fn build_translate_request_normalizes_language_codes() {
+        let request = build_translate_request(&stage_input(Some(" la "), Some(" it ")))
+            .expect("valid request");
+        assert_eq!(request.source_lang.as_deref(), Some("LA"));
+        assert_eq!(request.target_lang, "IT");
+    }
+
+    #[test]
+    fn build_translate_request_omits_blank_source_for_auto_detection() {
+        let request =
+            build_translate_request(&stage_input(Some(" "), Some("en"))).expect("valid request");
+        let body = serde_json::to_value(&request).expect("serializable");
+        assert!(body.get("source_lang").is_none(), "got: {body}");
+    }
+
+    #[test]
+    fn build_translate_request_serializes_deepl_body_fields() {
+        let request =
+            build_translate_request(&stage_input(None, Some("de"))).expect("valid request");
+        let body = serde_json::to_value(&request).expect("serializable");
+        assert_eq!(body["text"], serde_json::json!(["Lorem ipsum"]));
+        assert_eq!(body["target_lang"], "DE");
+        assert_eq!(body["formality"], "more");
+        assert_eq!(body["preserve_formatting"], true);
+        assert_eq!(body["glossary_id"], "g-1");
+        assert_eq!(body["show_billed_characters"], true);
+        assert!(body.get("model_type").is_none(), "got: {body}");
+        assert!(body.get("context").is_none(), "got: {body}");
     }
 }

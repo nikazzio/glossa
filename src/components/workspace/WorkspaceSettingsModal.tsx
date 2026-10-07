@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select, TabStrip, ToggleRow } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select, TabStrip } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import { OcrSettingsSection } from './OcrSettingsSection';
 import type { EmbeddingModel, ModelProvider } from '../../types';
@@ -31,7 +31,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [description, setDescription] = useState('');
   const [iconKey, setIconKey] = useState<WorkspaceIconKey>(DEFAULT_WORKSPACE_ICON);
   const [embeddingModel, setEmbeddingModel] = useState<EmbeddingModel>('text-embedding-3-small');
-  const [memorySearchAllWorkspaces, setMemorySearchAllWorkspaces] = useState(false);
   const [memoryExtractorProvider, setMemoryExtractorProvider] = useState<ModelProvider>('openai');
   const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5.4-nano');
   const [memoryExtractorPrompt, setMemoryExtractorPrompt] = useState('');
@@ -47,7 +46,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     setDescription(activeWorkspace.description ?? '');
     setIconKey(isWorkspaceIconKey(activeWorkspace.iconKey) ? activeWorkspace.iconKey : DEFAULT_WORKSPACE_ICON);
     setEmbeddingModel(activeWorkspace.embeddingModel);
-    setMemorySearchAllWorkspaces(activeWorkspace.memorySearchAllWorkspaces);
     setMemoryExtractorProvider(activeWorkspace.memoryExtractorProvider);
     setMemoryExtractorModel(activeWorkspace.memoryExtractorModel);
     setMemoryExtractorPrompt(activeWorkspace.memoryExtractorPrompt);
@@ -68,7 +66,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
         description: description.trim() || undefined,
         iconKey,
         embeddingModel,
-        memorySearchAllWorkspaces,
         memoryExtractorProvider,
         memoryExtractorModel: memoryExtractorModel.trim(),
         memoryExtractorPrompt: memoryExtractorPrompt.trim(),
@@ -196,11 +193,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   aria-labelledby="workspace-settings-tab-memory"
                   className="space-y-4"
                 >
-                  <div className="border-y border-rule py-2.5">
-                    <ToggleRow icon={<Brain size={14} />} label={t('workspace.memorySearchAllWorkspaces')}
-                      hint={t('workspace.memorySearchAllWorkspacesHint')} checked={memorySearchAllWorkspaces}
-                      disabled={saving || isRegenerating} onChange={() => setMemorySearchAllWorkspaces((value) => !value)} />
-                  </div>
                   <div className="space-y-3 border-y border-rule py-4">
                     <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
                       {t('workspace.embeddingModel')}

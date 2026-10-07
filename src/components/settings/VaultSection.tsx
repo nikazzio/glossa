@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Archive, AlertTriangle, FolderTree, ScanSearch, ShieldCheck, Trash2 } from 'lucide-react';
-import { IconButton, SectionLabel, SettingRow, Spinner, ToggleRow, Tooltip } from '../ui';
+import { IconButton, PanelSection, SECTION_SETTING_LIST_CLASSNAME, SettingRow, ToggleRow } from '../ui';
+import { FolderRow } from './FolderRow';
 import {
   chooseVaultFolder,
   deleteVaultOrphans,
@@ -201,13 +202,13 @@ export function VaultSection() {
   };
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <SectionLabel icon={Archive} label={t('settings.storage.vault.title')} />
-        {/* «Tieni tutto insieme» è un comando come gli altri: icona e tooltip,
-            accanto alla sezione su cui agisce. Era un pulsante testuale
-            sottolineato, l'unico della finestra. */}
-        {!status?.isDefault && (
+    <PanelSection
+      icon={Archive}
+      label={t('settings.storage.vault.title')}
+      actions={
+        // «Tieni tutto insieme» è un comando come gli altri: icona e tooltip,
+        // accanto alla sezione su cui agisce.
+        !status?.isDefault && (
           <IconButton
             size="sm"
             onClick={() => void handleDefault()}
@@ -216,53 +217,34 @@ export function VaultSection() {
           >
             <FolderTree size={13} />
           </IconButton>
-        )}
-      </div>
+        )
+      }
+    >
 
-      {/* La riga **è** il comando: cliccarla apre la scelta della cartella.
-          Un pulsante separato ripeterebbe la stessa azione occupando spazio. */}
-      <Tooltip label={t('settings.storage.vault.chooseFolder')} side="top">
-        <button
-          type="button"
-          onClick={() => void handleChoose()}
+      <div className={SECTION_SETTING_LIST_CLASSNAME}>
+        <FolderRow
+          label={status?.isDefault ? t('settings.storage.vault.defaultLocation') : t('settings.storage.vault.customLocation')}
+          path={status?.path ?? null}
+          loading={loading}
           disabled={busy || loading}
-          aria-label={t('settings.storage.vault.chooseFolder')}
-          className="w-full border-y border-rule py-3 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+          chooseLabel={t('settings.storage.vault.chooseFolder')}
+          onChoose={() => void handleChoose()}
         >
-          <p className="caption-label">
-            {status?.isDefault
-              ? t('settings.storage.vault.defaultLocation')
-              : t('settings.storage.vault.customLocation')}
-          </p>
-          {loading ? (
-            <div className="mt-1.5 flex items-center gap-2 text-sm text-editorial-muted">
-              <Spinner size={14} />
-              {t('common.loading')}
-            </div>
-          ) : (
-            <>
-              <p className="mt-1 break-all font-mono text-sm text-editorial-ink">{status?.path}</p>
-              {status && !status.reachable && (
-                // Disco staccato o cartella non ancora sincronizzata: è un caso
-                // diverso da "i file non ci sono", e va detto così.
-                <p className="mt-2 flex items-center gap-2 text-sm text-editorial-warning">
-                  <AlertTriangle size={13} className="shrink-0" />
-                  {t('settings.storage.vault.unreachable')}
-                </p>
-              )}
-            </>
+          {status && !status.reachable && (
+            // Disco staccato o cartella non ancora sincronizzata: è un caso
+            // diverso da "i file non ci sono", e va detto così.
+            <p className="flex items-center gap-2 text-sm text-editorial-warning">
+              <AlertTriangle size={13} className="shrink-0" />
+              {t('settings.storage.vault.unreachable')}
+            </p>
           )}
-        </button>
-      </Tooltip>
-
-      {syncWarning && (
-        <p className="flex items-start gap-2 text-sm leading-relaxed text-editorial-warning">
-          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-          {t('settings.storage.vault.syncWarning')}
-        </p>
-      )}
-
-      <div className="divide-y divide-rule border-y border-rule">
+          {syncWarning && (
+            <p className="flex items-start gap-2 text-sm leading-relaxed text-editorial-warning">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {t('settings.storage.vault.syncWarning')}
+            </p>
+          )}
+        </FolderRow>
         <SettingRow
           label={t('settings.storage.vault.verifyQuick')}
           hint={t('settings.storage.vault.verifyHint')}
@@ -291,13 +273,15 @@ export function VaultSection() {
           </IconButton>
         </SettingRow>
 
-        <ToggleRow
-          icon={<ShieldCheck size={13} />}
-          label={t('settings.storage.vault.verifyOnStartup')}
-          checked={verifyOnStartup}
-          disabled={busy}
-          onChange={() => void changeVerifyOnStartup(!verifyOnStartup)}
-        />
+        <div className="py-2.5">
+          <ToggleRow
+            icon={<ShieldCheck size={13} />}
+            label={t('settings.storage.vault.verifyOnStartup')}
+            checked={verifyOnStartup}
+            disabled={busy}
+            onChange={() => void changeVerifyOnStartup(!verifyOnStartup)}
+          />
+        </div>
       </div>
 
       {/* L'esito dell'ultimo controllo resta qui finché non se ne fa un altro:
@@ -333,7 +317,7 @@ export function VaultSection() {
               })}
             </p>
 
-            <div className="divide-y divide-rule border-y border-rule">
+            <div className={SECTION_SETTING_LIST_CLASSNAME}>
               <SettingRow
                 label={
                   check.orphans > 0
@@ -358,6 +342,6 @@ export function VaultSection() {
           </>
         )}
       </div>
-    </section>
+    </PanelSection>
   );
 }

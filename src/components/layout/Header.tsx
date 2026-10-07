@@ -20,7 +20,6 @@ import {
   type GlobalArea,
 } from '../../navigation/appLocation';
 import { EASE_EDITORIAL } from './motion';
-import { ShellNavFooter } from './ShellNav';
 import { Tooltip } from '../ui';
 import { WorkspaceIcon } from '../workspace/WorkspaceIdentity';
 
@@ -260,7 +259,6 @@ export function Header() {
           </div>
         </div>
 
-        {activeWorkspace ? <ShellNavFooter variant="header" /> : null}
       </div>
 
       {helpLoaded.current && (

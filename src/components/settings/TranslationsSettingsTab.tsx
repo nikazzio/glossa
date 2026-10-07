@@ -1,231 +1,58 @@
-import type { ReactNode } from 'react';
-import { Scissors, Layers, LayoutTemplate, Palette, Sparkles, Columns2, BookOpen, ChevronsLeft, Copy, RotateCcw, Sun, Moon } from 'lucide-react';
+import { ChevronsLeft, Copy, Layers, RotateCcw, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { HLColorSet } from '../../stores/uiStore';
-import {
-  FieldLabel,
-  FIELD_MONO_CLASSNAME,
-  SectionLabel,
-  SegmentedControl,
-  SettingRow,
-} from '../ui';
+import { useConfigStore } from '../../stores/configStore';
+import { FIELD_NUMBER_CLASSNAME, SettingRow, PanelSection, SECTION_SETTING_LIST_CLASSNAME } from '../ui';
+import { SettingChoiceRow } from './SettingChoiceRow';
 
-const LAYOUT_OPTIONS: Array<{ value: 'auto' | 'standard' | 'book'; labelKey: string; icon: ReactNode }> = [
-  { value: 'auto',     labelKey: 'document.layoutAuto',     icon: <Sparkles size={14} /> },
-  { value: 'standard', labelKey: 'document.layoutStandard', icon: <Columns2 size={14} /> },
-  { value: 'book',     labelKey: 'document.layoutBook',     icon: <BookOpen size={14} /> },
-];
+type PipelineInit = 'copy-first' | 'copy-previous' | 'defaults';
 
-const PIPELINE_INIT_OPTIONS: Array<{ value: 'copy-first' | 'copy-previous' | 'defaults'; labelKey: string; icon: ReactNode }> = [
-  { value: 'copy-first',    labelKey: 'settings.newPipelineInitCopyFirst',    icon: <ChevronsLeft size={14} /> },
-  { value: 'copy-previous', labelKey: 'settings.newPipelineInitCopyPrevious', icon: <Copy size={14} /> },
-  { value: 'defaults',      labelKey: 'settings.newPipelineInitDefaults',     icon: <RotateCcw size={14} /> },
-];
+/** Passo e distanza minima fra i tre preset di segmentazione, in parole. */
+const PRESET_STEP = 50;
 
-function colorToHex(color: string | undefined): string {
-  if (!color) return '#000000';
-  if (color.startsWith('#')) return color;
-  const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (m) return '#' + [m[1], m[2], m[3]].map((v) => parseInt(v).toString(16).padStart(2, '0')).join('');
-  return '#000000';
-}
-
-function applyHexToColor(existing: string | undefined, hex: string): string {
-  const m = (existing ?? '').match(/rgba?\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/);
-  if (m) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${m[1]})`;
-  }
-  return hex;
-}
-
-interface TranslationsSettingsTabProps {
-  chunkPresetShort: number;
-  chunkPresetMedium: number;
-  chunkPresetLong: number;
-  setChunkPresetShort: (value: number) => void;
-  setChunkPresetMedium: (value: number) => void;
-  setChunkPresetLong: (value: number) => void;
-  newPipelineInit: 'copy-first' | 'copy-previous' | 'defaults';
-  setNewPipelineInit: (value: 'copy-first' | 'copy-previous' | 'defaults') => void;
-  documentLayout: 'auto' | 'standard' | 'book';
-  setDocumentLayout: (value: 'auto' | 'standard' | 'book') => void;
-  hlMode: 'light' | 'dark';
-  activeHlColors: HLColorSet;
-  setHighlightColor: (mode: 'light' | 'dark', key: keyof HLColorSet, value: string) => void;
-}
-
-export function TranslationsSettingsTab({
-  chunkPresetShort,
-  chunkPresetMedium,
-  chunkPresetLong,
-  setChunkPresetShort,
-  setChunkPresetMedium,
-  setChunkPresetLong,
-  newPipelineInit,
-  setNewPipelineInit,
-  documentLayout,
-  setDocumentLayout,
-  hlMode,
-  activeHlColors,
-  setHighlightColor,
-}: TranslationsSettingsTabProps) {
+/** Valori di partenza delle traduzioni: misura dei frammenti e nuove pipeline. */
+export function TranslationsSettingsTab() {
   const { t } = useTranslation();
+  const {
+    chunkPresetShort, chunkPresetMedium, chunkPresetLong,
+    setChunkPresetShort, setChunkPresetMedium, setChunkPresetLong,
+    newPipelineInit, setNewPipelineInit,
+  } = useConfigStore();
+  const presets = [
+    { id: 'short', labelKey: 'settings.chunkPresetShort', hintKey: 'settings.chunkPresetShortHint', value: chunkPresetShort,
+      min: PRESET_STEP, max: chunkPresetMedium - PRESET_STEP, set: setChunkPresetShort },
+    { id: 'medium', labelKey: 'settings.chunkPresetMedium', hintKey: 'settings.chunkPresetMediumHint', value: chunkPresetMedium,
+      min: chunkPresetShort + PRESET_STEP, max: chunkPresetLong - PRESET_STEP, set: setChunkPresetMedium },
+    { id: 'long', labelKey: 'settings.chunkPresetLong', hintKey: 'settings.chunkPresetLongHint', value: chunkPresetLong,
+      min: chunkPresetMedium + PRESET_STEP, max: undefined, set: setChunkPresetLong },
+  ];
 
   return (
-    <div
-      id="settings-panel-translations"
-      role="tabpanel"
-      aria-labelledby="settings-tab-translations"
-      className="space-y-10"
-    >
-      {/* Segmentazione */}
-      <section className="space-y-4">
-        <SectionLabel icon={Scissors} label={t('settings.segmentation')} />
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <FieldLabel htmlFor="settings-chunk-preset-short" block>
-              {t('settings.chunkPresetShort')}
-            </FieldLabel>
-            <input
-              id="settings-chunk-preset-short"
-              type="number"
-              min={50}
-              max={chunkPresetMedium - 50}
-              step={50}
-              value={chunkPresetShort}
-              onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
-              className={FIELD_MONO_CLASSNAME}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel htmlFor="settings-chunk-preset-medium" block>
-              {t('settings.chunkPresetMedium')}
-            </FieldLabel>
-            <input
-              id="settings-chunk-preset-medium"
-              type="number"
-              min={chunkPresetShort + 50}
-              max={chunkPresetLong - 50}
-              step={50}
-              value={chunkPresetMedium}
-              onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
-              className={FIELD_MONO_CLASSNAME}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <FieldLabel htmlFor="settings-chunk-preset-long" block>
-              {t('settings.chunkPresetLong')}
-            </FieldLabel>
-            <input
-              id="settings-chunk-preset-long"
-              type="number"
-              min={chunkPresetMedium + 50}
-              step={50}
-              value={chunkPresetLong}
-              onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
-              className={FIELD_MONO_CLASSNAME}
-            />
-          </div>
+    <div id="settings-panel-translations" role="tabpanel" aria-labelledby="settings-tab-translations" className="space-y-10">
+      <PanelSection icon={Scissors} label={t('settings.segmentation')} hint={t('settings.segmentationHint')}>
+        <div className={SECTION_SETTING_LIST_CLASSNAME}>
+          {presets.map((preset) => (
+            <SettingRow key={preset.id} label={t(preset.labelKey)} hint={t(preset.hintKey)}>
+              <input id={`settings-chunk-preset-${preset.id}`} type="number" step={PRESET_STEP} min={preset.min} max={preset.max}
+                value={preset.value} aria-label={t(preset.labelKey)}
+                onChange={(event) => preset.set(Number(event.target.value) || PRESET_STEP)}
+                className={FIELD_NUMBER_CLASSNAME} />
+              <span className="w-16 text-xs text-editorial-muted">{t('settings.wordsUnit')}</span>
+            </SettingRow>
+          ))}
         </div>
-      </section>
+      </PanelSection>
 
-      {/* Inizializzazione nuova pipeline */}
-      <section className="space-y-4">
-        <SectionLabel icon={Layers} label={t('settings.newPipelineInit')} />
-        {/* Lo stesso controllo del tema e dell'interlinea: le opzioni hanno un
-            nome, quindi il nome si legge senza passare il mouse. */}
-        <SegmentedControl
-          ariaLabel={t('settings.newPipelineInit')}
-          value={newPipelineInit}
-          onChange={setNewPipelineInit}
-          options={PIPELINE_INIT_OPTIONS.map((opt) => ({
-            value: opt.value,
-            label: t(opt.labelKey),
-            icon: opt.icon,
-          }))}
-        />
-      </section>
-
-      {/* Layout lettura */}
-      <section className="space-y-4">
-        <SectionLabel icon={LayoutTemplate} label={t('header.readerLayout')} />
-        <SegmentedControl
-          ariaLabel={t('header.readerLayout')}
-          value={documentLayout}
-          onChange={setDocumentLayout}
-          options={LAYOUT_OPTIONS.map((opt) => ({
-            value: opt.value,
-            label: t(opt.labelKey),
-            icon: opt.icon,
-          }))}
-        />
-      </section>
-
-      {/* Evidenziazioni */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <SectionLabel icon={Palette} label={t('settings.highlights')} />
-          {/* Quale tema si sta modificando: una didascalia, non una pastiglia —
-              non è cliccabile e non deve sembrarlo. */}
-          <span className="flex items-center gap-1 caption-label">
-            {hlMode === 'dark' ? <Moon size={10} /> : <Sun size={10} />}
-            {t(hlMode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
-          </span>
+      <PanelSection icon={Layers} label={t('settings.pipelinesSection')}>
+        <div className={SECTION_SETTING_LIST_CLASSNAME}>
+          <SettingChoiceRow<PipelineInit> label={t('settings.newPipelineInit')} hint={t('settings.newPipelineInitHint')}
+            value={newPipelineInit} onChange={setNewPipelineInit}
+            options={[
+              { value: 'copy-first', label: t('settings.newPipelineInitCopyFirst'), content: <ChevronsLeft size={11} /> },
+              { value: 'copy-previous', label: t('settings.newPipelineInitCopyPrevious'), content: <Copy size={11} /> },
+              { value: 'defaults', label: t('settings.newPipelineInitDefaults'), content: <RotateCcw size={11} /> },
+            ]} />
         </div>
-        {([
-          {
-            groupLabel: t('settings.highlightsGlossaryGroup'),
-            items: [
-              { key: 'sourceTerm'   as const, label: t('settings.highlightSourceTerm') },
-              { key: 'matchTerm'    as const, label: t('settings.highlightMatchTerm') },
-              { key: 'mismatchTerm' as const, label: t('settings.highlightMismatchTerm') },
-            ],
-          },
-          {
-            groupLabel: t('settings.highlightsOtherGroup'),
-            items: [
-              { key: 'search'       as const, label: t('settings.highlightSearch') },
-              { key: 'auditPhrase'  as const, label: t('settings.highlightAuditPhrase') },
-              { key: 'annotation'   as const, label: t('settings.highlightAnnotation') },
-            ],
-          },
-        ]).map(({ groupLabel, items }) => (
-          <div key={groupLabel} className="space-y-1.5">
-            <FieldLabel>{groupLabel}</FieldLabel>
-            <div className="divide-y divide-rule border-y border-rule">
-              {items.map(({ key, label }) => (
-                // La pastiglia del colore sta a destra come ogni altro comando
-                // di riga, e l'etichetta ha il corpo delle altre etichette:
-                // prima era la sola riga della finestra in corsivo a 18px.
-                <SettingRow key={key} label={label}>
-                  <label className="relative h-5 w-5 shrink-0 cursor-pointer overflow-hidden rounded-full border border-editorial-border">
-                    <span
-                      className="absolute inset-0"
-                      style={{ backgroundColor: activeHlColors[key] }}
-                    />
-                    <input
-                      type="color"
-                      value={colorToHex(activeHlColors[key])}
-                      onChange={(e) =>
-                        setHighlightColor(
-                          hlMode,
-                          key,
-                          applyHexToColor(activeHlColors[key], e.target.value),
-                        )
-                      }
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                      aria-label={label}
-                    />
-                  </label>
-                </SettingRow>
-              ))}
-            </div>
-          </div>
-        ))}
-      </section>
+      </PanelSection>
     </div>
   );
 }

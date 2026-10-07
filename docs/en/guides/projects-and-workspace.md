@@ -31,7 +31,20 @@ editor import. The file is read as soon as you choose it: if it cannot be read
 field and nothing is created. **Create** opens the translation in the editor
 with the import preview, where you choose languages and segments; closing the
 preview leaves the translation empty, and you can import the file later from
-the editor. A workspace’s name, description and icon identify it throughout
+the editor. Under **Source book and version** the row shows the chosen book title
+(truncated; the full title and copy appear in the tooltip): the book icon opens
+a searchable list (search by title or copy) where each entry shows the title
+and, below it, the copy; the X removes the book. The window does not widen with
+long titles.
+
+The import preview is the app’s standard window, large and almost full height.
+At the top, the file name and title. On the left, in a column that scrolls on
+its own: **Languages of the work** (Source, then Target), **Model** (provider and
+model) and **Splitting into chunks** (automatic splitting, headings for
+Markdown, carrying trailing short blocks, size presets, recalculate). On the
+right, the word, paragraph and chunk counts, the choice between card view and
+segment view (small round icons) and the chunk preview at full height. At the
+bottom, the result of the word-count check, Cancel and Import. A workspace’s name, description and icon identify it throughout
 the application.
 
 ## The Translations catalogue
@@ -41,7 +54,7 @@ out like the [Transcriptions catalogue](./transcription#the-transcriptions-catal
 shelves on the right, search and quick filters above the list, three views
 (list, covers, table).
 
-- **Row**: name in italics, below it the source and target languages, then
+- **Row**: name in italics, below it the names of the source and target languages, then
   workspace, translated segments out of the total, verified segments and the
   completion bar, green when every segment is verified.
 - **Shelves**: All, Recent (edited in the last 30 days), Not started (no
@@ -76,6 +89,21 @@ switching workspace — saves before closing. If that save fails, the
 translation stays open with the error in view: no edit is lost by leaving. One
 limit remains: closing the Glossa window an instant after the last edit can
 lose it.
+
+## Left bar
+
+The left bar holds navigation: at the top the Dashboard with Overview and
+Search, then the areas in working order (Library, Transcriptions, Translations,
+Analysis) and finally the workspaces, with the plus to create one. A rule
+separates each group; an item’s explanation appears on hover.
+
+At the bottom is the general menu: save all, general language resources,
+settings, help and interface language. It is always available, even without
+an active workspace.
+
+The icon at the top collapses the bar: the item icons and the general menu
+remain, and a click opens the page without expanding it. The Glossa mark at
+the top expands it again.
 
 ## Areas and their ink
 

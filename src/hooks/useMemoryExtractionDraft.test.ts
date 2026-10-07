@@ -48,6 +48,8 @@ function makeSavedEntry(overrides: Partial<PhraseMemoryEntry>): PhraseMemoryEntr
     confidence: 1,
     sourceLanguage: 'it',
     targetLanguage: 'en',
+    sourceLanguageVariety: null,
+    targetLanguageVariety: null,
     author: null,
     work: null,
     domain: null,
@@ -69,7 +71,10 @@ describe('useMemoryExtractionDraft', () => {
     useProjectStore.setState({ currentProjectId: 'proj-1' });
     usePipelineStore.setState((state) => ({
       ...state,
-      config: { ...state.config, sourceLanguage: 'it', targetLanguage: 'en' },
+      workLanguages: {
+        source: { code: null, variety: null, note: '' },
+        target: { code: 'ita', variety: null, note: '' },
+      },
     }));
   });
 
@@ -97,6 +102,8 @@ describe('useMemoryExtractionDraft', () => {
       model: 'gpt-5-nano',
       sourceText: 'Ciao mondo.',
       targetText: 'Hello world.',
+      sourceLanguage: 'not specified',
+      targetLanguage: 'Italian',
     }));
     await waitFor(() => {
       expect(result.current.candidates).toHaveLength(1);
@@ -136,6 +143,8 @@ describe('useMemoryExtractionDraft', () => {
       chunkId: 'c1',
       pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }],
     }));
+    expect(mockSaveApproved.mock.calls[0][0]).not.toHaveProperty('sourceLanguage');
+    expect(mockSaveApproved.mock.calls[0][0]).not.toHaveProperty('targetLanguage');
     expect(savedCount).toBe(1);
     await waitFor(() => expect(result.current.candidates).toHaveLength(0));
   });
@@ -212,6 +221,7 @@ describe('useMemoryExtractionDraft', () => {
     act(() => { extractPromise = result.current.extract(); });
     act(() => { result.current.toggleAccepted(manualId); }); // modifica fatta mentre l'estrazione è in corso
 
+    await waitFor(() => expect(mockExtract).toHaveBeenCalled()); // la lingua si descrive prima, a catalogo caricato
     resolveExtract([{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }]);
     await act(async () => { await extractPromise; });
 

@@ -4,6 +4,7 @@ import { AREA_INK_CLASSNAME, CommandBar, CompletionBar, RenameField, Tooltip, ty
 import { ROW_REVEAL_CLASSNAME } from '../ui/catalogStyles';
 import type { TranslationCatalogEntry } from '../../services/translationCatalogService';
 import { isFullyVerified, translatedRatio } from '../../utils/translationCatalogFilters';
+import { useLanguageLabel } from '../../hooks/useLanguageLabel';
 
 export interface TranslationRowProps {
   entry: TranslationCatalogEntry;
@@ -14,12 +15,6 @@ export interface TranslationRowProps {
   onOpen: () => void;
   /** Mentre un'altra traduzione si sta aprendo la riga non risponde. */
   disabled: boolean;
-}
-
-/** Il nome di una lingua com'è scritto nell'app, o quello salvato se l'app non lo conosce. */
-export function useLanguageLabel() {
-  const { t } = useTranslation();
-  return (language: string) => t(`languages.${language}`, { defaultValue: language });
 }
 
 /** Le lingue di una traduzione: «Latino → Italiano». */

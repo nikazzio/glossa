@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { Plus, Trash2, CheckCircle2, Loader2, Wifi, Key, X, Save } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Loader2, Wifi, Key, X, Save, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
@@ -10,7 +10,7 @@ import {
   testCustomProviderConnection,
 } from '../../services/customProviderService';
 import { customProviderProfileSchema } from '../../schemas/externalData';
-import { FieldLabel, FIELD_CLASSNAME, FIELD_MONO_CLASSNAME, IconButton, ToggleRow } from '../ui';
+import { FieldLabel, FIELD_CLASSNAME, FIELD_MONO_CLASSNAME, IconButton, PanelSection, SECTION_SETTING_LIST_CLASSNAME, ToggleRow } from '../ui';
 import type { CustomProviderProfile } from '../../types';
 
 interface ProfileFormState {
@@ -128,7 +128,7 @@ function ProfileForm({
   };
 
   return (
-    <div className="space-y-4 border-y border-rule py-4">
+    <div className="space-y-4 pt-2">
       <FormField label={t('settings.customProvider.name')}>
         <input
           type="text"
@@ -154,7 +154,7 @@ function ProfileForm({
         </p>
       )}
 
-      <div className="border-y border-rule py-3">
+      <div className="py-1">
         <ToggleRow
           icon={<Key size={12} />}
           label={t('settings.customProvider.requiresApiKey')}
@@ -260,27 +260,27 @@ export function CustomProviderSection() {
   };
 
   return (
-    <div className="space-y-3">
-      {/* Il comando per aggiungere sta in cima, con l'icona e il tooltip: la
-          riga tratteggiata in fondo era l'unico comando testuale della
-          sezione, e occupava una riga per stare lì. */}
-      <div className="flex items-center justify-between gap-3">
-        <FieldLabel>{t('settings.customProvider.add')}</FieldLabel>
-        <IconButton
-          size="sm"
-          tone={showAddForm ? 'accent' : 'default'}
-          onClick={showAddForm ? () => setShowAddForm(false) : openAddForm}
-          title={t('settings.customProvider.add')}
-          ariaPressed={showAddForm}
-        >
-          <Plus size={13} />
-        </IconButton>
-      </div>
-
+    <PanelSection
+      icon={Globe}
+      label={t('settings.models.custom')}
+      actions={
+            <IconButton
+              size="sm"
+              tone={showAddForm ? 'accent' : 'default'}
+              onClick={showAddForm ? () => setShowAddForm(false) : openAddForm}
+              title={t('settings.customProvider.add')}
+              ariaPressed={showAddForm}
+            >
+              <Plus size={13} />
+            </IconButton>
+      }
+    >
+      {profiles.length > 0 && (
+        <div className={SECTION_SETTING_LIST_CLASSNAME}>
       {profiles.map((profile) => (
         <div
           key={profile.id}
-          className="flex items-center justify-between gap-3 border-b border-rule py-3"
+          className="flex items-center justify-between gap-3 py-2.5"
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -308,6 +308,8 @@ export function CustomProviderSection() {
           </IconButton>
         </div>
       ))}
+        </div>
+      )}
 
       {showAddForm && (
         <ProfileForm
@@ -320,6 +322,6 @@ export function CustomProviderSection() {
           onCancel={() => { setShowAddForm(false); }}
         />
       )}
-    </div>
+    </PanelSection>
   );
 }

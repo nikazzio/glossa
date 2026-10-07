@@ -20,7 +20,7 @@ import { dashboardLocation, workspaceLocation, type AppLocation, type GlobalArea
 import type { Workspace } from '../../../types';
 import { AREA_INK_CLASSNAME, IconButton, type InkedArea } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
-import { ShellNavItem, ShellNavSection } from '../ShellNav';
+import { ShellNavFooter, ShellNavItem, ShellNavSection } from '../ShellNav';
 import { RailBrandToggle } from './RailBrandToggle';
 import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
 
@@ -29,12 +29,22 @@ function isInkedArea(area: GlobalArea): area is InkedArea {
   return area in AREA_INK_CLASSNAME;
 }
 
+/** Nell'ordine del lavoro: si raccoglie, si trascrive, si traduce, si analizza. */
 const AREA_ITEMS: ReadonlyArray<{ id: GlobalArea; icon: typeof BookOpenText; enabled: boolean }> = [
   { id: 'library', icon: LibraryBig, enabled: true },
-  { id: 'translations', icon: BookOpenText, enabled: true },
   { id: 'transcriptions', icon: FilePen, enabled: true },
+  { id: 'translations', icon: BookOpenText, enabled: true },
   { id: 'analysis', icon: BarChart3, enabled: true },
 ];
+
+/**
+ * Due misure di cerchietto, uguali a barra aperta e chiusa: le voci principali
+ * e, più piccole, le viste della Dashboard.
+ */
+const MAIN_CIRCLE = 'h-7 w-7';
+const MAIN_ICON = 14;
+const VIEW_CIRCLE = 'h-5 w-5';
+const VIEW_ICON = 11;
 
 /**
  * La barra resta anche dentro una traduzione aperta: lì l'area attiva è
@@ -78,15 +88,13 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
         icon={
           // Cerchietto sempre in tinta accent: la home dell'app spicca sulle voci di sezione.
           <span
-            className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
-              collapsed ? 'h-9 w-9' : 'h-7 w-7'
-            } ${
+            className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${MAIN_CIRCLE} ${
               active
                 ? 'border-editorial-accent text-editorial-accent'
                 : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
             }`}
           >
-            <LayoutDashboard size={collapsed ? 16 : 14} />
+            <LayoutDashboard size={MAIN_ICON} />
           </span>
         }
         label={t('dashboard.title')}
@@ -126,15 +134,13 @@ function DashboardViews({ collapsed }: { collapsed: boolean }) {
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
-                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
-                  collapsed ? 'h-8 w-8' : 'h-5 w-5'
-                } ${
+                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${VIEW_CIRCLE} ${
                   active
                     ? 'border-editorial-accent text-editorial-accent'
                     : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/30 hover:text-editorial-accent'
                 }`}
               >
-                <Icon size={collapsed ? 13 : 11} />
+                <Icon size={VIEW_ICON} />
               </span>
             }
             label={t(labelKey)}
@@ -169,9 +175,7 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
-                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
-                  collapsed ? 'h-9 w-9' : 'h-6 w-6'
-                } ${
+                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${MAIN_CIRCLE} ${
                   active
                     ? 'border-editorial-accent text-editorial-accent'
                     : enabled
@@ -180,7 +184,7 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
                       : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
                 }`}
               >
-                <Icon size={collapsed ? 15 : 12} />
+                <Icon size={MAIN_ICON} />
               </span>
             }
             label={t(`areas.${id}.title`)}
@@ -247,7 +251,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
               labelFont="display"
               onClick={() => void handleOpenWorkspace(ws)}
               ariaCurrent={isCurrentView ? 'page' : undefined}
-              icon={<WorkspaceIcon iconKey={ws.iconKey} size={collapsed ? 17 : 14} />}
+              icon={<WorkspaceIcon iconKey={ws.iconKey} size={MAIN_ICON} />}
               label={ws.name}
             />
           );
@@ -262,44 +266,50 @@ export interface WorkspaceRailNextProps {
   collapsed: boolean;
 }
 
+/** Larghezza della barra chiusa: il contenuto chiuso vi resta ancorato mentre la barra si restringe. */
+export const RAIL_COLLAPSED_WIDTH = 64;
+/**
+ * Larghezza minima della barra aperta, che è anche quella iniziale: esattamente
+ * il menu generale in fondo — cinque comandi da 33 px, quattro spazi da 2,
+ * 12 px di margine per lato — più il bordo destro. Il contenuto aperto non
+ * scende sotto, così mentre la barra si allarga non si ricompone.
+ */
+export const RAIL_MIN_WIDTH = 5 * 33 + 4 * 2 + 2 * 12 + 1;
+
 export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
   const { t } = useTranslation();
   const setCollapsed = useUiStore((state) => state.setDashboardSidebarCollapsed);
 
-  if (collapsed) {
-    return (
-      <div className="flex h-full min-h-0 flex-col items-center">
-        <div className="flex h-20 w-full shrink-0 items-center justify-center">
-          <RailBrandToggle onExpand={() => setCollapsed(false)} title={t('sidebar.expand')} />
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
-          <DashboardItem collapsed />
-          <AreaSection collapsed />
-          <WorkspaceSection collapsed />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {/* Header: collassa a destra, allineato alla barra progetto */}
-      <div className="flex h-20 shrink-0 items-center justify-end px-3">
-        <IconButton
-          size="md"
-          tone="default"
-          onClick={() => setCollapsed(true)}
-          title={t('sidebar.collapse')}
-          tooltipSide="bottom"
-          className="h-9 w-9 shrink-0 bg-editorial-bg"
-        >
-          <PanelLeftClose size={14} />
-        </IconButton>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
-        <DashboardItem collapsed={false} />
-        <AreaSection collapsed={false} />
-        <WorkspaceSection collapsed={false} />
+    // Ogni stato ha subito la sua larghezza finale: chiudendo, la barra si
+    // restringe sopra il contenuto già in colonna; aprendo, lo scopre già
+    // composto. Il pannello taglia quello che non ci sta ancora.
+    // Il ritaglio è nostro: lasciato al pannello, il contenuto largo quanto il
+    // minimo (bordo compreso) faceva comparire una barra di scorrimento orizzontale.
+    <div className="h-full w-full overflow-hidden">
+      <div className="flex h-full min-h-0 flex-col" style={collapsed ? { width: RAIL_COLLAPSED_WIDTH } : { minWidth: RAIL_MIN_WIDTH - 1 }}>
+        <div className={`flex h-20 shrink-0 items-center ${collapsed ? 'justify-center' : 'justify-end px-3'}`}>
+          {collapsed ? (
+            <RailBrandToggle onExpand={() => setCollapsed(false)} title={t('sidebar.expand')} />
+          ) : (
+            <IconButton
+              size="md"
+              tone="default"
+              onClick={() => setCollapsed(true)}
+              title={t('sidebar.collapse')}
+              tooltipSide="bottom"
+              className="h-9 w-9 shrink-0 bg-editorial-bg"
+            >
+              <PanelLeftClose size={14} />
+            </IconButton>
+          )}
+        </div>
+        <nav aria-label={t('sidebar.navigation')} className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
+          <DashboardItem collapsed={collapsed} />
+          <AreaSection collapsed={collapsed} />
+          <WorkspaceSection collapsed={collapsed} />
+        </nav>
+        <ShellNavFooter collapsed={collapsed} />
       </div>
     </div>
   );

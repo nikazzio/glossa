@@ -12,6 +12,8 @@ import { useLibraryStore } from '../../stores/libraryStore';
 import { confirm } from '../../stores/confirmStore';
 import { generateId } from '../../utils';
 import { usePhraseProvenanceLookup } from '../../hooks/usePhraseProvenanceLookup';
+import { useLanguageNames } from '../../hooks/useLanguageLabel';
+import { LanguagePairLabel } from '../languages/LanguagePairLabel';
 import { CatalogSearchField, IconButton, SectionLabel, Select, Spinner, StatBlock, FieldLabel, Tooltip } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { PhraseProvenance } from './PhraseProvenance';
@@ -20,6 +22,7 @@ import { ResourceWorkspaceFilter } from './ResourceWorkspaceFilter';
 
 export function MemoriesTab({ onEditingChange, onBusyChange }: { onEditingChange?: (value: boolean) => void; onBusyChange?: (value: boolean) => void } = {}) {
   const { t } = useTranslation();
+  const languageNames = useLanguageNames();
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const { glossaries, libraryScope, dirtyIds } = useLibraryStore();
   const [workspaceFilter, setWorkspaceFilter] = useState(() => libraryScope === 'global' ? 'all' : activeWorkspace?.id ?? 'all');
@@ -150,7 +153,11 @@ export function MemoriesTab({ onEditingChange, onBusyChange }: { onEditingChange
               <BookOpenText size={13} className="shrink-0" aria-hidden="true" />
               <Tooltip label={origin} className="min-w-0 flex-1"><span className="truncate">{origin}</span></Tooltip>
             </div>
-            <span className="text-xs text-editorial-muted">{entry.sourceLanguage} → {entry.targetLanguage}</span>
+            <Tooltip label={`${languageNames.describe(entry.sourceLanguage, entry.sourceLanguageVariety)} → ${languageNames.describe(entry.targetLanguage, entry.targetLanguageVariety)}`}
+              className="min-w-0 max-w-[50%]">
+              <LanguagePairLabel source={{ code: entry.sourceLanguage, variety: entry.sourceLanguageVariety }}
+                target={{ code: entry.targetLanguage, variety: entry.targetLanguageVariety }} />
+            </Tooltip>
             <div className="flex shrink-0 gap-1">
               <IconButton size="sm" onClick={() => setDetailsId(detailsOpen ? null : entry.id)}
                 disabled={busyId !== null || editingId !== null || metadataEditing}

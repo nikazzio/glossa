@@ -146,6 +146,14 @@ interattivi.
 - Il chiamante controlla `open` e `onOpenChange`.
 - Il trigger usa `ariaPressed={open}` e non ribalta manualmente lo stato.
 - Overlay sopra le finestre: `z-[210]`.
+- `SearchPicker`: un `IconButton` che apre un elenco lungo con ricerca
+  (`CatalogSearchField`) e gruppi sotto piccole didascalie maiuscole; voci
+  `PopoverItem` con il codice o la seconda informazione in `description`; una
+  scelta chiude. Si usa al posto di un `Select` quando le voci sono molte o
+  lunghe (lingue, libri della Biblioteca): un `Select` nativo si allarga alla
+  voce più lunga e allarga la finestra. Il valore scelto sta accanto, nella
+  riga, troncato con il testo intero nel suggerimento; la «x» lo toglie.
+- `CommandRule`: filetto verticale fra gruppi di comandi in una riga.
 
 ### PopoverItem e LinkChip
 
@@ -252,15 +260,14 @@ solo**.
   `INSPECTOR_WIDTH` (Biblioteca e Studio uguali).
 - `PageHeader`: la riga `h-14` in cima a una pagina di dettaglio — ritorno,
   segno dell'area nel suo inchiostro, identità, comandi a destra. `center`
-  aggiunge un gruppo a sé centrato nella riga (la pipeline con le sue lingue
-  nello Studio di traduzione): griglia a tre colonne con le ali uguali.
+  resta per gruppi centrati. `titleAccessory` affianca opera / pipeline: nomi troncati, menu e opzioni, tipo con icona; coppia soltanto in DeepL. Il nome della pipeline è l’unico ingresso al menu (piccola freccia muted dentro lo stesso comando, nessun pulsante separato); nel menu i comandi Rinomina/Nuova stanno in un solo gruppo sotto un solo filetto. Nessuna pillola o pannello aggiuntivo nella barra.
 - `ResizeHandle`: l'unico divisore trascinabile fra colonne, con nome per chi
   legge con la voce; `layer="shell"` fra colonne dell'applicazione.
 
 ### ChoiceDots
 
 Scelta esclusiva fra poche opzioni a cerchietti da 24 px con icona o lettera
-(immagine inviata all'OCR, livello di ragionamento, modalità della pipeline).
+(immagine inviata all'OCR, livello di ragionamento, modalità della pipeline, modo Struttura / Frammento aperto dell'anteprima prompt).
 Un'opzione può essere `disabled` (la modalità DeepL senza chiave): resta
 visibile, il motivo è nell'etichetta, le frecce la saltano; `role="radiogroup"`,
 frecce/Home/End spostano scelta e fuoco, suggerimento per opzione, la scelta in
@@ -278,7 +285,9 @@ testo nel suggerimento e per chi legge con la voce.
 ### SettingRow e campi
 
 - Ogni impostazione usa `SettingRow` dentro una lista con `divide-y` e
-  `border-y`.
+  `border-y`. Subito sotto il titolo di una `PanelSection` la lista usa
+  `SECTION_SETTING_LIST_CLASSNAME` (solo `border-b`): il filetto del titolo fa
+  già da bordo superiore e un secondo bordo lo raddoppierebbe.
 - Riga `py-2.5`, label `text-sm`, una sola icona nel comando a destra.
 - L'etichetta prende lo spazio disponibile, il comando non lo ruba: `SettingRow`
   incapsula i figli in un contenitore che non si allarga. Un campo a larghezza
@@ -303,13 +312,35 @@ testo nel suggerimento e per chi legge con la voce.
   dell'etichetta accanto si legge come una nota a margine invece che come la
   scelta fatta. La larghezza si lascia al contenuto, senza numeri fissi, salvo
   un tetto per i testi lunghi.
-- Scelte esclusive con nome usano `SegmentedControl`.
+- Scelte esclusive con nome: `ChoiceDots` (o `SettingChoiceRow` nelle
+  impostazioni) e `Select`; `SegmentedControl` resta solo nella finestra di
+  creazione della trascrizione, da convertire.
 - Ogni campo di ricerca usa `CatalogSearchField` (anche nei pannelli e nei
   fogli dello Studio): `onKeyDown` per Esc, `focusOnMount` quando si apre da un
   comando esplicito.
 - Interruttori booleani usano `ToggleRow`.
 
 ### Dialog
+
+- Finestre di lavoro grandi (anteprima d'importazione): `Dialog` con
+  `widthClassName="max-w-6xl"`, `panelClassName="h-[90vh]"`, corpo senza
+  padding a due colonne: impostazioni a sinistra (`w-96`, scorrimento proprio,
+  sezioni con `SectionLabel`), contenuto a destra a tutta altezza con la sua
+  barra di conteggi e la scelta di vista su `ChoiceDots`.
+- Lingue di un'opera: `WorkLanguagesFields`, due sezioni (Partenza, Arrivo) di
+  `SettingRow`: Lingua e Varietà con valore in `font-display`, codice mono
+  piccolo, `SearchPicker` e «x»; Nota con campo in linea. Nella riga in cima
+  allo Studio la coppia sta a destra, prima dei comandi dell'opera:
+  `LanguagePairLabel` (nomi e varietà; le note nel suggerimento) e un
+  `IconButton` lingue che apre la finestra con Annulla/Conferma, mai salvata
+  all'uscita; poi `CommandRule`. Il tipo di pipeline è solo un'icona con nome e
+  spiegazione nel suggerimento.
+- Riferimenti della memoria: una sola riga di comandi (soglia con − cursore +
+  e valore, filetto, globo, aggiorna) senza titolo ripetuto; ogni risultato:
+  percentuale e cerchio, originale in `font-display` e traduzione in sans con
+  il codice lingua a margine, una riga di provenienza e i dettagli in un `Hint`.
+  Le coppie della Memoria del frammento (salvate, estratte, scritte a mano)
+  usano la stessa forma (`PhraseLine`), con campi modificabili al posto del testo.
 
 - Finestre modali tramite `Dialog`; conferme distruttive tramite `AlertDialog`.
 - Conferma e annullamento usano i pulsanti dialog condivisi.
@@ -380,6 +411,25 @@ Un indicatore di provenienza non deve dipendere da un orologio. La versione
 precedente si accendeva solo entro trenta secondi dall'ultima risposta —
 contando anche le immagini lette dal disco — e su un libro tutto online restava
 spento quasi sempre.
+
+### Coppia di lingue
+
+Una coppia di lingue si scrive sempre con `LanguagePairLabel`
+(`components/languages`): «Italiano (Old Italian) → Inglese», `font-sans
+text-xs`, mai corsivo. Nomi in inchiostro, varietà fra parentesi e freccia in
+muted; tronca da sola e il testo intero va nel suggerimento. Accanto a un
+comando lascia `mr-2` di respiro. Nelle righe di frase sta nella riga di testa,
+non nel margine dei codici, così le frasi restano allineate.
+
+### Costi
+
+Stima e consumo usano `CostTable` (`components/pipeline`): una riga per fase con
+nome, modello mono sotto, token (cache sotto) e costo, totale in fondo; per il
+consumo anche le chiamate. Nessun carosello, nessuna carta. Nello Studio la riga
+sotto i comandi è un solo pulsante senza suggerimento (le cifre si leggono già)
+che apre un `ClickPopover` con le due tabelle: solo titoli e tabelle, né
+paragrafi né suggerimenti dentro (sarebbe un secondo riquadro sopra il primo).
+Il consumo non si colora: il verde resta per scelta e stato attivo.
 
 ### Completamento in una riga di elenco
 
@@ -552,20 +602,55 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
 - Grip sempre visibile; stato hover, drag e focus riconoscibile.
 - Animazioni usano i token di motion condivisi.
 - Fly-out non coprono il controllo che li ha aperti e si chiudono con Escape.
+- Barra di sinistra (`WorkspaceRailNext`): solo navigazione (Dashboard con le
+  sue viste, aree nell'ordine del lavoro, workspace), gruppi aperti da un
+  filetto (`ShellNavSection`), una riga per voce con la spiegazione nel
+  suggerimento. Voce scelta: velatura `bg-editorial-accent/6`, nome e
+  cerchietto in accento, nessuna barretta. Due misure di cerchietto, uguali aperta e chiusa: voci
+  principali `h-7` icona 14, viste della Dashboard `h-5` icona 11. In fondo il
+  menu generale (`ShellNavFooter`): salva, risorse linguistiche, impostazioni,
+  guida, lingua; in fila da aperta, in colonna da chiusa. Chiusa: restano le
+  icone, niente titoli di gruppo; una voce porta alla pagina senza riaprire.
+- Collasso: entrambi i pannelli hanno `PANEL_FLEX_TRANSITION_CLASS`; il
+  contenuto della barra ha subito la larghezza finale (64 px chiusa, minimo
+  198 aperta, cioè la larghezza esatta del menu generale, che è anche quella
+  iniziale; massimo 420) e il pannello `overflow-hidden` lo scopre senza ricomporlo.
 
 ### Impostazioni
 
 - Radice: `space-y-10`, `role="tabpanel"`, `aria-labelledby`.
-- Sezione: `space-y-4` con `SectionLabel`.
-- Elenchi: righe piatte separate, niente card o pill.
+- Sezione: `PanelSection` (titolo con il filetto sotto, comandi della sezione
+  nello slot `actions`), come nella scheda dell'opera della Biblioteca. Sotto,
+  l'elenco usa `SECTION_SETTING_LIST_CLASSNAME`: il filetto del titolo fa da
+  bordo superiore, quindi un filetto fra le righe e uno solo in fondo. Mai due
+  elenchi a filetti attaccati: righe della stessa sezione stanno in un elenco
+  solo; un `ToggleRow` dentro un elenco va in un contenitore `py-2.5`.
+- Elenchi: righe piatte separate, niente card o pill. Una riga isolata senza
+  titolo sopra ha filetto sopra e sotto.
 - Una scheda che raccoglie argomenti diversi si divide in **sotto-linguette**
-  (`TabStrip`) invece di diventare un rotolo unico: accanto alla fila,
-  l'etichetta della linguetta attiva in `font-display italic`.
+  con `SettingsSubTabs` invece di diventare un rotolo unico: fila `TabStrip`,
+  accanto l'etichetta della linguetta attiva in `font-display italic`.
+- Ogni impostazione è una riga (`SettingRow`) dentro una lista a filetti:
+  niente caselle affiancate, riquadri cliccabili o paragrafi fissi (la
+  spiegazione va nel `hint` della riga o del `SectionLabel`).
+- Scelta esclusiva: `SettingChoiceRow` (cerchietti `ChoiceDots` con il nome
+  della scelta accanto) quando le opzioni hanno un'icona naturale, `Select`
+  `md` quando sono solo parole. Mai i riquadri larghi di `SegmentedControl`.
+- Una cartella è una `FolderRow`, riga di un elenco: nome, percorso mono sotto,
+  icona cartella a destra per sceglierne un'altra.
+- Sotto-linguette (`SettingsSubTabs`) senza filetto proprio: la separazione la
+  dà il titolo della prima sezione.
 - Salvataggio al cambio, salvo input intermedi che richiedono conferma
   esplicita. In quel caso mostrare stato non salvato e comando di ripristino.
-- Ordine generale: modalità di traduzione, coppia linguistica, persona.
+- Ordine generale: modalità, coppia DeepL sempre visibile (disabilitata fuori DeepL), Descrizione comune del lavoro.
 
 ### Elenchi di versioni e comandi per riga
+
+Le anteprime dei prompt della pipeline, nelle opzioni e nel frammento, usano
+la stessa superficie `surface-resource` delle risorse linguistiche e il
+contrasto `linguistic-resource`: un fondo per messaggio/blocco, testo aperto
+senza fondo annidato. Accento verde sul bordo sinistro richiesto esplicitamente dall’utente. Gli editor aprono una bozza con conferma/annullamento a icona; rifinitura e applicazione modelli non salvano prima della conferma. I prompt di sistema nell’anteprima (`SystemTextCard`): carta come gli altri pezzi con lucchetto `IconButton` (aperto in tono accent, `ariaPressed`); aperto diventa `PipelinePromptEditor` con il lucchetto fra i comandi; interruttore di un pezzo facoltativo `ToggleRight`/`ToggleLeft` con `ariaPressed` nel gruppo comandi, anche sulla riga grigia del pezzo spento; i pezzi con contenuto altrove hanno solo `ArrowUpRight` che apre la scheda, senza lucchetto. Testo dei prompt sempre `font-mono`, in lettura e in modifica. L’anteprima delle opzioni è una vista sola: per fase, due gruppi `SectionLabel` (messaggio di sistema / utente) e una carta per pezzo, a destra tre gruppi divisi dal filetto verticale (`CommandRule`, `h-4 w-px bg-editorial-border`): informazioni come icone muted con `Hint` (tipo del pezzo: `Settings2` di sistema, `Braces` automatico; provenienza `PromptSourceIcon`: `BookMarked` template, `PenLine` personalizzato, niente se predefinito) | comandi (apertura della scheda `ArrowUpRight`, lucchetto) | occhio e copia; nessuna scritta lunga, nessun badge; i pezzi assenti sono una riga muted con filetto sinistro neutro, titolo in corsivo con `Hint` e motivo. Ogni testo si espande e si copia integralmente. Le fasi non usate restano visibili ma disabilitate; audit/coerenza restano disponibili in DeepL.
+Gli editor prompt/descrizione usano `FIELD_MONO_CLASSNAME` nella bozza; un solo fondo tenue per la carta.
 
 Le Risorse linguistiche usano `TabStrip` nella fila della finestra e ricerca
 `CatalogSearchField`. Ogni voce ha un unico fondo `surface-resource`, carta
@@ -627,18 +712,16 @@ Ogni pannello che configura una chiamata a un modello (fase di traduzione,
 giudizio, scheda OCR della trascrizione) ha la stessa forma: una `PanelSection`
 con il **Modello** (fornitore + modello + lucchetto su una riga, comandi di
 taratura sotto, opzioni del fornitore come righe con interruttore) e una sezione
-**Prompt** (bordo sinistro verde, pillola «Personalizzato», solo ripristino e
-modifica fuori dalla modifica). Nella configurazione della pipeline la sezione
+**Prompt** (carta tenue e bordo verde; espandi e modifica fuori dalla bozza, conferma/annulla nella bozza). Nella configurazione della pipeline la sezione
 Modello è una sola, `ModelSection`, per fasi e giudizio. Nessun testo di
 spiegazione fisso: il perché sta nei suggerimenti dei titoli, delle righe e dei
 comandi, e un comando spento dice il motivo («Modifica prompt — esistono già
 traduzioni», «Rifinisci… — manca la chiave di X»). Le icone di categoria della
 taratura (ragionamento, temperatura) sono muted dentro un `Hint`, mai in ocra.
-L'editor prompt è uno solo, `AuditPromptEditor`: i modelli salvati stanno in
+La pipeline usa `PipelinePromptEditor`; OCR mantiene `AuditPromptEditor`. La spiegazione la porta il titolo della carta (`Hint` con `children`, come `SectionLabel`), nessuna «i» separata; vista di lettura fino a 12 righe. Accanto al titolo `PromptSourceLabel`: Predefinito / Personalizzato / Template «nome», riconosciuto confrontando il testo (`describePromptSource`); niente pillola «Personalizzato». Campi di modifica dei prompt alti 16 righe. Un suggerimento Radix non intercetta mai il puntatore (regola CSS sul contenitore) e quello sul nome della pipeline resta chiuso a menu aperto. I modelli salvati stanno in
 due `ClickPopover` (`PromptTemplateMenus`), il libro con `CatalogSearchField` e
 `PopoverItem`, il segnalibro con `RenameField`; niente eliminazione lì, si
-elimina nelle risorse linguistiche. `variant="stage"` dà
-questa resa; la variante predefinita resta quella del giudizio traduzione.
+elimina nelle risorse linguistiche. La conferma applica testo ed eventuali impostazioni del modello insieme; annullare scarta entrambi.
 Le scelte di taratura sotto il modello (livello di ragionamento, immagine
 inviata dall'OCR) sono cerchietti da 24 px con icona e suggerimento, preceduti
 da un'icona di categoria. Il comando principale di un pannello che si chiude

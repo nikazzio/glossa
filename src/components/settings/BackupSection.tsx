@@ -2,15 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, Check, Copy, DatabaseBackup, Download, KeyRound, LockKeyhole, Upload } from 'lucide-react';
-import {
-  Dialog,
-  DialogCancelButton,
-  DialogConfirmButton,
-  FIELD_CLASSNAME,
-  IconButton,
-  SectionLabel,
-  SettingRow,
-} from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, FIELD_CLASSNAME, IconButton, SettingRow, PanelSection } from '../ui';
 import { writeBackup, restoreBackup } from '../../services/backupService';
 import { enqueueVaultVerification } from '../../services/jobsService';
 import { markRestoreCheck } from '../../services/restoreFollowUp';
@@ -166,10 +158,9 @@ export function BackupSection() {
   };
 
   return (
-    <section className="space-y-4">
-      <SectionLabel icon={DatabaseBackup} label={t('settings.backup')} />
+    <PanelSection icon={DatabaseBackup} label={t('settings.backup')}>
 
-      <div className="divide-y divide-rule border-y border-rule">
+      <div className="divide-y divide-rule border-b border-rule">
         <SettingRow label={t('settings.backupExport')} hint={t('settings.backupHint')}>
           <div className="flex items-center gap-1">
             <IconButton size="sm" onClick={() => void handleWrite(false)} disabled={busy} title={t('settings.backupExportTooltip')}>
@@ -249,6 +240,6 @@ export function BackupSection() {
           </IconButton>
         </div>
       </Dialog>
-    </section>
+    </PanelSection>
   );
 }

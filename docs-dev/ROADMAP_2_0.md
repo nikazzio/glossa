@@ -1,6 +1,18 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 29 settembre 2026.
+Aggiornata: 5 ottobre 2026.
+
+## Prossimi passi concordati (7 ottobre 2026)
+
+- Fatti: Impostazioni generali (otto linguette, linguetta Lingue con «Aggiorna
+  elenco lingue» che conserva i codici ritirati) e barra di sinistra (#485 C:
+  menu generale in fondo, collasso fluido).
+- Integrazione: #490 → `feat/translation-studio-layout` (#488) → `main`. Il
+  consolidamento delle migrazioni 0004-0008 si fa insieme all'unione su `main`.
+- **Prossimo lavoro UI/UX: Dashboard.**
+- **Rimandati:** sblocco del prompt delle fasi quando esistono frammenti
+  tradotti (oggi si cambia solo il modello); scelta a cerchietti nella finestra
+  «Crea trascrizione».
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 

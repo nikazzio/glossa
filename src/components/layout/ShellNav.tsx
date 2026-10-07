@@ -12,8 +12,8 @@ import { IconButton, SectionLabel, Tooltip } from '../ui';
 
 /**
  * Multibar shell — superfici di navigazione laterali (home e progetto).
- * Item attivo: barra accent verticale + tint leggero + testo accent.
- * Niente linguetta flottante: la selezione resta contenuta nella colonna.
+ * Item attivo: velatura appena percepibile, nome in accento e cerchietto
+ * bordato in accento; niente barretta verticale.
  */
 
 interface ShellNavSectionProps {
@@ -26,19 +26,17 @@ interface ShellNavSectionProps {
 
 export function ShellNavSection({ icon: Icon, label, action, collapsed = false, children }: ShellNavSectionProps) {
   return (
-    <div className="px-2.5">
+    // Un filetto apre ogni gruppo. Da chiusa resta solo quello: il titolo a
+    // icona sembrava una voce e non portava da nessuna parte.
+    <div role="group" aria-label={label} className="mt-2 px-2.5">
+      <div className="border-t border-rule" />
       {!collapsed ? (
         <div className="flex items-center justify-between gap-2 px-1.5 pb-1 pt-2">
           <SectionLabel icon={Icon} label={label} />
           {action}
         </div>
       ) : (
-        // Da collassata resta l'icona della sezione (header stabile): niente salto verticale.
-        <div className="flex justify-center pb-1 pt-2">
-          <Tooltip label={label} side="right">
-            <Icon size={13} className="text-editorial-muted/70" aria-hidden="true" />
-          </Tooltip>
-        </div>
+        <div className="pt-2" />
       )}
       <div className="space-y-0.5">{children}</div>
     </div>
@@ -46,18 +44,11 @@ export function ShellNavSection({ icon: Icon, label, action, collapsed = false, 
 }
 
 /**
- * Footer barra: azioni app-level (salva, impostazioni, lingua, aiuto).
- * `variant='bar'` (default): ancorato in fondo alla barra laterale (shell vecchia).
- * `variant='header'` (#291, shell nuova): cluster orizzontale in alto a destra,
- * senza bordo/mt-auto perché vive dentro l'header.
+ * Menu generale in fondo alla barra di sinistra: salva, risorse linguistiche,
+ * impostazioni, guida e lingua dell'interfaccia. Sempre raggiungibile, anche
+ * senza workspace; a barra chiusa i comandi si mettono in colonna.
  */
-export function ShellNavFooter({
-  collapsed = false,
-  variant = 'bar',
-}: {
-  collapsed?: boolean;
-  variant?: 'bar' | 'header';
-}) {
+export function ShellNavFooter({ collapsed = false }: { collapsed?: boolean }) {
   const { t, i18n } = useTranslation();
   const setShowSettings = useUiStore((state) => state.setShowSettings);
   const setShowHelp = useUiStore((state) => state.setShowHelp);
@@ -105,20 +96,16 @@ export function ShellNavFooter({
 
   const toggleLang = () => i18n.changeLanguage(i18n.language === 'en' ? 'it' : 'en');
 
-  // In testata i comandi stanno in fila orizzontale: un tooltip laterale
-  // coprirebbe i pulsanti vicini. Nel rail verticale il lato giusto resta
-  // destra.
-  const tooltipSide = variant === 'header' ? ('bottom' as const) : ('right' as const);
+  // Aperta i comandi stanno in fila: un suggerimento laterale coprirebbe i
+  // vicini, quindi sta sopra. Chiusa sono in colonna, e il lato giusto è destra.
+  const tooltipSide = collapsed ? ('right' as const) : ('top' as const);
 
   return (
-    <div
-      className={
-        variant === 'header'
-          ? 'flex items-center gap-1'
-          : `mt-auto flex border-t border-rule ${
-              collapsed ? 'flex-col items-center gap-1.5 py-2.5' : 'items-center gap-1 px-3 py-2.5'
-            }`
-      }
+    <nav
+      aria-label={t('sidebar.generalMenu')}
+      className={`flex shrink-0 border-t border-rule ${
+        collapsed ? 'flex-col items-center gap-1 py-2.5' : 'items-center gap-0.5 px-3 py-2.5'
+      }`}
     >
       <IconButton
         size="md"
@@ -159,19 +146,20 @@ export function ShellNavFooter({
       >
         <HelpCircle size={15} />
       </IconButton>
-      <Tooltip label={`${t('language.label')} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`} side={tooltipSide}>
-        <button
-          type="button"
-          onClick={toggleLang}
-          aria-label={t('language.label')}
-          className="inline-flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full border border-editorial-border text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <span className="select-none font-mono text-[10px] font-bold leading-none">
-            {i18n.language.toUpperCase()}
-          </span>
-        </button>
-      </Tooltip>
-    </div>
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={() => void toggleLang()}
+        title={`${t('language.label')} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`}
+        ariaLabel={t('language.label')}
+        tooltipSide={tooltipSide}
+      >
+        {/* Quadrato come le icone accanto: il pulsante resta un cerchio. */}
+        <span className="inline-flex h-[15px] w-[15px] select-none items-center justify-center font-sans text-caption font-semibold leading-none">
+          {i18n.language.toUpperCase()}
+        </span>
+      </IconButton>
+    </nav>
   );
 }
 
@@ -219,10 +207,15 @@ export function ShellNavItem({
   disabledReason = null,
 }: ShellNavItemProps) {
   const shownReason = disabled ? disabledReason : null;
+  // La spiegazione della voce sta nel suggerimento, come in tutta l'app; da
+  // chiusa il suggerimento porta anche il nome.
+  const tooltip = [collapsed ? label : null, hint, shownReason].filter(Boolean).join(' — ');
   const labelClassName = labelFont === 'display' ? 'font-display text-sm italic' : 'font-sans text-sm';
 
+  // Scelta sobria: una velatura appena percepibile e il nome in accento; il
+  // cerchietto dell'icona, bordato in accento, dice il resto.
   const toneClassName = active
-    ? collapsed ? 'text-editorial-accent' : 'bg-editorial-accent/10 text-editorial-accent'
+    ? collapsed ? 'text-editorial-accent' : 'bg-editorial-accent/6 text-editorial-accent'
     : disabled
       ? 'text-editorial-muted opacity-50'
       : 'text-editorial-muted hover:bg-editorial-textbox/30 hover:text-editorial-accent';
@@ -248,24 +241,15 @@ export function ShellNavItem({
       {collapsed ? (
         <span className="sr-only">{[label, hint, shownReason].filter(Boolean).join(' — ')}</span>
       ) : (
-        <span className="min-w-0 flex-1">
-          <span className={`block truncate ${labelClassName}`}>{label}</span>
-          {hint ? <span className="mt-0.5 block truncate text-xs text-editorial-muted">{hint}</span> : null}
-        </span>
+        <span className={`min-w-0 flex-1 truncate ${labelClassName}`}>{label}</span>
       )}
     </button>
   );
 
   return (
     <div className={`group relative flex w-full items-center rounded-[12px] transition-colors duration-150 ${toneClassName}`}>
-      {active && !collapsed ? (
-        <span
-          aria-hidden="true"
-          className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-editorial-accent"
-        />
-      ) : null}
-      {collapsed || shownReason ? (
-        <Tooltip label={[label, hint, shownReason].filter(Boolean).join(' — ')} side="right" className="w-full">
+      {tooltip ? (
+        <Tooltip label={tooltip} side="right" className="w-full">
           {button}
         </Tooltip>
       ) : (

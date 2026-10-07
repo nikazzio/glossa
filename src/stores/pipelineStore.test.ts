@@ -16,8 +16,6 @@ describe('pipelineStore', () => {
       inputText: '',
       config: {
         pipelineId: '',
-        sourceLanguage: 'English',
-        targetLanguage: 'Italian',
         stages: [
           {
             id: 'stg-default',

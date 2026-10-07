@@ -7,7 +7,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { listPhraseMemoryEntries, updatePhraseMemoryEntry, type PhraseMemoryEntry } from '../../services/phraseMemoryService';
 import { MemoriesTab } from './MemoriesTab';
 
-vi.mock('react-i18next', () => { const t = (key: string) => key; return { useTranslation: () => ({ t }) }; });
+vi.mock('react-i18next', () => { const t = (key: string) => key; return { useTranslation: () => ({ t, i18n: { language: 'it' } }) }; });
 
 vi.mock('../../services/phraseMemoryService', () => ({ listPhraseMemoryEntries: vi.fn(), updatePhraseMemoryEntry: vi.fn().mockResolvedValue(undefined),
   addPhraseMemoryEmbedding: vi.fn(), setPhraseMemoryTags: vi.fn().mockResolvedValue(undefined), deletePhraseMemoryEntry: vi.fn(), exportPhraseMemoryToCsv: vi.fn(), getProjectNames: vi.fn().mockResolvedValue({}), getChunkPositions: vi.fn().mockResolvedValue({}) }));

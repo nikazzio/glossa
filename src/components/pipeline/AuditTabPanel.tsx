@@ -1,12 +1,12 @@
-import { Cpu, RefreshCw, Scale } from 'lucide-react';
+import { Cpu, RefreshCw } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { PanelSection, ToggleRow } from '../ui';
-import { AuditPromptEditor } from './AuditPromptEditor';
+import { PanelSection, SECTION_SETTING_LIST_CLASSNAME, ToggleRow } from '../ui';
+import { PipelinePromptEditor } from './PipelinePromptEditor';
 import { ModelSection } from './ModelSection';
 import { NumberSettingRow } from './NumberSettingRow';
 import { withoutReasoningEffort } from './modelTuning';
@@ -20,12 +20,8 @@ interface AuditTabPanelProps {
   setConfig: Dispatch<SetStateAction<PipelineConfig>>;
   isProcessing: boolean;
   auditTemplates: PromptTemplate[];
-  isRefiningJudge: boolean;
-  isRefiningCoherence: boolean;
   canRefine: boolean;
   judgeRefineLabel: string;
-  handleRefineJudgePrompt: () => void;
-  handleRefineCoherencePrompt: () => void;
   handleJudgeProviderChange: (provider: ModelProvider) => void;
   keyStatuses: ProviderKeyStatusMap;
   isRefreshingOllama: boolean;
@@ -40,12 +36,8 @@ export function AuditTabPanel({
   setConfig,
   isProcessing,
   auditTemplates,
-  isRefiningJudge,
-  isRefiningCoherence,
   canRefine,
   judgeRefineLabel,
-  handleRefineJudgePrompt,
-  handleRefineCoherencePrompt,
   handleJudgeProviderChange,
   keyStatuses,
   isRefreshingOllama,
@@ -57,42 +49,43 @@ export function AuditTabPanel({
   const editDisabledReason = isProcessing ? t('document.operationsRunning') : undefined;
   const refineDisabledReason = t('pipeline.reasonMissingKey', { provider: config.judgeProvider });
 
-  const applyTemplate = (field: 'judgePrompt' | 'coherencePrompt') => (template: PromptTemplate) =>
-    setConfig((prev) => ({
-      ...prev,
-      [field]: template.prompt,
-      judgeModel: template.defaultModel || prev.judgeModel,
-      judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+  const confirmPrompt = (field: 'judgePrompt' | 'coherencePrompt') => (text: string, template?: PromptTemplate) =>
+    setConfig((prev) => ({ ...prev, [field]: text,
+      judgeModel: template?.defaultModel || prev.judgeModel,
+      judgeProvider: (template?.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+      ...(template?.defaultProvider ? { reviewProviderOptions: {} } : {}),
     }));
 
   return (
     <div id="pconfig-panel-audit" role="tabpanel" aria-labelledby="pconfig-tab-audit" className="space-y-8">
-      <div className="divide-y divide-rule border-y border-rule">
-        <div className="py-2.5">
-          <ToggleRow
-            icon={null}
-            label={t('pipeline.judgeRefineLoopSectionLabel')}
-            checked={refineLoop}
-            disabled={isProcessing}
-            onChange={() => setConfig((prev) => ({ ...prev, judgeRefineLoop: !(prev.judgeRefineLoop ?? false) }))}
-          />
+      <PanelSection icon={RefreshCw} label={t('pipeline.judgeRefineLoopSectionLabel')}>
+        <div className={SECTION_SETTING_LIST_CLASSNAME}>
+          <div className="py-2.5">
+            <ToggleRow
+              icon={null}
+              label={t('pipeline.judgeRefineLoop')}
+              checked={refineLoop}
+              disabled={isProcessing}
+              onChange={() => setConfig((prev) => ({ ...prev, judgeRefineLoop: !(prev.judgeRefineLoop ?? false) }))}
+            />
+          </div>
+          {refineLoop && (
+            <NumberSettingRow
+              label={t('pipeline.judgeRefineLoopMaxIter')}
+              value={config.judgeRefineLoopMaxIter ?? REFINE_LOOP_DEFAULT}
+              min={REFINE_LOOP_MIN}
+              max={REFINE_LOOP_MAX}
+              disabled={isProcessing}
+              onChange={(raw) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  judgeRefineLoopMaxIter: Math.max(REFINE_LOOP_MIN, Math.min(REFINE_LOOP_MAX, parseInt(raw, 10) || REFINE_LOOP_MIN)),
+                }))
+              }
+            />
+          )}
         </div>
-        {refineLoop && (
-          <NumberSettingRow
-            label={t('pipeline.judgeRefineLoopMaxIter')}
-            value={config.judgeRefineLoopMaxIter ?? REFINE_LOOP_DEFAULT}
-            min={REFINE_LOOP_MIN}
-            max={REFINE_LOOP_MAX}
-            disabled={isProcessing}
-            onChange={(raw) =>
-              setConfig((prev) => ({
-                ...prev,
-                judgeRefineLoopMaxIter: Math.max(REFINE_LOOP_MIN, Math.min(REFINE_LOOP_MAX, parseInt(raw, 10) || REFINE_LOOP_MIN)),
-              }))
-            }
-          />
-        )}
-      </div>
+      </PanelSection>
 
       <PanelSection icon={Cpu} label={t('pipeline.auditModelLabel')}>
         <ModelSection
@@ -120,48 +113,41 @@ export function AuditTabPanel({
         />
       </PanelSection>
 
-      <AuditPromptEditor
+      <PipelinePromptEditor
         label={t('pipeline.judgePromptLabel')}
         hint={t('pipeline.judgePromptHint')}
         value={config.judgePrompt}
         placeholder={t('pipeline.auditPlaceholder')}
         templates={auditTemplates}
-        isRefining={isRefiningJudge}
+        templateContext="audit"
         canRefine={canRefine}
         refineLabel={judgeRefineLabel}
         refineDisabledReason={refineDisabledReason}
-        onRefine={handleRefineJudgePrompt}
-        onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
-        onApplyTemplate={applyTemplate('judgePrompt')}
+        onConfirm={confirmPrompt('judgePrompt')}
         saveTemplate={saveTemplate}
-        defaultModel={config.judgeModel}
-        defaultProvider={config.judgeProvider}
-        icon={<Scale size={11} />}
+        model={config.judgeModel}
+        provider={config.judgeProvider}
         defaultValue={DEFAULT_JUDGE_PROMPT}
-        onReset={() => setConfig((prev) => ({ ...prev, judgePrompt: DEFAULT_JUDGE_PROMPT }))}
-        editDisabledReason={editDisabledReason}
+        disabledReason={editDisabledReason}
       />
 
-      <AuditPromptEditor
+      <PipelinePromptEditor
         label={t('pipeline.coherencePromptLabel')}
         hint={t('pipeline.coherencePromptHint')}
-        value={config.coherencePrompt ?? ''}
+        // Senza un testo proprio la coerenza usa il predefinito: si mostra quello.
+        value={config.coherencePrompt ?? DEFAULT_COHERENCE_PROMPT}
         placeholder={t('pipeline.coherencePromptPlaceholder')}
         templates={auditTemplates}
-        isRefining={isRefiningCoherence}
+        templateContext="audit"
         canRefine={canRefine}
         refineLabel={judgeRefineLabel}
         refineDisabledReason={refineDisabledReason}
-        onRefine={handleRefineCoherencePrompt}
-        onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
-        onApplyTemplate={applyTemplate('coherencePrompt')}
+        onConfirm={confirmPrompt('coherencePrompt')}
         saveTemplate={saveTemplate}
-        defaultModel={config.judgeModel}
-        defaultProvider={config.judgeProvider}
-        icon={<RefreshCw size={11} />}
+        model={config.judgeModel}
+        provider={config.judgeProvider}
         defaultValue={DEFAULT_COHERENCE_PROMPT}
-        onReset={() => setConfig((prev) => ({ ...prev, coherencePrompt: DEFAULT_COHERENCE_PROMPT }))}
-        editDisabledReason={editDisabledReason}
+        disabledReason={editDisabledReason}
       />
     </div>
   );

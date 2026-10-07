@@ -24,7 +24,7 @@ describe('barra delle linguette delle impostazioni', () => {
         removeEventListener: vi.fn(),
       })),
     });
-    useUiStore.setState({ showSettings: true, settingsTab: 'translations' });
+    useUiStore.setState({ showSettings: true, settingsTab: 'appearance' });
   });
 
   it('le frecce cambiano scheda, e Home ed End vanno agli estremi', async () => {
@@ -33,24 +33,24 @@ describe('barra delle linguette delle impostazioni', () => {
     const user = userEvent.setup();
     render(<SettingsModal />);
 
-    const first = screen.getByRole('tab', { name: 'areas.translations.title' });
+    const first = screen.getByRole('tab', { name: 'settings.appearanceTab' });
     expect(first).toHaveAttribute('aria-selected', 'true');
     first.focus();
 
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'areas.transcriptions.title' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-
-    await user.keyboard('{End}');
     expect(screen.getByRole('tab', { name: 'areas.library.title' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
 
+    await user.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: 'settings.jobsTab' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+
     await user.keyboard('{Home}');
-    expect(screen.getByRole('tab', { name: 'areas.translations.title' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'settings.appearanceTab' })).toHaveAttribute(
       'aria-selected',
       'true',
     );

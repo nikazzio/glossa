@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateProjectDialog } from './CreateProjectDialog';
@@ -93,13 +93,29 @@ describe('CreateProjectDialog', () => {
   it('links an explicitly selected book version without guessing from the file', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onClose={vi.fn()} workspaceId="ws-1" />);
-    await screen.findByRole('option', { name: 'Fiore — Testimone A' });
-    await user.selectOptions(screen.getByLabelText('projects.sourceBook'), 'version-a');
+    const picker = screen.getByRole('button', { name: 'projects.chooseSourceBook' });
+    await waitFor(() => expect(picker).toBeEnabled());
+    await user.click(picker);
+    await user.click(await screen.findByRole('button', { name: /Fiore\s*Testimone A/ }));
+    expect(screen.getByText('Fiore')).toBeInTheDocument();
     await user.type(screen.getByPlaceholderText('projects.namePlaceholder'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'projects.create' }));
     expect(createAndOpen).toHaveBeenCalledWith('Fiore', 'ws-1', 'version-a');
   });
 
+  it('clears the chosen book with the X button and creates without a book', async () => {
+    const user = userEvent.setup();
+    render(<CreateProjectDialog open onClose={vi.fn()} workspaceId="ws-1" />);
+    const picker = screen.getByRole('button', { name: 'projects.chooseSourceBook' });
+    await waitFor(() => expect(picker).toBeEnabled());
+    await user.click(picker);
+    await user.click(await screen.findByRole('button', { name: /Fiore\s*Testimone A/ }));
+    await user.click(screen.getByRole('button', { name: 'projects.clearSourceBook' }));
+    expect(screen.getByText('memory.provenance.noBook')).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText('projects.namePlaceholder'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'projects.create' }));
+    expect(createAndOpen).toHaveBeenCalledWith('Fiore', 'ws-1', undefined);
+  });
   it('creates an empty translation when no file is chosen', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onClose={vi.fn()} workspaceId="ws-1" />);

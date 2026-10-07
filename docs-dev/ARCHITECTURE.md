@@ -14,11 +14,72 @@ nuova, idempotente sui database che l'hanno già superata.
 una migrazione dichiarata è cambiata o sparita, sia quando ne compare una non
 dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
 
+## Contesto e anteprime della pipeline (#489)
+
+`PipelineConfig.workBrief` / Rust `work_brief` è l’unico contesto comune degli
+LLM. Migrazione 0004 aggiunge la colonna; 0005 elimina Persona e override
+lingua globali, senza conversioni semantiche o percorsi legacy. Le lingue non
+stanno più nella pipeline: sono dell'opera (vedi «Lingue dell'opera» sotto).
+Lettura, salvataggio e duplicazione includono la descrizione. Backup usa righe
+e colonne dello schema corrente. Nome visibile «Contesto di traduzione» (campo `workBrief`, colonna `work_brief`): obbligatorio, mai vuoto — `DEFAULT_WORK_BRIEF` (inglese → italiano, come la vecchia coppia predefinita) nei default dello store e alla lettura di una riga vuota; l’editor non conferma un testo vuoto e il ripristino torna al predefinito. Template nel contesto `brief`;
+contesti obsoleti non vengono riclassificati silenziosamente: la lettura
+(`getPromptTemplates`) esclude le righe con contesto sconosciuto, le registra
+nel log e ne restituisce i nomi in `skipped`, che lo store mostra in un avviso;
+una riga sola non svuota più l’intero elenco. I tre template `persona` del
+database di sviluppo sono stati riclassificati a mano in `brief` (correzione
+dati una tantum, nessuna migrazione).
+
+Regole per fase: le frasi della memoria si aggiungono solo a traduzione e Refine (`receivesMemory` in `engine.ts`, stessa regola nell’anteprima); il glossario sta una volta nelle regole del blocco statico, senza promemoria nelle istruzioni; intestazione del contesto `Translation context:`. La prova di equivalenza confronta con una copia della composizione precedente aggiornata con gli stessi cambi di testo voluti. Testi di sistema (`src-tauri/src/llm/prompt_texts.rs`): ogni testo del programma attorno ai prompt dell’utente ha id, predefinito e segnaposto obbligatori (`SYSTEM_TEXTS`); `render(config, id, values)` usa la sostituzione della pipeline se completa, altrimenti il predefinito; sostituzione dei segnaposto in un solo passaggio. Comando `prompt_system_texts` per l’editor. Migrazione 0006 aggiunge `pipelines.prompt_composition` (JSON `{texts: {id: testo}, disabled: [id pezzo]}`, NULL = predefiniti) ↔ `PipelineConfig.promptComposition`; si copia nella duplicazione insieme a `coherence_prompt` (prima perso). I separatori fra pezzi restano nel codice, così i predefiniti producono gli stessi byte di prima. Categoria template `system`. Pezzi spenti: `promptComposition.disabled` con chiavi `fase:pezzo` (`translation`, `refine`, `format`, `audit`, `coherence`); `on()`/`when_on()` in `prompts.rs` li omettono; spenti i frammenti vicini, si omette anche l’id del frammento. Elenco dei facoltativi in `SWITCHABLE_PARTS` (`promptParts.ts`). Composizione a pezzi (`src-tauri/src/llm/composition.rs`): `compose_stage_prompts`,
+`compose_judge_prompts`, `compose_coherence_prompts` producono blocchi di `PromptPart`
+con id stabile; `into_structured()` li concatena (la richiesta vera), `preview_parts()`
+li restituisce all’anteprima nei comandi `preview_*_prompt` (campo `parts`). Anteprima e
+invio coincidono per costruzione; prova di equivalenza byte per byte con la copia della
+composizione precedente (`legacy_prompts_test.rs`). L’anteprima delle opzioni
+(`PromptPreviewTab` + catalogo `promptParts.ts`) mostra per fase tutti i pezzi possibili
+in ordine, con tipo (fisso/tuo/dati/automatico), luogo di modifica e motivo di assenza.
+L’impronta di ripresa (`pipelineFingerprint`) include modelli, prompt
+delle fasi LLM attive, prompt dell’audit, descrizione e parametri DeepL.
+La linguetta Anteprima dello Studio è stata rimossa: il modo «Frammento aperto» di `PromptPreviewTab` usa `useChunkPromptPreview` sul frammento selezionato (o il primo). L’hook offre anche `preview-audit` e
+`preview-coherence`: stessi input dell’esecuzione manuale (traduzione attuale; per la
+coerenza blocco dei frammenti vicini tradotti) tramite `preview_judge_prompt` e
+`preview_coherence_prompt`; voci spente senza traduzione.
+
+Traduzione/refine, audit e coerenza ricevono ruolo neutro, descrizione opzionale
+e istruzioni proprie; nessuna coppia implicita anche con descrizione vuota.
+Format resta isolato. Ordine system cacheabile immutato: static → blob →
+istruzioni della fase. Lingua report dalla UI, fallback English. Fingerprint
+comprende descrizione normalizzata e opzioni DeepL. La rifinitura `brief`
+preserva il contesto senza aggiungere ordini specifici delle fasi.
+
+DeepL usa solo `providerOptions.deepl.sourceLang/targetLang`; sorgente vuota
+significa rilevamento automatico, destinazione obbligatoria. Input Tauri unico
+`{text, deeplConfig}`. `build_translate_request` valida e compone il corpo sia
+per HTTP sia per `preview_deepl_stage`, senza chiavi nella preview. Codici
+dalle liste API; nessuna conversione euristica dei nomi lingua. Cambio coppia
+scollega il glossario, cambio target azzera formality. Glossario richiede
+sorgente esplicita e target.
+
+`preview_stage_prompt`, `preview_judge_prompt`, `preview_coherence_prompt`
+riusano i costruttori dell’esecuzione. Opzioni: richiesta completa iniziale,
+costruzione per blocchi selezionabile per fasi LLM, messaggi audit/coerenza e
+corpo DeepL. Segnaposto espliciti per testo, blob, memoria e risultato
+precedente; non sono richieste storiche. Risposte superate ignorate.
+`PromptMessage` unifica carta tenue/verde, espansione e copia integrale nelle
+opzioni e nel frammento. Log mantengono le richieste effettive.
+Anteprima diretta audit/coerenza nel singolo frammento ancora da completare.
+
+Tutti i quattro ruoli restano nella configurazione; la modalità determina
+`enabled`. Cambio modalità conserva prompt/modello/opzioni/profilo custom.
+Sotto-tab inattive disabilitate. Editor pipeline con bozza locale e conferma;
+applicazione modelli e rifinitura non salvano implicitamente. Coppia DeepL
+sempre visibile in Generale, abilitata soltanto in DeepL.
+
 ## Ricerca federata e Dashboard
 
 Le due viste vivono nella Dashboard (`DashboardArea`): `overview` e ricerca
 (`view: 'search'`). Si scelgono dalla barra a sinistra,
-come voci sotto la Dashboard (`WorkspaceRailNext`), non da una fila di linguette
+come voci sotto la Dashboard (`WorkspaceRailNext`, che in fondo porta anche il
+menu generale `ShellNavFooter`, tolto dalla testata), non da una fila di linguette
 dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
 continua a leggere. Contratto di navigazione: la variante `dashboard` di
 `AppLocation` porta `view` e `searchId`; la variante `library` porta solo
@@ -475,13 +536,19 @@ dell'utente o sistema, seguito anche mentre l'app è aperta): lo usano
 `ThemeSync` (classe `dark` su `<html>`), l'accento e le evidenziazioni
 applicati a runtime.
 
-**Impostazioni.** `uiStore.settingsTab` ha una sola linguetta per la Biblioteca
-(`library`), che al suo interno si divide in tre sotto-linguette — ritmi di
-rete, biblioteche, immagini — tenute in stato locale. Le vecchie `download` e
-`libraries` non esistono più; la linguetta disattivata «in arrivo» resta solo per
-le Trascrizioni. La bozza di un profilo di rete vive nella finestra e non nella
-scheda, perché la scheda si smonta cambiando linguetta, e il profilo in modifica
-si ritrova dalla bozza al rientro.
+**Impostazioni.** Valgono per tutta l'app; quelle di un workspace stanno in
+`WorkspaceSettingsModal`. `uiStore.settingsTab` (non persistito) ha otto
+linguette, nella fila comune `TabStrip`: `appearance`, `library`,
+`transcriptions`, `translations`, `models`, `languages`, `data`, `jobs`. Le
+schede con argomenti diversi usano `SettingsSubTabs` (sotto-linguette in stato
+locale): Aspetto (interfaccia, documento, evidenziazioni), Biblioteca (ritmi di
+rete, biblioteche, immagini), Modelli (un provider per linguetta, provider
+personalizzato, prezzi), Dati (cartelle e deposito, cache di rete, backup). Ogni
+scheda legge da sé i propri store; le scelte esclusive sono `SettingChoiceRow`
+(`ChoiceDots` con il nome della scelta) o `Select`. La bozza di un profilo di
+rete vive nella finestra e non nella scheda, perché la scheda si smonta
+cambiando linguetta, e il profilo in modifica si ritrova dalla bozza al rientro.
+Il controllo pre-avvio con problemi apre direttamente Modelli.
 
 ## Trascrizioni
 
@@ -907,7 +974,36 @@ da `importErrorMessageKey`, mostrati nella finestra; nulla si crea). Dopo
 `createAndOpen` il file va in `uiStore.pendingImportFile` (non persistito):
 l'editor montato lo consuma con `startImport`, la stessa via del comando di
 import, e apre `ImportPreviewDialog`. Chiudendo l'anteprima il progetto resta
-vuoto.
+vuoto. Il libro di origine si sceglie con `SearchPicker` (titolo, copia sotto),
+mai con un `Select` che si allarga al titolo più lungo.
+
+**Lingue dell'opera.** Le lingue sono dell'opera (`projects`), valgono per
+tutte le sue pipeline; `pipelines` non ha più colonne di lingua (migrazione
+0007, che converte i vecchi nomi inglesi in codici e aggiunge
+`*_language_variety` e `*_language_note`). Ogni lato è un `LanguageChoice`
+(`code` ISO 639-3 o null, `variety` Glottocode o null, `note`); `WorkLanguages`
+vive in `pipelineStore.workLanguages`, caricato da `getProjectSource` e salvato
+da `saveProjectSource`, `createProject` e `projectStore.updateWorkLanguages`
+(`saveWorkLanguages`). Colonne vuote = non indicata. Elenco incluso in
+`src/languages/data` (ISO 639-3 dal registro SIL, varietà Glottolog di livello
+«dialect» collegate alla loro lingua ISO, nomi italiani da CLDR), rigenerato da
+`npx tsx scripts/update-languages.ts`. Costruzione e unione stanno in
+`languages/build.ts`, condiviso con «Aggiorna elenco lingue» (Impostazioni →
+Lingue): il backend scarica le due fonti (`languages_fetch_sources`, fuori dai
+limiti CORS), il frontend costruisce l'elenco, i codici spariti restano con il
+segno «ritirato» (nominati, non più proposti) e il risultato si salva in
+`<cartella dati>/languages/` (`languages_save`, scrittura via file temporaneo).
+`loadLanguageCatalog` preferisce l'elenco salvato (`languages_read_saved`) e
+ricade su quello incluso; caricato a richiesta come testo grezzo e validato
+(`languages/catalog.ts`, `useLanguageCatalog`); `catalog.info` dice origine,
+date, conteggi e ritirati. Interfaccia unica
+`WorkLanguagesFields` in `ImportPreviewDialog` (colonna sinistra) e nella
+finestra di `WorkLanguagesControl` (salva solo con Conferma; partenza vuota
+proposta dalla lingua del libro con `matchLanguage`). Dopo ogni Conferma
+`countProjectPhraseRelabels` e, se l'utente accetta, `relabelProjectPhrases`.
+Estrazione delle coppie: `describeLanguageForModel` (nome inglese, varietà,
+nota). Catalogo e Memorie mostrano i nomi con `useLanguageLabel`. Fatti di
+provenienza: codici dell'opera.
 
 **Studio di traduzione** (`components/translation/TranslationStudio`): si apre
 quando `projectStore.currentProjectId` è valorizzato, **dentro**
@@ -938,18 +1034,27 @@ vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
 salva solo le risorse linguistiche, fuori dai campi, come prima.
 
 Memoria di frasi: `vec_save_locked_phrases` **aggiunge** e
-basta (niente più cancellazione delle coppie del frammento); una coppia si
+basta (niente più cancellazione delle coppie del frammento); le lingue delle
+revisioni le legge dal progetto (`text_languages::project_languages`, `und` se
+non indicata), non dal chiamante. Una coppia si
 toglie con `vec_delete_phrase_memory`. `vec_list_phrase_memory(workspaceId?,
 chunkId?)`: senza workspace tutte le frasi. `vec_search_phrase_memory` ha
-`allWorkspaces` e `sourceLanguage`/`targetLanguage`, e restituisce la
+`allWorkspaces` e `sourceLanguage`/`targetLanguage` (lo Studio passa solo la
+lingua di arrivo dell'opera; nessun filtro se non indicata), e restituisce la
 provenienza (workspace di casa = quello della traduzione o dell'importazione,
 `NULL` = senza workspace; `project_id`, `chunk_id`), mostrata da
 `PhraseProvenance` con `usePhraseProvenanceLookup` (due letture in tutto).
-`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo
-dell’interruttore nella scheda Memoria delle impostazioni workspace, salvato
-con le altre impostazioni della scheda. Cambiare workspace, modello di misura,
-coppia di lingue o ambito invalida i riferimenti selezionati anche a ricerca
-automatica spenta; con ricerca automatica attiva ne avvia una nuova.
+`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo del
+globo nei Riferimenti (`ReferencesTab`, `updateActiveWorkspace`), non più nelle
+impostazioni workspace. `ReferencesTab` ordina con `orderByCircle`
+(`utils/memoryCircles.ts`): documento corrente, poi workspace, poi altrove,
+dentro ogni cerchio per somiglianza; ogni riga (`ReferenceMatchRow`) porta
+l'etichetta del cerchio e le lingue delle revisioni (`vec_search_phrase_memory`
+restituisce `source_language`/`target_language`). La soglia ha passi di 0,01
+con − e +.
+Cambiare workspace, modello di misura, lingua di arrivo dell'opera o ambito
+invalida i riferimenti selezionati anche a ricerca automatica spenta; con
+ricerca automatica attiva ne avvia una nuova.
 
 Risorse linguistiche: `LibraryPanel` usa `TabStrip`; Modelli aggiunge ricerca,
 filtro OCR e `PromptTemplateForm` per creazione/modifica in posto tramite
@@ -1034,8 +1139,7 @@ Configurazione della pipeline (`document/ConfigDrawer`, `Dialog` aperto da ⚙ i
 pipeline (la rinomina resta in `PipelineSwitch`), `TabStrip` (`idPrefix`
 `pconfig`) nella fila della finestra con il nome della linguetta accanto.
 Linguette (`ConfigSection`): `settings` Generale (`SettingsTabPanel`: modalità
-su `ChoiceDots` con la riga delle fasi della modalità scelta, lingue spente con
-persona personalizzata, persona sull'editor comune), `translation` Fasi
+su `ChoiceDots`, coppia DeepL sempre visibile e attiva solo in DeepL, Descrizione comune con bozza/conferma), `translation` Fasi
 (`TranslationTabPanel` → `StageCard` per fase + memoria di contesto in fondo),
 `audit` Controllo qualità (`AuditTabPanel`), `memory` Memoria (`MemoryTabPanel`,
 spenta con motivo in modalità DeepL; se era aperta si torna a Generale),
@@ -1047,8 +1151,8 @@ Trascrizioni) durante la pipeline, che rende inerti i comandi coperti. Fase e
 giudizio condividono `ModelSection` (fornitore, modello, lucchetto se
 esistono traduzioni, ricarica Ollama, ragionamento e temperatura, opzioni
 Ollama in `ProviderRuntimeEditor`, cache Anthropic); le regole di taratura
-sono funzioni pure in `pipeline/modelTuning.ts`. Ogni prompt (fasi, persona,
-giudizio, coerenza) usa `AuditPromptEditor` con `editDisabledReason` e
+sono funzioni pure in `pipeline/modelTuning.ts`. Ogni prompt pipeline (fasi, descrizione,
+giudizio, coerenza) usa `PipelinePromptEditor` con `disabledReason` e
 `refineDisabledReason`. I modelli di prompt salvati si applicano e si salvano da
 `PromptTemplateMenus` (anche nell'OCR); si eliminano solo dalle risorse
 linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hint` di
@@ -1056,9 +1160,7 @@ linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hi
 «Azzera tutte le traduzioni» (`resetAllChunks`, conferma), spento con motivo.
 
 Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
-`RenameField`, poi `PipelineSwitch` — nome della pipeline rinominabile
-(`renamePipeline`), ⇄ con `PopoverItem`/`MenuActionRow`, ⚙ della
-configurazione — e le lingue della pipeline; a destra importa, esporta,
+`RenameField`, accessorio `titleAccessory`: separatore /, `PipelineSwitch` con menu scelta/creazione/rinomina/eliminazione e ⚙, tipo Semplice/Editoriale/DeepL come sola icona con `Hint`; a destra `WorkLanguagesControl` (coppia dell'opera e icona che apre la finestra; la coppia DeepL resta nelle opzioni della fase), `CommandRule`, poi importa, esporta,
 risorse linguistiche del workspace, elimina), al centro `DocumentView` invariato salvo la fila
 `ChunkStrip` («nn/nn», poi una finestra di 7 `ChunkDot` con il frammento
 aperto fisso al centro: la fila intera trasla di `SLOT_PX` per posto, i
@@ -1067,10 +1169,11 @@ pallini fuori finestra restano montati per lo scorrimento ma con `tabIndex`
 passivo), `StageStatusRow` (spie delle fasi del frammento aperto, aprono
 `StageTraceDialog`) e la lente che apre `SearchTab` sotto la fila (regione,
 non più linguetta; Esc dal campo la chiude), a destra `TranslationInspector`: `InspectorShell` con `beforeTabs`
-per l'esecuzione (le lingue, nella riga in cima, sono della pipeline:
-`projects.source_language/target_language` ne è solo la copia dell'ultima
-salvata): (`PipelineSidebarRunSection` + `ChunkCostPanel`, il cui dettaglio
-della stima si apre a sinistra del riquadro) e cinque
+per l'esecuzione (`PipelineSidebarRunSection` + `ChunkCostPanel`: una riga
+stima/speso che con un clic apre a sinistra un `ClickPopover` con due
+`CostTable`; il consumo viene da `summarizeChunkUsage`, che per ogni fase dà
+`calls` = chiamate completate, non esecuzioni; il registro non segna a quale
+esecuzione appartiene una chiamata) e cinque
 linguette (Glossario, Memoria, Anteprima, Revisione, Documento) su un solo
 stato, `uiStore.studioTab` (`TranslationStudioTab` =
 linguette del frammento ∪ linguette del documento). `studioGroupViews` conserva
@@ -2013,6 +2116,20 @@ coppie salvate come match a distanza zero; il frontend conserva queste nella Mem
 modifica solo tag dell’unità. `vec_update_phrase_memory(input)` confronta entrambe
 le revisioni prima della scrittura atomica. La rigenerazione del workspace aggiunge
 il modello selezionato e conserva tutti gli altri, con controllo dello snapshot.
+
+Lingua delle revisioni: `language` (ISO 639-3, `und` = non indicata) più
+`language_variety` (Glottocode) e `language_note` (migrazione 0008). Una lingua
+corretta è una revisione nuova con lo stesso testo: `text_languages::relabel_project`
+crea le revisioni per le frasi dell'opera con lingue diverse da quelle
+dell'opera, ricopia le misure dell'originale, sposta i puntatori di
+`phrase_memory` e registra `text.language.changed`, tutto in una transazione;
+`count_relabels` le conta (una sola query con le due revisioni in join). Comandi
+`vec_count_project_phrase_relabels`, `vec_relabel_project_phrases`. Elenco e
+ricerca restituiscono anche `source_language_variety`/`target_language_variety`
+(join sulle revisioni, la vista `phrase_memory_entries` resta invariata); la UI
+le mostra con `LanguagePairLabel` («Italiano (Old Italian) → Inglese») in cima
+allo Studio, nelle voci di Risorse linguistiche → Memorie e in testa a ogni
+riferimento.
 
 Tag manuali in `text_unit_tags`, non proposte automatiche né vocabolario controllato.
 Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel

@@ -4,7 +4,9 @@ import type {
   DocumentRenderProfile,
   ExperimentalImportMode,
   FootnoteDefinition,
+  LanguageChoice,
   PipelineConfig,
+  WorkLanguages,
 } from '../types';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -51,6 +53,7 @@ export interface ProjectSource {
   renderProfile: DocumentRenderProfile;
   markdownAware: boolean;
   experimentalImport: ExperimentalImportMode | null;
+  workLanguages: WorkLanguages;
 }
 
 // Shared type used by pipelineService for raw translation rows.
@@ -82,6 +85,37 @@ export interface SavedTranslation {
 }
 
 // ── Projects CRUD ────────────────────────────────────────────────────
+
+interface LanguageColumns {
+  source_language: string | null;
+  source_language_variety: string | null;
+  source_language_note: string | null;
+  target_language: string | null;
+  target_language_variety: string | null;
+  target_language_note: string | null;
+}
+
+const LANGUAGE_COLUMNS_SQL = `source_language, source_language_variety, source_language_note,
+            target_language, target_language_variety, target_language_note`;
+
+const toChoice = (code: string | null, variety: string | null, note: string | null): LanguageChoice => ({
+  code: code?.trim() || null,
+  variety: variety?.trim() || null,
+  note: note ?? '',
+});
+
+function rowToWorkLanguages(row: LanguageColumns): WorkLanguages {
+  return {
+    source: toChoice(row.source_language, row.source_language_variety, row.source_language_note),
+    target: toChoice(row.target_language, row.target_language_variety, row.target_language_note),
+  };
+}
+
+/** Values for the six language columns, in the order of `LANGUAGE_COLUMNS_SQL`; '' = not specified. */
+function workLanguageParams({ source, target }: WorkLanguages): (string | null)[] {
+  const side = (choice: LanguageChoice) => [choice.code ?? '', choice.code ? choice.variety : null, choice.note.trim()];
+  return [...side(source), ...side(target)];
+}
 
 export async function listProjects(workspaceId: string): Promise<Project[]> {
   return select<Project>(
@@ -219,18 +253,17 @@ export async function listProjectSourceVersions(): Promise<ProjectSourceVersion[
 
 export async function createProject(
   name: string,
-  sourceLang: string,
-  targetLang: string,
+  languages: WorkLanguages,
   workspaceId: string,
   sourceVersionId?: string,
 ): Promise<string> {
   const id = `proj-${crypto.randomUUID()}`;
   const pipelineId = `pipeline-${crypto.randomUUID()}`;
   await runInTransaction(async (run) => {
-    await run(`INSERT INTO projects (id, name, source_language, target_language, workspace_id)
-      VALUES ($1, $2, $3, $4, $5)`, [id, name, sourceLang, targetLang, workspaceId]);
-    await run(`INSERT INTO pipelines (id, project_id, name, source_language, target_language, stages, judge_prompt, judge_model, judge_provider)
-      VALUES ($1, $2, 'Default', $3, $4, '[]', '', '', '')`, [pipelineId, id, sourceLang, targetLang]);
+    await run(`INSERT INTO projects (id, name, workspace_id, ${LANGUAGE_COLUMNS_SQL})
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, [id, name, workspaceId, ...workLanguageParams(languages)]);
+    await run(`INSERT INTO pipelines (id, project_id, name, stages, judge_prompt, judge_model, judge_provider)
+      VALUES ($1, $2, 'Default', '[]', '', '', '')`, [pipelineId, id]);
     if (sourceVersionId) await run(`INSERT INTO translation_origins(project_id,origin_type,source_version_id)
       VALUES($1,'source_level',$2)`, [id, sourceVersionId]);
   });
@@ -259,9 +292,10 @@ export async function getProjectSource(projectId: string): Promise<ProjectSource
     render_profile: DocumentRenderProfile | null;
     markdown_aware: number | null;
     experimental_import: ExperimentalImportMode | null;
-  }>(
+  } & LanguageColumns>(
     `SELECT source_display_text, source_processing_text, source_footnotes,
-            document_format, render_profile, markdown_aware, experimental_import
+            document_format, render_profile, markdown_aware, experimental_import,
+            ${LANGUAGE_COLUMNS_SQL}
      FROM projects WHERE id = $1`,
     [projectId],
   );
@@ -281,7 +315,20 @@ export async function getProjectSource(projectId: string): Promise<ProjectSource
     renderProfile: row.render_profile ?? 'plain-text',
     markdownAware: row.markdown_aware === 1,
     experimentalImport: row.experimental_import ?? null,
+    workLanguages: rowToWorkLanguages(row),
   };
+}
+
+/** Saves the work's languages alone (the Studio panel), without touching its source text. */
+export async function saveWorkLanguages(projectId: string, languages: WorkLanguages): Promise<void> {
+  await execute(
+    `UPDATE projects SET
+       source_language = $1, source_language_variety = $2, source_language_note = $3,
+       target_language = $4, target_language_variety = $5, target_language_note = $6,
+       updated_at = CURRENT_TIMESTAMP
+     WHERE id = $7`,
+    [...workLanguageParams(languages), projectId],
+  );
 }
 
 /** Rinomina un progetto. Il nome è l'unico dato del progetto che l'utente
@@ -298,7 +345,8 @@ export async function saveProjectSource(
   inputText: string,
   inputProcessingText: string,
   sourceFootnotes: FootnoteDefinition[],
-  config: Pick<PipelineConfig, 'documentFormat' | 'renderProfile' | 'markdownAware' | 'experimentalImport' | 'sourceLanguage' | 'targetLanguage'>,
+  config: Pick<PipelineConfig, 'documentFormat' | 'renderProfile' | 'markdownAware' | 'experimentalImport'>,
+  languages: WorkLanguages,
 ): Promise<void> {
   await execute(
     `UPDATE projects SET
@@ -310,9 +358,13 @@ export async function saveProjectSource(
        markdown_aware         = $6,
        experimental_import    = $7,
        source_language        = $8,
-       target_language        = $9,
+       source_language_variety = $9,
+       source_language_note   = $10,
+       target_language        = $11,
+       target_language_variety = $12,
+       target_language_note   = $13,
        updated_at             = CURRENT_TIMESTAMP
-     WHERE id = $10`,
+     WHERE id = $14`,
     [
       inputText,
       inputProcessingText,
@@ -321,9 +373,33 @@ export async function saveProjectSource(
       config.renderProfile ?? 'plain-text',
       config.markdownAware ? 1 : 0,
       config.experimentalImport ?? null,
-      config.sourceLanguage,
-      config.targetLanguage,
+      ...workLanguageParams(languages),
       projectId,
     ],
   );
+}
+
+/** Language codes already given to the works of a workspace, to list them first when choosing. */
+export async function listWorkspaceLanguageCodes(workspaceId: string): Promise<string[]> {
+  const rows = await select<{ code: string | null }>(
+    `SELECT source_language AS code FROM projects WHERE workspace_id = $1 AND status = 'active'
+     UNION SELECT target_language AS code FROM projects WHERE workspace_id = $1 AND status = 'active'`,
+    [workspaceId],
+  );
+  return rows.map((row) => row.code?.trim() ?? '').filter(Boolean);
+}
+
+/** The free-text language of the book a work comes from, when the work records one. */
+export async function getWorkBookLanguage(projectId: string): Promise<string | null> {
+  const rows = await select<{ primary_language: string | null }>(
+    `SELECT s.primary_language
+     FROM translation_origins o
+     LEFT JOIN transcription_documents d ON d.id = o.transcription_document_id
+     JOIN source_versions sv ON sv.id = COALESCE(o.source_version_id, d.source_version_id)
+     JOIN sources s ON s.id = sv.source_id
+     WHERE o.project_id = $1
+     LIMIT 1`,
+    [projectId],
+  );
+  return rows[0]?.primary_language?.trim() || null;
 }

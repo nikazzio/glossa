@@ -24,7 +24,7 @@ o RTF. Un testo non UTF-8 viene rifiutato con un errore di codifica.
 
 La finestra di sistema permette di scegliere file da qualsiasi cartella
 accessibile, anche su dischi esterni. L’anteprima consente di controllare
-estrazione e segmentazione prima di confermare. Un PDF composto soltanto da
+estrazione e segmentazione, e di indicare lingue e modello, prima di confermare. Un PDF composto soltanto da
 immagini non fornisce testo tramite questa estrazione: l’importazione non
 esegue OCR.
 

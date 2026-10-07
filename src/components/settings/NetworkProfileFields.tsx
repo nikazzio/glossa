@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { FIELD_INLINE_CLASSNAME, FIELD_NUMBER_CLASSNAME, SectionLabel, SettingRow } from '../ui';
+import { FIELD_INLINE_CLASSNAME, FIELD_NUMBER_CLASSNAME, SettingRow, PanelSection } from '../ui';
 import { Gauge, Wrench } from 'lucide-react';
 import { MAX_HOST_CONCURRENCY, type NetworkValues } from '../../services/downloadSettingsService';
 
@@ -145,11 +145,12 @@ export function NetworkProfileFields({
     </SettingRow>
   );
 
-  const rows = 'divide-y divide-rule border-y border-rule';
+  const rows = 'divide-y divide-rule border-b border-rule';
 
   return (
     <div className="space-y-10">
-      <div className={rows}>
+      {/* Riga sola, senza titolo sopra: filetti sopra e sotto. */}
+      <div className="border-y border-rule">
         <SettingRow label={t('settings.network.name')}>
           <input
             id="settings-network-profile-name"
@@ -161,15 +162,13 @@ export function NetworkProfileFields({
         </SettingRow>
       </div>
 
-      <section className="space-y-4">
-        <SectionLabel icon={Gauge} label={t('settings.network.rhythmSection')} />
+      <PanelSection icon={Gauge} label={t('settings.network.rhythmSection')}>
         <div className={rows}>{KNOBS.map(knobRow)}</div>
-      </section>
+      </PanelSection>
 
-      <section className="space-y-4">
-        <SectionLabel icon={Wrench} label={t('settings.network.advanced')} />
+      <PanelSection icon={Wrench} label={t('settings.network.advanced')}>
         <div className={rows}>{ADVANCED_KNOBS.map(knobRow)}</div>
-      </section>
+      </PanelSection>
     </div>
   );
 }

@@ -18,6 +18,10 @@ type RawPhraseMatch = {
   workspace_id: string | null;
   project_id: string | null;
   chunk_id: string | null;
+  source_language: string;
+  target_language: string;
+  source_language_variety: string | null;
+  target_language_variety: string | null;
   provenance: TextProvenance;
   embedding_model: string;
   dimensions: number;
@@ -31,6 +35,8 @@ type RawPhraseMemoryEntry = {
   confidence: number | null;
   source_language: string;
   target_language: string;
+  source_language_variety: string | null;
+  target_language_variety: string | null;
   author: string | null;
   work: string | null;
   domain: string | null;
@@ -83,6 +89,8 @@ export interface PhraseMemoryEntry {
   confidence: number;
   sourceLanguage: string;
   targetLanguage: string;
+  sourceLanguageVariety: string | null;
+  targetLanguageVariety: string | null;
   author: string | null;
   work: string | null;
   domain: string | null;
@@ -143,8 +151,6 @@ export interface SaveApprovedPhrasePairsOptions {
   projectId: string;
   chunkId: string;
   embeddingModel: EmbeddingModel;
-  sourceLanguage: string;
-  targetLanguage: string;
   pairs: ApprovedPhrasePair[];
 }
 
@@ -158,6 +164,10 @@ function toPhraseMatch(raw: RawPhraseMatch): PhraseMatch {
     workspaceId: raw.workspace_id,
     projectId: raw.project_id,
     chunkId: raw.chunk_id,
+    sourceLanguage: raw.source_language,
+    targetLanguage: raw.target_language,
+    sourceLanguageVariety: raw.source_language_variety ?? null,
+    targetLanguageVariety: raw.target_language_variety ?? null,
     provenance: raw.provenance,
     embeddingModel: raw.embedding_model,
     dimensions: raw.dimensions,
@@ -173,6 +183,8 @@ function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
     confidence: raw.confidence ?? 1,
     sourceLanguage: raw.source_language,
     targetLanguage: raw.target_language,
+    sourceLanguageVariety: raw.source_language_variety ?? null,
+    targetLanguageVariety: raw.target_language_variety ?? null,
     author: raw.author,
     work: raw.work,
     domain: raw.domain,
@@ -545,7 +557,7 @@ export async function setPhraseMemoryTags(entry: PhraseMemoryEntry, tags: string
 }
 
 export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOptions): Promise<number> {
-  const { workspaceId, projectId, chunkId, embeddingModel, sourceLanguage, targetLanguage } = options;
+  const { workspaceId, projectId, chunkId, embeddingModel } = options;
 
   if (options.pairs.length === 0) {
     throw new Error('saveApprovedPhrasePairs called with no pairs to save.');
@@ -591,8 +603,6 @@ export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOp
     projectId,
     chunkId,
     pairs,
-    sourceLanguage,
-    targetLanguage,
     embeddingModel,
   });
   logger.info('phrase_memory.save_approved.insert_done', {
@@ -706,4 +716,14 @@ export function exportPhraseMemoryToCsv(entries: PhraseMemoryEntry[]): string {
     created_at: e.createdAt,
   }));
   return Papa.unparse({ fields: [...PHRASE_MEMORY_CSV_FIELDS], data: rows });
+}
+
+/** Phrases saved from the work whose languages differ from the work's current ones. */
+export async function countProjectPhraseRelabels(projectId: string): Promise<number> {
+  return invoke<number>('vec_count_project_phrase_relabels', { projectId });
+}
+
+/** Gives the phrases saved from the work the work's current languages (new revisions, same text). */
+export async function relabelProjectPhrases(projectId: string): Promise<number> {
+  return invoke<number>('vec_relabel_project_phrases', { projectId });
 }

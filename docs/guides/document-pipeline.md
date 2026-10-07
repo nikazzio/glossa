@@ -24,17 +24,71 @@ Verifica i confini prima di confermare: essi determinano le unità di traduzione
 e revisione. I dettagli su formati, limiti e note importate sono nel
 [riferimento per importazione ed esportazione](../reference/import-export).
 
+## Lingue dell’opera
+
+Le lingue appartengono all’opera tradotta, non alle sue pipeline: valgono per
+tutte le pipeline dell’opera, che non hanno più una coppia di lingue. Il
+prompt di traduzione è guidato dal **Contesto di traduzione**; solo DeepL
+conserva una coppia propria nelle opzioni della sua fase, perché il servizio
+richiede codici.
+
+Partenza e Arrivo hanno ciascuno tre campi facoltativi:
+
+- **Lingua**: codice ISO 639-3 del registro ufficiale SIL, quello dei cataloghi
+  bibliotecari, comprese lingue storiche (latino, greco antico, francese antico
+  e medio, provenzale/occitano antico, spagnolo antico, inglese antico e
+  medio, alto tedesco antico e medio, anglo-normanno e altre). Si cerca per
+  nome italiano, nome inglese o codice; a ricerca vuota l’elenco mostra
+  «Già usate nel workspace» e «Lingue storiche», scrivendo si cercano tutte le
+  circa 7.900 lingue. I nomi sono in italiano dove esiste un nome standard,
+  altrimenti l’inglese ufficiale.
+- **Varietà**: una varietà di Glottolog, offerta solo tra quelle della lingua
+  scelta (latino: tardo latino, latino medievale, latino volgare; italiano:
+  italiano antico, fiorentino, laziale, cicolano-reatino-aquilano). Resta
+  disabilitata finché non scegli una lingua.
+- **Nota**: testo libero per ciò che i codici non dicono (epoca, area, mano),
+  per esempio «volgare padano, sec. XV».
+
+Ogni campo può restare vuoto («non indicata») e ha una X per svuotarlo. Una
+nuova opera parte con partenza non indicata e arrivo italiano.
+
+Limiti: gli standard non hanno un codice per latino medievale, italiano antico
+o catalano antico come lingue; Glottolog non elenca una varietà «latino
+classico»; le lingue regionali italo-romanze (veneto, lombardo, ligure,
+napoletano, siciliano…) sono lingue separate con sole varietà moderne; non
+esistono varietà d’area medievali, per cui si usa la nota. Per un trattato di
+scherma volgare del Quattrocento: italiano + italiano antico + nota, oppure la
+lingua regionale + nota. L’elenco delle lingue è incluso nell’app e funziona
+senza rete; **Impostazioni → Lingue** mostra l’elenco in uso e lo riscarica
+dalle fonti ufficiali, conservando come ritirate le lingue che non ci sono più.
+
+Dove si impostano: nella finestra di importazione e nella riga in cima allo
+Studio. Lì, a destra prima dei comandi, la coppia compare con le varietà
+(«Italiano (Old Italian) → Inglese»); il suggerimento aggiunge le note. L’icona delle
+lingue accanto apre la finestra **Lingue dell’opera** con gli stessi campi, Annulla e
+Conferma: senza conferma non si salva nulla. Mentre la pipeline lavora il
+comando è visibile ma bloccato, con il motivo nel suggerimento. Se l’opera non
+ha lingua di partenza e viene da un libro della Biblioteca la cui lingua
+corrisponde a una lingua nota, la partenza è proposta già compilata (da
+confermare); nella finestra di importazione si precompila allo stesso modo.
+
+Dopo ogni conferma, se la memoria contiene frasi salvate da questa opera con
+lingue diverse, l’app chiede se darle le lingue dell’opera: testo e misure di
+somiglianza restano uguali e la versione precedente resta nella cronologia. Vale
+anche per allineare frasi salvate prima. Vedi la
+[memoria di frasi](./phrase-memory).
+
 ## Configurazione
 
 Apri la configurazione della pipeline (l’ingranaggio nella riga in cima allo
-Studio) e imposta lingue, modalità, provider, modelli e istruzioni: le
+Studio) e imposta Contesto di traduzione, modalità, provider, modelli e istruzioni; le lingue stanno nell’opera (vedi sotto) e solo DeepL ha una propria coppia: le
 linguette sono descritte nella [configurazione della pipeline](../reference/pipeline-config). Le modalità definiscono questa sequenza:
 
 | Modalità | Elaborazione |
 | --- | --- |
 | Standard | Traduzione e valutazione automatica |
 | Editoriale | Traduzione, revisione della bozza (*Refine*), formattazione (*Format*) e valutazione |
-| DeepL Hybrid | Traduzione DeepL, revisione LLM facoltativa e valutazione LLM |
+| DeepL Hybrid | Traduzione DeepL, revisione LLM e valutazione LLM |
 
 Provider e modelli delle fasi LLM sono indipendenti. DeepL richiede una propria
 chiave API e non svolge il ruolo di valutatore. La modalità della pipeline non
@@ -51,6 +105,9 @@ L’elaborazione procede per frammenti e ne aggiorna lo stato. L’annullamento
 interrompe il lavoro corrente senza eliminare i risultati già completati.
 La ripresa e la rielaborazione hanno scopi diversi: la prima completa il lavoro
 restante, la seconda ricalcola i frammenti non verificati selezionati dall’azione.
+Se dopo l’interruzione cambi modelli, prompt delle fasi o dell’audit, la
+Contesto di traduzione o le opzioni DeepL, la ripresa avvisa che la configurazione non è
+più quella con cui il lavoro era cominciato.
 
 Mentre un frammento si traduce, il testo della sua traduzione è coperto da un
 velo oro, «Traduzione in corso…», e non si modifica: il testo non compare man
@@ -64,15 +121,7 @@ principale a sinistra resta in vista e porta a qualunque area, chiudendo la
 traduzione. Mentre la pipeline lavora le sue voci sono spente, come il ritorno
 al catalogo.
 
-In cima, la riga d’intestazione riporta al catalogo delle Traduzioni e mostra
-il nome della traduzione (un clic lo rinomina); al centro della riga, la
-pipeline aperta: il suo
-nome (anche questo si rinomina con un clic), ⇄ per sceglierne un’altra, crearne
-una o eliminarla, l’ingranaggio con le sue opzioni e la sua coppia di lingue.
-Le lingue appartengono alla pipeline: due pipeline della stessa traduzione
-possono averne di diverse. A destra della stessa riga stanno i comandi della
-traduzione intera: importa, esporta, risorse linguistiche del workspace ed
-eliminazione.
+In cima, la barra mostra opera / pipeline e il tipo Semplice, Editoriale o DeepL. I nomi lunghi si troncano; il suggerimento mostra il nome completo. Il nome dell’opera si rinomina con un clic. Il nome della pipeline, con la piccola freccia accanto, apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. Accanto compaiono le lingue dell’opera in forma breve (vedi [Lingue dell’opera]). A destra stanno importa, esporta, risorse linguistiche ed eliminazione.
 
 Al centro i due fogli affiancano originale e traduzione. Sopra di loro, a
 sinistra, il numero del frammento aperto; al centro una finestra di sette
@@ -144,8 +193,11 @@ nuovo in frammenti diversi.
 
 ## Anteprima delle richieste
 
-La configurazione mostra la struttura dei prompt. La scheda **Anteprima** del
-frammento costruisce invece la richiesta della fase scelta per il testo corrente.
+L’**Anteprima prompt** nelle opzioni della pipeline ha due modi. **Struttura**
+mostra i pezzi di ogni richiesta con i segnaposto dove entrano i dati.
+**Frammento aperto** li riempie con il frammento aperto nello Studio: testo,
+frammenti vicini, frasi della memoria spuntate, traduzione precedente. Audit e
+Coerenza usano la traduzione attuale del frammento; senza traduzione lo dicono.
 Questa operazione non chiama il modello e non produce una traduzione.
 
 ## Esportazione
@@ -167,6 +219,11 @@ Le schede disattivate restano raggiungibili col tabulatore, così puoi leggere i
 motivo nell’etichetta. Non si attivano; le frecce passano alle schede disponibili.
 I selettori circolari restano raggiungibili anche se la scelta corrente non è disponibile.
 
-Nella colonna Strumenti, passa sulla stima o sui consumi per aprire il dettaglio.
-La stima segue modalità e numero di blocchi selezionati; i consumi sono quelli
-del frammento aperto. Il numero di blocchi non indica ripetizioni della traduzione.
+Nella colonna Strumenti, sotto i comandi, una riga riporta la stima del
+prossimo lancio e lo speso sul frammento aperto. Un clic apre il pannello dei
+costi: due tabelle con una riga per fase (modello, token, costo). La stima segue
+modalità e numero di blocchi selezionati ed è indicativa. Lo speso riporta anche
+le **chiamate** al modello per fase: un frammento ritradotto o un ciclo di
+revisione aggiungono chiamate, quindi il numero non conta le esecuzioni. Il
+numero di blocchi non indica ripetizioni della traduzione. La scheda Statistiche
+mostra la stessa tabella per fase sull’intero documento.

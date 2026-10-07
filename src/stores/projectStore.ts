@@ -6,6 +6,7 @@ import {
   deleteProject,
   getProjectSource,
   saveProjectSource,
+  saveWorkLanguages,
   type Project,
 } from '../services/projectService';
 import {
@@ -32,7 +33,7 @@ import { useWorkspaceStore } from './workspaceStore';
 import { useAnnotationsStore } from './annotationsStore';
 import { unversionedChunks, useTranslationHistoryStore } from './translationHistoryStore';
 import { recordManualRevision } from '../services/translationRevisionsService';
-import type { Pipeline, PipelineConfig, TranslationChunk } from '../types';
+import type { Pipeline, PipelineConfig, TranslationChunk, WorkLanguages } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
 let createPipelineInFlight: Promise<void> | null = null;
@@ -70,6 +71,8 @@ interface ProjectState {
    *  nello storico per ogni frammento il cui testo è cambiato. */
   saveVersionNow: () => Promise<void>;
   renameCurrentProject: (name: string) => Promise<void>;
+  /** Lingue dell'opera aperta: le mette in vista e, se l'opera esiste già, le salva subito. */
+  updateWorkLanguages: (languages: WorkLanguages) => Promise<void>;
   closeProject: () => void;
   /** Salva se c'è qualcosa da salvare, poi chiude. `false`: salvataggio fallito, la traduzione resta aperta con l'errore in vista. */
   leaveProject: () => Promise<boolean>;
@@ -122,14 +125,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await workspaceStore.setActive(workspace);
     }
 
-    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage, workspace.id, sourceVersionId);
+    const id = await createProject(name, pipeline.workLanguages, workspace.id, sourceVersionId);
 
     const pipelines = await listPipelines(id);
     const activePipelineId = pipelines[0]?.id ?? null;
 
     // saveProjectSource uses execute() directly — must run outside the transaction
     // to avoid deadlocking on the shared write-serialization queue.
-    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config);
+    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config, pipeline.workLanguages);
     if (activePipelineId) {
       await runInTransaction(async (run) => {
         await saveFullState(id, activePipelineId, pipeline.config, chunks, run);
@@ -151,6 +154,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     // resta senza nome in testata e in barra di stato finché non si cambia
     // sezione.
     await get().loadProjects().catch(() => {});
+  },
+
+  updateWorkLanguages: async (languages) => {
+    const { currentProjectId } = get();
+    if (currentProjectId) await saveWorkLanguages(currentProjectId, languages);
+    usePipelineStore.getState().setWorkLanguages(languages);
   },
 
   renameCurrentProject: async (name: string) => {
@@ -179,6 +188,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     ]);
 
     if (!source) throw new Error(`Project not found: ${id}`);
+    usePipelineStore.getState().setWorkLanguages(source.workLanguages);
 
     const activePipelineId = allPipelines[0]?.id ?? null;
 
@@ -364,7 +374,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           if (!name?.trim()) throw new Error('Project name required for first save.');
           const { activeWorkspace } = useWorkspaceStore.getState();
           if (!activeWorkspace) throw new Error('No active workspace');
-          currentProjectId = await createProject(name.trim(), pipeline.config.sourceLanguage, pipeline.config.targetLanguage, activeWorkspace.id);
+          currentProjectId = await createProject(name.trim(), pipeline.workLanguages, activeWorkspace.id);
           const pipelines = await listPipelines(currentProjectId);
           activePipelineId = pipelines[0]?.id ?? null;
           newPipelines = pipelines;
@@ -376,6 +386,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           pipeline.inputProcessingText,
           pipeline.sourceFootnotes,
           pipeline.config,
+          pipeline.workLanguages,
         );
 
         if (activePipelineId) {
@@ -479,8 +490,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const op = (async () => {
       const { currentProjectId, pipelines, activePipelineId } = get();
       if (!currentProjectId) return;
-      const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
-      const newId = await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
+      const newId = await createPipeline(currentProjectId, name);
 
       const initMode = useConfigStore.getState().newPipelineInit;
       if (initMode !== 'defaults' && pipelines.length > 0) {

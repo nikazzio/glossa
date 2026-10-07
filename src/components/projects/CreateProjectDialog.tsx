@@ -7,7 +7,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { importErrorMessageKey, importTextFile, type ImportedTextFile } from '../../services/fileService';
 import { listProjectSourceVersions, type ProjectSourceVersion } from '../../services/projectService';
-import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, Select, SettingRow } from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, SearchPicker, Select, SettingRow, Tooltip, type SearchPickerGroup } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface CreateProjectDialogProps {
@@ -149,9 +149,13 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
         </label>
         <div className="border-y border-rule">
           <SettingRow label={t('projects.sourceBook')} hint={t('projects.sourceBookHint')}>
-            <Select value={sourceVersionId} onChange={setSourceVersionId} disabled={creating || sourcesFailed}
-              ariaLabel={t('projects.sourceBook')} options={[{ value: '', label: t('memory.provenance.noBook') },
-                ...sources.map((source) => ({ value: source.id, label: `${source.title} — ${source.label}` }))]} />
+            <ChosenBook source={sources.find((source) => source.id === sourceVersionId)} />
+            <SearchPicker icon={<BookOpenText size={14} />} title={t('projects.chooseSourceBook')}
+              disabled={creating || sourcesFailed || sources.length === 0} searchLabel={t('projects.searchSourceBook')}
+              search={(query) => searchBooks(sources, query, t('projects.sourceBookGroup'))}
+              noResults={t('projects.noSourceBookFound')} onPick={setSourceVersionId} />
+            <IconButton size="sm" title={t('projects.clearSourceBook')} disabled={creating || !sourceVersionId}
+              onClick={() => setSourceVersionId('')}><X size={14} /></IconButton>
           </SettingRow>
         </div>
         <div className="space-y-1.5">
@@ -175,5 +179,27 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
         </div>
       </div>
     </Dialog>
+  );
+}
+
+const normalize = (value: string) => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+/** Books whose title or copy contains the query, in one group. */
+function searchBooks(sources: ProjectSourceVersion[], rawQuery: string, groupLabel: string): SearchPickerGroup[] {
+  const query = normalize(rawQuery.trim());
+  const items = sources
+    .filter((source) => !query || normalize(`${source.title} ${source.label}`).includes(query))
+    .map((source) => ({ id: source.id, label: source.title, detail: source.label }));
+  return [{ id: 'books', label: groupLabel, items }];
+}
+
+/** Il libro scelto: titolo troncato con il testo intero nel suggerimento, mai una riga che allarga la finestra. */
+function ChosenBook({ source }: { source: ProjectSourceVersion | undefined }) {
+  const { t } = useTranslation();
+  if (!source) return <span className="text-sm italic text-editorial-muted">{t('memory.provenance.noBook')}</span>;
+  return (
+    <Tooltip label={`${source.title} — ${source.label}`}>
+      <span className="block max-w-48 truncate font-display text-base italic text-editorial-ink">{source.title}</span>
+    </Tooltip>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Minimize2, Ruler } from 'lucide-react';
-import { SectionLabel, Select, SettingRow } from '../ui';
+import { Select, SettingRow, PanelSection } from '../ui';
 import {
   DEFAULT_SIZE_CAP,
   DEFAULT_THUMBNAIL_EDGE,
@@ -21,7 +21,7 @@ import {
   setOptimizeQuality,
 } from '../../services/optimizeService';
 
-const ROWS = 'divide-y divide-rule border-y border-rule';
+const ROWS = 'divide-y divide-rule border-b border-rule';
 
 /**
  * Le misure che valgono per tutte le biblioteche: quanto grande si vuole una
@@ -69,8 +69,7 @@ export function LibraryImagesSection() {
 
   return (
     <>
-      <section className="space-y-4">
-        <SectionLabel icon={Ruler} label={t('settings.download.sizes')} />
+      <PanelSection icon={Ruler} label={t('settings.download.sizes')}>
         <div className={ROWS}>
           <SettingRow
             label={t('settings.download.sizeCap')}
@@ -109,10 +108,9 @@ export function LibraryImagesSection() {
             />
           </SettingRow>
         </div>
-      </section>
+      </PanelSection>
 
-      <section className="space-y-4">
-        <SectionLabel icon={Minimize2} label={t('settings.download.optimize')} />
+      <PanelSection icon={Minimize2} label={t('settings.download.optimize')}>
         <div className={ROWS}>
           <SettingRow
             label={t('settings.download.optimizeQuality')}
@@ -132,7 +130,7 @@ export function LibraryImagesSection() {
             />
           </SettingRow>
         </div>
-      </section>
+      </PanelSection>
     </>
   );
 }

@@ -31,6 +31,21 @@ scansionato senza testo, un file non in UTF-8) il motivo compare sotto il campo
 e non si crea nulla. Con **Crea** la traduzione si apre nell’editor con
 l’anteprima dell’import, dove si scelgono lingue e frammenti; chiudendo
 l’anteprima la traduzione resta vuota e il file si importa poi dall’editor.
+Sotto **Libro e versione di origine** la riga mostra il titolo del libro scelto
+(troncato; titolo completo e copia compaiono nel suggerimento): l’icona del
+libro apre un elenco con ricerca per titolo o copia, dove ogni voce mostra il
+titolo e, sotto, la copia; la X toglie il libro. La finestra non si allarga con
+i titoli lunghi.
+
+L’anteprima dell’import è la finestra standard dell’app, ampia e quasi a tutta
+altezza. In cima il nome del file e il titolo. A sinistra, in una colonna che
+scorre da sola: **Lingue dell’opera** (Partenza, poi Arrivo), **Modello**
+(servizio e modello) e **Suddivisione in frammenti** (suddivisione automatica,
+titoli per il Markdown, accorpamento dei blocchi brevi finali, misure
+predefinite, ricalcolo). A destra i conteggi di parole, paragrafi e frammenti,
+la scelta fra vista a schede e vista a segmenti (piccole icone rotonde) e
+l’anteprima dei frammenti a tutta altezza. In fondo l’esito del controllo del
+conteggio delle parole, Annulla e Importa.
 Nome, descrizione e icona del workspace aiutano a riconoscerne l’appartenenza
 nelle diverse viste.
 
@@ -41,7 +56,7 @@ come il [catalogo delle Trascrizioni](./transcription#il-catalogo-delle-trascriz
 scaffali a destra, ricerca e filtri rapidi sopra l’elenco, tre viste (elenco,
 copertine, tabella).
 
-- **Riga**: nome in corsivo, sotto le lingue di partenza e di arrivo, poi
+- **Riga**: nome in corsivo, sotto i nomi delle lingue di partenza e di arrivo, poi
   workspace, frammenti tradotti sul totale, frammenti verificati e la barretta
   di completamento, verde quando tutti i frammenti sono verificati.
 - **Scaffali**: Tutte, Recenti (modificate negli ultimi 30 giorni), Da iniziare
@@ -78,6 +93,22 @@ alto, cambio di workspace — salva prima di chiudere. Se quel salvataggio
 fallisce, la traduzione resta aperta con l’errore in vista: nessuna modifica
 si perde uscendo. Resta un limite: chiudere la finestra di Glossa entro un
 istante dall’ultima modifica può perderla.
+
+## Barra di sinistra
+
+La barra di sinistra raccoglie la navigazione: in alto la Dashboard con
+Panoramica e Ricerca, poi le aree nell’ordine del lavoro (Biblioteca,
+Trascrizioni, Traduzioni, Analisi) e infine i workspace, con il più per
+crearne uno. Ogni gruppo è separato da un filetto; la spiegazione di una voce
+compare passando il puntatore.
+
+In fondo c’è il menu generale: salva tutto, risorse linguistiche generali,
+impostazioni, guida e lingua dell’interfaccia. È sempre disponibile, anche
+senza un workspace attivo.
+
+L’icona in alto chiude la barra: restano le icone delle voci e del menu
+generale, e un clic porta alla pagina senza riaprirla. Il segno di Glossa in
+alto la riapre.
 
 ## Aree e loro inchiostro
 

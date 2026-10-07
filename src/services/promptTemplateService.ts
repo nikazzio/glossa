@@ -1,6 +1,7 @@
 import { select, execute } from './dbService';
 import type { PromptTemplate, PromptTemplateContext, PromptTemplateWorkflow } from '../types';
 import { generateId } from '../utils';
+import { logger } from '../utils/logger';
 
 interface TemplateRow {
   id: string;
@@ -13,18 +14,20 @@ interface TemplateRow {
   created_at: string;
 }
 
-function rowToTemplate(row: TemplateRow): PromptTemplate {
-  const ctx: PromptTemplateContext =
-    row.context === 'audit' || row.context === 'persona' || row.context === 'memory' || row.context === 'ocr'
-      ? row.context
-      : 'stage';
+const TEMPLATE_CONTEXTS: readonly PromptTemplateContext[] = ['stage', 'audit', 'brief', 'memory', 'ocr', 'system'];
+
+function isTemplateContext(value: string): value is PromptTemplateContext {
+  return (TEMPLATE_CONTEXTS as readonly string[]).includes(value);
+}
+
+function rowToTemplate(row: TemplateRow, context: PromptTemplateContext): PromptTemplate {
   const workflow: PromptTemplateWorkflow =
     row.workflow === 'transcription' ? 'transcription' : 'translation';
   return {
     id: row.id,
     name: row.name,
     prompt: row.prompt,
-    context: ctx,
+    context,
     workflow,
     defaultModel: row.default_model || undefined,
     defaultProvider: row.default_provider || undefined,
@@ -32,7 +35,13 @@ function rowToTemplate(row: TemplateRow): PromptTemplate {
   };
 }
 
-export async function getPromptTemplates(context?: PromptTemplateContext): Promise<PromptTemplate[]> {
+export interface PromptTemplateList {
+  templates: PromptTemplate[];
+  /** Names of rows with an unknown context: excluded so one bad row cannot hide the whole list. */
+  skipped: string[];
+}
+
+export async function getPromptTemplates(context?: PromptTemplateContext): Promise<PromptTemplateList> {
   const rows = context
     ? await select<TemplateRow>(
         'SELECT id, name, prompt, context, workflow, default_model, default_provider, created_at FROM prompt_templates WHERE context = $1 ORDER BY name ASC',
@@ -41,7 +50,15 @@ export async function getPromptTemplates(context?: PromptTemplateContext): Promi
     : await select<TemplateRow>(
         'SELECT id, name, prompt, context, workflow, default_model, default_provider, created_at FROM prompt_templates ORDER BY name ASC',
       );
-  return rows.map(rowToTemplate);
+  const templates = rows.flatMap((row) => (isTemplateContext(row.context) ? [rowToTemplate(row, row.context)] : []));
+  const invalid = rows.filter((row) => !isTemplateContext(row.context));
+  if (invalid.length > 0) {
+    logger.error('prompt_templates.unsupported_context', {
+      rows: invalid.map(({ id, context: ctx }) => ({ id, context: ctx })),
+    });
+  }
+  const skipped = invalid.map((row) => row.name);
+  return { templates, skipped };
 }
 
 export async function savePromptTemplate(

@@ -10,6 +10,11 @@ export const PANEL_BODY_CLASSNAME = 'flex flex-col gap-6 px-4 py-5';
 /** Elenco etichetta–valore dentro una sezione. */
 export const STAT_LIST_CLASSNAME = 'space-y-2.5';
 
+/** Elenco di impostazioni subito sotto il titolo di una `PanelSection`: il
+ *  filetto del titolo fa già da bordo superiore, un secondo bordo lo
+ *  raddoppierebbe. */
+export const SECTION_SETTING_LIST_CLASSNAME = 'divide-y divide-rule border-b border-rule';
+
 /** Larghezze della colonna a schede, in pixel. */
 export const INSPECTOR_WIDTH = {
   collapsed: 56,

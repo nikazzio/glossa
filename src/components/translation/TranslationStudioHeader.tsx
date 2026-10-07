@@ -1,23 +1,23 @@
 import { useState } from 'react';
-import { BookOpenText, FileOutput, LibraryBig, Trash2, Upload } from 'lucide-react';
+import { BookOpenText, FileOutput, Layers, LibraryBig, Network, ScrollText, Trash2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { IconButton, PageHeader, RenameField, Tooltip } from '../ui';
+import { CommandRule, Hint, IconButton, PageHeader, RenameField, Tooltip } from '../ui';
 import { confirm } from '../../stores/confirmStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useLanguageLabel } from '../projects/TranslationCatalogRow';
 import { PipelineSwitch } from './PipelineSwitch';
+import { WorkLanguagesControl } from './WorkLanguagesControl';
 
 interface TranslationStudioHeaderProps {
   onBack: () => void;
   onImportDocument: () => void;
 }
 
-const SEPARATOR = <span className="h-1 w-1 shrink-0 rounded-full bg-editorial-border" aria-hidden="true" />;
+const MODE_ICONS = { standard: ScrollText, editorial: Layers, 'deepl-hybrid': Network };
 
 /** Nome della traduzione, rinominabile sul posto con un clic. */
 function TranslationName() {
@@ -48,7 +48,7 @@ function TranslationName() {
   }
 
   return (
-    <Tooltip label={t('areas.translations.catalog.rename')} side="bottom">
+    <Tooltip label={`${projectName} — ${t('areas.translations.catalog.rename')}`} side="bottom" className="min-w-0 max-w-full">
       <button
         type="button"
         onClick={() => setEditing(true)}
@@ -75,9 +75,8 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
     (s) => s.projects.find((project) => project.id === s.currentProjectId)?.name ?? '',
   );
   const removeProject = useProjectStore((s) => s.removeProject);
-  const languageLabel = useLanguageLabel();
-  const sourceLanguage = usePipelineStore((s) => s.config.sourceLanguage);
-  const targetLanguage = usePipelineStore((s) => s.config.targetLanguage);
+  const mode = usePipelineStore((s) => s.config.mode ?? 'standard');
+  const ModeIcon = MODE_ICONS[mode];
   const setShowExportDialog = useUiStore((s) => s.setShowExportDialog);
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
   const [removing, setRemoving] = useState(false);
@@ -118,18 +117,20 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
       backLabel={blockedTitle(t('sidebar.backToTranslations'), running)}
       backDisabled={isProcessing}
       title={<TranslationName />}
-      center={
+      titleAccessory={
         <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 font-display text-lg text-editorial-muted" aria-hidden="true">/</span>
           <PipelineSwitch />
-          {SEPARATOR}
-          {/* Le lingue sono della pipeline: stanno accanto a lei, intere. */}
-          <span className="shrink-0 text-sm text-editorial-ink">
-            {languageLabel(sourceLanguage)} → {languageLabel(targetLanguage)}
-          </span>
+          {/* Il tipo di pipeline è un segno: nome e spiegazione nel suggerimento. */}
+          <Hint label={`${t(`pipeline.modeShort.${mode}`)} — ${t(`pipeline.modeDesc.${mode}`)}`}>
+            <ModeIcon size={14} className="shrink-0 text-editorial-muted" aria-label={t(`pipeline.modeShort.${mode}`)} />
+          </Hint>
         </span>
       }
       actions={
         <>
+          <WorkLanguagesControl disabledReason={running} />
+          <CommandRule />
           <IconButton
             size="sm"
             onClick={onImportDocument}

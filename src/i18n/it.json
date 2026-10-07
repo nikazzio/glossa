@@ -196,7 +196,9 @@
     "backToAnalysis": "Torna ad Analisi",
     "resize": "Ridimensiona la barra",
     "collapse": "Comprimi barra",
-    "expand": "Espandi barra"
+    "expand": "Espandi barra",
+    "generalMenu": "Menu generale",
+    "navigation": "Navigazione"
   },
   "projectShell": {
     "railLabel": "Pannelli progetto",
@@ -231,7 +233,8 @@
     },
     "modeDesc": {
       "standard": "Uno stage di traduzione + audit qualità.",
-      "editorial": "Tre stage: traduzione → refine → format, poi audit qualità."
+      "editorial": "Tre stage: traduzione → refine → format, poi audit qualità.",
+      "deepl-hybrid": "Traduzione DeepL, revisione LLM e audit."
     },
     "stageRole": {
       "deepl-translation": "Traduzione DeepL",
@@ -256,7 +259,6 @@
     "blobOverlap": "Sovrapposizione",
     "blobOverlapHint": "Quanti chunk dalla coda del blocco precedente includere all'inizio del successivo, per non perdere il filo ai confini.",
     "inheritDefault": "Eredita dal progetto",
-    "personaActive": "System prompt (persona)",
     "stages": "Fasi",
     "auditGuard": "Controllo Qualità",
     "auditPlaceholder": "Istruzioni per l'audit...",
@@ -354,9 +356,9 @@
     "prompt": "Prompt",
     "auditModelLabel": "Modello Audit",
     "auditModelHint": "Questo provider e modello vengono usati sia per la valutazione locale sia per l'audit di coerenza.",
-    "judgePromptLabel": "Prompt Giudice",
+    "judgePromptLabel": "Prompt dell'audit",
     "judgePromptHint": "Istruzioni per la valutazione locale di qualita, accuratezza e terminologia.",
-    "coherencePromptLabel": "Prompt Coerenza",
+    "coherencePromptLabel": "Prompt della coerenza",
     "coherencePromptHint": "Istruzioni per l'audit cross-segmento dell'intero documento tradotto.",
     "coherencePromptPlaceholder": "Istruzioni per l'audit di coerenza...",
     "judgeRefineLoopSectionLabel": "Loop di raffinamento",
@@ -430,71 +432,8 @@
     "tabGlossary": "Glossario",
     "tabPreview": "Anteprima prompt",
     "promptPreviewTitle": "Anteprima Prompt",
-    "promptPreviewHint": "Com'è costruito il prompt con la configurazione attuale; i segnaposto indicano dove entrano il testo del frammento e il contesto.",
+    "promptPreviewHint": "La richiesta di ogni fase, pezzo per pezzo e nell'ordine in cui parte. «Struttura» mostra i segnaposto dove entrano i dati del frammento; «Frammento aperto» li riempie con il frammento aperto nello Studio, comprese le frasi della memoria spuntate.",
     "promptPreviewEmpty": "Non ci sono ancora fasi di traduzione abilitate.",
-    "promptPreviewStatic": "Statico",
-    "promptPreviewRuntime": "Runtime",
-    "promptPreviewBlocks": {
-      "system-opener": {
-        "title": "Apertura di sistema",
-        "hint": "Cacheabile: definisce il ruolo del modello e la coppia di lingue. Identico per ogni chunk — rimane in cache tra tutti gli stage."
-      },
-      "structural-rules": {
-        "title": "Regole strutturali",
-        "hint": "Cacheabile: regole di preservazione di paragrafi, spazi e note a piè di pagina, applicate a ogni stage."
-      },
-      "glossary-constraints": {
-        "title": "Vincoli glossario",
-        "hint": "Cacheabile: terminologia obbligatoria. Quando è presente un glossario, questo blocco include la tabella completa dei termini."
-      },
-      "markdown-rules": {
-        "title": "Regole Markdown",
-        "hint": "Cacheabile: regole di preservazione della sintassi Markdown. Mostrato solo quando la modalità markdown-aware è attivata."
-      },
-      "stage-instructions": {
-        "title": "Istruzioni di fase",
-        "hint": "Cacheabile per run: il tuo prompt personalizzato seguito dal contratto di output. Il contratto di output è ripetuto nel turno utente per rinforzare l'istruzione su entrambi i turni — è intenzionale."
-      },
-      "blob-context": {
-        "title": "Contesto blob opzionale",
-        "hint": "Blocco documento di riferimento riusato tra i chunk dello stesso blob. E solo contesto e appartiene al prefisso cacheabile."
-      },
-      "current-chunk-id": {
-        "title": "ID chunk opzionale",
-        "hint": "Identificatore runtime del chunk inserito solo quando e disponibile il tracciamento del blob. Delimita la richiesta al chunk corrente."
-      },
-      "source-chunk-text": {
-        "title": "Testo sorgente runtime",
-        "hint": "Payload del chunk corrente inserito a esecuzione. Nel refine resta il chunk sorgente originale, non la traduzione precedente."
-      },
-      "previous-stage-result": {
-        "title": "Risultato fase precedente",
-        "hint": "Testo runtime prodotto dalla fase precedente. Il refine lo riceve insieme al chunk sorgente originale."
-      },
-      "runtime-task": {
-        "title": "Istruzione task runtime",
-        "hint": "Istruzione valida solo a esecuzione che dice al modello di tradurre, rifinire o formattare solo il chunk corrente."
-      },
-      "phrase-memory": {
-        "title": "Memoria frasi",
-        "hint": "Coppie di memoria di traduzione trovate per questo chunk. Aggiunte alle istruzioni della fase a esecuzione — vengono iniettate solo le corrispondenze abilitate."
-      },
-      "output-contract": {
-        "title": "Contratto output runtime",
-        "hint": "Requisito finale dell'output ripetuto nel turno utente per rinforzare l'istruzione di sistema. Limita la risposta al testo completo specifico della fase."
-      },
-      "system-post-processor": {
-        "title": "Post-processore di sistema",
-        "hint": "Cacheabile: vincoli rigidi per lo stage di formattazione. Impedisce al modello di ritradurre o modificare il testo — sono ammessi solo interventi minimi di correzione della formattazione."
-      }
-    },
-    "tabPersona": "Persona",
-    "personaLabel": "Persona",
-    "personaCustomBadge": "Personalizzata",
-    "personaReset": "Ripristina automatica",
-    "languagePairLockedByPersona": "La coppia linguistica è bloccata quando è attiva una persona personalizzata — resettala per modificarla",
-    "customLanguageToggle": "Usa lingua personalizzata",
-    "customLanguageActive": "Lingua personalizzata attiva",
     "customLanguageReset": "Torna allo standard",
     "customSourceLanguagePlaceholder": "es. Norreno antico, Latino medievale",
     "customTargetLanguagePlaceholder": "es. Italiano moderno, Inglese contemporaneo",
@@ -512,7 +451,9 @@
       "saved": "Template salvato",
       "deleted": "Template eliminato",
       "saveFailed": "Salvataggio template fallito",
-      "loadFailed": "Caricamento template fallito"
+      "loadFailed": "Caricamento template fallito",
+      "skipped_one": "Modello di prompt escluso: categoria non riconosciuta",
+      "skipped_other": "{{count}} modelli di prompt esclusi: categoria non riconosciuta"
     },
     "editPrompt": "Modifica prompt",
     "promptCustomBadge": "Personalizzato",
@@ -547,6 +488,7 @@
     "deepl": {
       "confirmDeleteGlossaryTitle": "Eliminare il glossario DeepL?",
       "confirmDeleteGlossaryMessage": "Il glossario «{{name}}» verrà eliminato definitivamente da DeepL. L'azione non è reversibile.",
+      "deleteGlossaryFailed": "Eliminazione del glossario DeepL non riuscita",
       "preserveFormatting": "Mantieni la formattazione",
       "showBilledCharacters": "Mostra i caratteri fatturati",
       "modelType": "Modalità di traduzione",
@@ -568,9 +510,146 @@
       "glossaryUploaded": "Glossario caricato su DeepL",
       "glossaryUploadFailed": "Caricamento del glossario su DeepL non riuscito",
       "uploadGlossaryTooltip": "Carica su DeepL il glossario di Glossa",
-      "keyRequired": "Richiede la chiave DeepL, da inserire in Impostazioni"
+      "keyRequired": "Richiede la chiave DeepL, da inserire in Impostazioni",
+      "detectSource": "Rileva lingua",
+      "languagesUnavailable": "Elenco lingue DeepL non disponibile. La selezione attuale è conservata.",
+      "glossariesUnavailable": "Elenco dei glossari DeepL non disponibile",
+      "glossaryNeedsSource": "Scegli una lingua sorgente nella fase DeepL per caricare il glossario.",
+      "requestBody": "Richiesta DeepL",
+      "languagePair": "DeepL · lingue",
+      "languagePairHint": "Solo per la richiesta DeepL; gli LLM seguono il Contesto di traduzione e i prompt.",
+      "onlyInDeeplMode": "Attive solo in modalità DeepL",
+      "chooseTarget": "Scegli la destinazione",
+      "swapUnavailable": "Scegli due lingue compatibili; il rilevamento automatico non si può invertire",
+      "autoShort": "Auto"
     },
-    "configSections": "Sezioni della configurazione"
+    "configSections": "Sezioni della configurazione",
+    "workBriefLabel": "Contesto di traduzione",
+    "workBriefHint": "Lingue, varietà, obiettivo e registro. Lo ricevono traduzione, revisione, audit e coerenza; non può restare vuoto.",
+    "workBriefPlaceholder": "Es. Traduci dal veneto del Seicento all’italiano contemporaneo, conservando il tono e spiegando i termini storici nelle note.",
+    "auditPreviewLabel": "Audit",
+    "coherencePreviewLabel": "Coerenza",
+    "phaseNotUsed": "Non usata in questa modalità",
+    "modeShort": {
+      "standard": "Semplice",
+      "editorial": "Editoriale",
+      "deepl-hybrid": "DeepL"
+    },
+    "operationFailed": "Operazione sulla pipeline non riuscita",
+    "promptSource": {
+      "template": "Template «{{name}}»",
+      "default": "Predefinito",
+      "custom": "Personalizzato"
+    },
+    "promptRequired": "il testo non può essere vuoto",
+    "promptParts": {
+      "systemMessage": "Messaggio di sistema",
+      "systemMessageHint": "Istruzioni, regole e risorse: uguale per tutti i frammenti, il fornitore lo tiene in cache e costa meno.",
+      "userMessage": "Messaggio utente",
+      "userMessageHint": "Il frammento da lavorare e la consegna finale: cambia a ogni frammento.",
+      "kind": {
+        "system": "Prompt di sistema",
+        "auto": "Automatico",
+        "linked": "Contenuto",
+        "systemAt": "Prompt di sistema · {{place}}",
+        "autoAt": "Automatico · {{place}}",
+        "linkedAt": "Contenuto: {{place}}"
+      },
+      "place": {
+        "general": "Generale",
+        "stages": "Fasi",
+        "quality": "Controllo qualità",
+        "glossary": "Glossario",
+        "memory": "Memoria"
+      },
+      "reason": {
+        "noGlossary": "nessun dizionario assegnato",
+        "notMarkdown": "solo per documenti importati come Markdown",
+        "noExamples": "nessun esempio inserito",
+        "onlyRefineLoop": "solo quando il ciclo di raffinamento rivede dopo un audit",
+        "whenGrouped": "compare solo quando il documento è diviso in gruppi di frammenti",
+        "notInThisRequest": "non presente in questa richiesta",
+        "switchedOff": "spento in questa fase"
+      },
+      "role": {
+        "title": "Ruolo",
+        "hint": "Dice al modello che cosa è in questa fase."
+      },
+      "translation-context": {
+        "title": "Contesto di traduzione",
+        "hint": "Intestazione di sistema seguita dal Contesto di traduzione, che si scrive in Generale."
+      },
+      "structural-rules": {
+        "title": "Regole strutturali",
+        "hint": "Conservare paragrafi, a capo, spazi, elenchi e note."
+      },
+      "glossary-rules": {
+        "title": "Regole del glossario",
+        "hint": "Le regole sono un testo di sistema; la tabella dei termini viene dal dizionario assegnato nella scheda Glossario."
+      },
+      "glossary-table": {
+        "title": "Glossario",
+        "hint": "Intestazione di sistema seguita dalla tabella del dizionario assegnato, nella scheda Glossario."
+      },
+      "markdown-rules": {
+        "title": "Regole Markdown",
+        "hint": "Non rovinare asterischi, note e titoli del Markdown."
+      },
+      "examples": {
+        "title": "Esempi di traduzione",
+        "hint": "Introduzione di sistema seguita dalle coppie di esempio inserite nella scheda Memoria."
+      },
+      "neighbour-chunks": {
+        "title": "Frammenti vicini",
+        "hint": "Cornice di sistema attorno al testo dei frammenti attorno, inserito in automatico; la quantità si regola in Fasi."
+      },
+      "stage-prompt": {
+        "title": "Prompt",
+        "hint": "Intestazione di sistema seguita dal prompt della fase, che si modifica nella sua scheda; per traduzione e Refine, con la memoria attiva, in fondo si aggiungono le frasi spuntate."
+      },
+      "output-contract": {
+        "title": "Consegna del risultato",
+        "hint": "Che cosa deve restituire il modello."
+      },
+      "review-method": {
+        "title": "Metodo di controllo",
+        "hint": "Come deve condurre la verifica."
+      },
+      "response-format": {
+        "title": "Formato della risposta",
+        "hint": "La struttura che l’app legge: cambiarla male fa fallire la verifica."
+      },
+      "chunk-id": {
+        "title": "Identificativo del frammento",
+        "hint": "Indica quale dei frammenti vicini è quello da lavorare."
+      },
+      "audit-findings": {
+        "title": "Rilievi dell’audit",
+        "hint": "Cornice di sistema attorno ai problemi trovati dall’audit, inseriti in automatico nel ciclo di raffinamento."
+      },
+      "deepl-request": {
+        "title": "Richiesta DeepL",
+        "hint": "Il corpo della richiesta inviata a DeepL: nessun prompt, solo parametri."
+      },
+      "openPlace": "Apri {{place}}, dove si modifica il contenuto",
+      "unlock": "Sblocca per modificare",
+      "lock": "Blocca di nuovo",
+      "unlockGuardedTitle": "Sbloccare il formato della risposta?",
+      "unlockGuardedMessage": "L’app legge la risposta del modello secondo questo formato: se lo cambi in modo incompatibile, audit o coerenza falliranno. Il ripristino resta sempre disponibile.",
+      "missingPlaceholder": "mancano i segnaposto {{names}}",
+      "sharedTranslationRefine": "in comune fra Traduzione e Refine",
+      "sharedAll": "in comune a tutte le fasi che lo usano",
+      "user-message": {
+        "title": "Messaggio utente",
+        "hint": "Il frammento da lavorare e la consegna finale; i segnaposto tra doppie graffe vengono riempiti a ogni frammento."
+      },
+      "switchOff": "Spegni questo pezzo in questa fase",
+      "switchOn": "Riaccendi questo pezzo"
+    },
+    "promptPreviewMode": "Che cosa mostrare",
+    "promptPreviewStructure": "Struttura",
+    "promptPreviewChunk": "Frammento aperto",
+    "promptPreviewNoChunk": "Nessun frammento aperto: apri o importa un documento nello Studio."
   },
   "audit": {
     "title": "Log Audit",
@@ -606,7 +685,6 @@
   },
   "settings": {
     "title": "Impostazioni",
-    "providerConfig": "Configurazione Provider",
     "segmentation": "Segmentazione Predefinita",
     "segmentationHint": "Parole obiettivo per ciascun preset. Minimo e massimo vengono derivati automaticamente (×0,5 e ×1,5).",
     "chunkPresetShort": "Brevi",
@@ -625,7 +703,6 @@
     "highlightAuditPhrase": "Frase audit",
     "highlightAnnotation": "Nota",
     "typography": "Tipografia",
-    "typographyTab": "Tipografia",
     "discoveryTab": "Ricerca fonti",
     "uiFont": "Font interfaccia",
     "uiFontHint": "Scegli il carattere dell'intera interfaccia. I valori serif editoriali non vengono toccati.",
@@ -670,7 +747,6 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
     "eyebrow": "Impostazioni generali",
-    "providerTab": "Provider",
     "storageTab": "Dati",
     "storage": {
       "title": "Posizione dati",
@@ -912,6 +988,46 @@
       "imageEdgeHint": "Lato lungo dell’immagine ottimizzata. Un’immagine più piccola non viene ingrandita.",
       "loadFailed": "Impossibile leggere le impostazioni delle trascrizioni",
       "saveFailed": "Impossibile salvare l’impostazione"
+    },
+    "appearanceTab": "Aspetto",
+    "modelsTab": "Modelli",
+    "languagesTab": "Lingue",
+    "appearance": {
+      "interface": "Interfaccia",
+      "document": "Documento",
+      "colors": "Colori",
+      "documentText": "Testo dei documenti",
+      "layoutHint": "Come si dispongono originale e traduzione nella lettura. Auto sceglie in base alla larghezza della finestra."
+    },
+    "accentColorFor": "Accento, tema {{scheme}}",
+    "wordsUnit": "parole",
+    "pipelinesSection": "Pipeline",
+    "models": {
+      "custom": "Provider personalizzato",
+      "apiKey": "Chiave API",
+      "list": "Modelli",
+      "server": "Server"
+    },
+    "data": {
+      "location": "Cartelle"
+    },
+    "languages": {
+      "title": "Elenco delle lingue",
+      "hint": "Lingue ISO 639-3 e varietà Glottolog offerte quando scegli le lingue di un’opera. L’elenco incluso funziona senza rete; l’aggiornamento lo riscarica dalle fonti ufficiali.",
+      "update": "Aggiorna elenco lingue",
+      "updated": "Elenco lingue aggiornato: {{added}} nuove, {{retired}} ritirate",
+      "updateFailed": "Aggiornamento dell’elenco lingue non riuscito: resta quello in uso",
+      "loadFailed": "Elenco delle lingue non leggibile",
+      "origin": "Elenco in uso",
+      "originHint": "Incluso nell’app, oppure scaricato con l’aggiornamento: quello scaricato prevale.",
+      "origin_bundled": "Incluso nell’app",
+      "origin_downloaded": "Scaricato",
+      "iso": "Lingue ISO 639-3",
+      "isoHint": "Lingue individuali e macrolingue del registro SIL, con la data in cui è stato preso.",
+      "varieties": "Varietà Glottolog",
+      "varietiesHint": "Varietà (livello dialetto) collegate a una lingua ISO, con la data in cui sono state prese.",
+      "retired": "Codici ritirati conservati",
+      "retiredHint": "Lingue sparite dalle fonti ufficiali: restano leggibili per nome nelle opere e nelle frasi che le usano, ma non si propongono più."
     }
   },
   "ollama": {
@@ -1067,6 +1183,11 @@
     "sourceBook": "Libro e versione di origine",
     "sourceBookUnspecified": "Libro non specificato",
     "sourceBookHint": "Collega esplicitamente una versione della Biblioteca. Il nome del file importato non determina il libro.",
+    "chooseSourceBook": "Scegli il libro",
+    "searchSourceBook": "Cerca per titolo o copia",
+    "sourceBookGroup": "Libri della Biblioteca",
+    "noSourceBookFound": "Nessun libro trovato",
+    "clearSourceBook": "Nessun libro",
     "sourceBookLoadError": "Impossibile caricare i libri disponibili"
   },
   "transcription": {
@@ -1168,7 +1289,7 @@
       "noModelConfigured": "Scegli un fornitore e un modello che leggano le immagini.",
       "loading": "Caricamento…",
       "documentModel": "Modello",
-      "documentPrompt": "Prompt",
+      "documentPrompt": "Prompt OCR del documento",
       "readThisPage": "Leggi la pagina {{page}}",
       "inheritWorkspace": "Eredita dal workspace",
       "saveFailed": "Salvataggio impostazioni OCR non riuscito",
@@ -1842,8 +1963,6 @@
     "technicalSummary": "Riepilogo tecnico",
     "createdAt": "Creato",
     "memoryScope": "Ambito memoria",
-    "memorySearchAllWorkspaces": "Cerca anche nella memoria degli altri workspace",
-    "memorySearchAllWorkspacesHint": "Include anche frasi di altri workspace e senza workspace, della stessa coppia di lingue. Quando il modello di misura è registrato, deve coincidere con quello del workspace; ogni riferimento mostra la provenienza.",
     "workspaceScoped": "Per workspace",
     "pipelineBadge_one": "1 pipeline",
     "pipelineBadge_other": "{{count}} pipeline",
@@ -1988,6 +2107,7 @@
     "import": "Importa file di testo",
     "imported": "File importato con successo",
     "importError": "Importazione fallita",
+    "languagesSaveAfterImportFailed": "Impossibile salvare le lingue dell’opera",
     "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
     "backupExportSuccess": "Backup salvato",
     "backupImportSuccess": "Ripristino completato",
@@ -2022,6 +2142,8 @@
     "importCoherenceOk": "Il testo è integro",
     "importCoherenceWarning": "~{{pct}}% delle parole potrebbe mancare dopo la segmentazione — controlla le impostazioni",
     "importModelLabel": "Modello",
+    "importSegmentationLabel": "Suddivisione in frammenti",
+    "importViewLabel": "Vista dell’anteprima",
     "chunkShort": "Brevi",
     "chunkShortTitle": "~400 parole per chunk — massima granularità",
     "chunkMedium": "Medi",
@@ -2248,9 +2370,6 @@
     "chunkSummaryLastAudit": "Audit",
     "chunkSummaryNoTranslation": "Nessuna traduzione registrata per questo chunk.",
     "chunkSummaryNoAudit": "Nessun audit registrato per questo chunk.",
-    "summaryTranslationRuns": "run traduzione",
-    "summaryAuditRuns": "run audit",
-    "summaryCoherenceRuns": "run coerenza",
     "summaryStageBreakdown": "Breakdown per fase",
     "summaryPrevStep": "Step precedente",
     "summaryNextStep": "Step successivo",
@@ -2292,23 +2411,14 @@
     "watchdogCancel": "Annulla e riprova",
     "insightsTabMemory": "Memoria",
     "insightsTabReferences": "Riferimenti",
-    "insightsTabPromptPreview": "Anteprima",
     "viewOptions": "Opzioni vista",
     "chunkTabLockedForAudit": "Disponibile dopo la traduzione del frammento"
   },
   "promptPreview": {
-    "title": "Anteprima messaggio",
-    "stageLabel": "Fase da vedere in anteprima",
-    "buildButton": "Costruisci anteprima",
-    "building": "Costruzione in corso…",
-    "systemLabel": "Istruzioni di sistema",
-    "userLabel": "Messaggio utente",
-    "copyBlock": "Copia questo blocco",
     "copiedToClipboard": "Copiato negli appunti",
-    "emptyNoChunk": "Seleziona un chunk per costruire l'anteprima.",
-    "emptyBeforeBuild": "Premi \"Costruisci anteprima\" per vedere il messaggio completo di questa fase.",
-    "deeplNotice": "Questa fase usa DeepL: non genera un messaggio testuale per un modello linguistico.",
-    "buildFailed": "Non sono riuscito a costruire l'anteprima."
+    "copyBlock": "Copia questo blocco",
+    "translationRequired": "manca la traduzione del frammento",
+    "unavailable": "Anteprima non disponibile"
   },
   "help": {
     "title": "Guida utente",
@@ -2412,14 +2522,17 @@
           {
             "title": "Configurare le fasi",
             "paragraphs": [
-              "L’icona rossa in fondo alla finestra azzera tutte le traduzioni e i loro audit, dopo una conferma. È spenta, con il motivo, mentre la pipeline lavora o quando non c’è niente da azzerare."
+              "La barra dello Studio mostra opera / pipeline e, come icona, il tipo Semplice, Editoriale o DeepL (nome nel suggerimento). I nomi lunghi si troncano e il suggerimento mostra il nome completo. Il nome della pipeline apre il menu per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni. A destra, prima dei comandi, compare in breve la coppia di lingue dell’opera, uguale per tutte le sue pipeline. Durante l’elaborazione le operazioni sulla pipeline sono bloccate.",
+              "L’icona rossa in fondo alla finestra azzera tutte le traduzioni e i loro audit, dopo una conferma. È spenta, con il motivo, mentre la pipeline lavora o quando non c’è niente da azzerare.",
+              "Accanto al titolo di ogni prompt vedi da dove viene il testo: Predefinito, Personalizzato o il nome del template salvato che stai usando."
             ],
             "steps": [
               "Apri la configurazione con l’ingranaggio nella riga in cima allo Studio, o con Ctrl + virgola. Il titolo è il nome della pipeline; le linguette sono Generale, Fasi, Controllo qualità, Memoria, Glossario e Anteprima prompt.",
-              "In Generale scegli la modalità e le lingue. Se usi una persona, descrivi ruolo, lingue e registro desiderati: questo testo sostituisce l’introduzione predefinita delle istruzioni, e finché è personalizzata le lingue restano ferme.",
+              "In Generale scegli la modalità e modifica il Contesto di traduzione con la matita: destinatari e registro. Le lingue non si impostano qui: sono le Lingue dell’opera. Conferma con la spunta o annulla con la X. Non è mai vuoto: parte da un testo predefinito (dall’inglese all’italiano) che puoi riscrivere o sostituire con un template salvato; la freccia circolare lo ripristina. Lo ricevono traduzione, revisione, audit e coerenza; le lingue non vengono aggiunte automaticamente ai prompt LLM. La coppia DeepL resta visibile, ma si attiva solo in modalità DeepL. Le fasi non usate restano visibili e disabilitate; cambiando modalità conservi i prompt configurati.",
               "In Fasi e Controllo qualità scegli servizio, modello e istruzioni di ogni fase. Con traduzioni già fatte il modello è chiuso dal lucchetto: aprirlo lascia i frammenti già tradotti con il modello precedente. Le spiegazioni compaiono passando sopra i titoli e le voci.",
               "In Memoria regola la memoria delle frasi e gli esempi di traduzione (la modalità DeepL non li usa); in Glossario assegna il dizionario e salvane i termini con il dischetto.",
-              "Consulta l’anteprima del prompt per verificare le istruzioni prima dell’esecuzione. Mentre la pipeline lavora la finestra resta visibile ma bloccata."
+              "Anteprima prompt mostra la richiesta di ogni fase pezzo per pezzo, con per ciascuno se è fisso, tuo, dati o automatico e dove si modifica; i pezzi assenti restano spenti con il motivo. Audit e Coerenza mostrano i messaggi completi, DeepL il corpo della richiesta API. Espandi un testo con l’occhio e copialo integralmente con gli appunti. I segnaposto rappresentano dati del frammento e contesto opzionale. Il backend costruisce le richieste come nell’esecuzione, senza contattare servizi. Le fasi non usate sono disabilitate; audit e coerenza restano disponibili anche con DeepL.",
+              "Le pipeline non hanno una coppia di lingue propria: nella fase DeepL scegli la coppia della traduzione standard. Puoi rilevare automaticamente la sorgente, ma un glossario richiede una sorgente esplicita. Il Contesto DeepL è distinto dal Contesto di traduzione. Le anteprime e i log mostrano il corpo API; nelle opzioni il testo del frammento è un segnaposto."
             ]
           },
           {
@@ -2428,14 +2541,17 @@
               "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
               "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
               "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato. Durante l’esecuzione non puoi cambiare pipeline o crearne una nuova. Memoria, Revisione e Documento ricordano la sottoscheda scelta quando passi a un’altra scheda.",
+              "Per vedere la richiesta vera di un frammento, aprilo nello Studio e scegli «Frammento aperto» in Anteprima prompt: gli stessi pezzi si riempiono con il suo testo, i frammenti vicini, le frasi della memoria spuntate e la traduzione precedente; Audit e Coerenza usano la traduzione attuale e senza traduzione lo dicono. Se dopo un’interruzione cambi modelli, prompt, Contesto di traduzione o opzioni DeepL, la ripresa te lo segnala.",
               "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi.",
-              "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente."
+              "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente.",
+              "In Anteprima prompt, modo Struttura, i prompt di sistema (ruoli, regole, intestazioni, formato della risposta, messaggio utente) hanno il lucchetto: aprilo per modificarli come gli altri prompt, con template della categoria Sistema e ripristino. Il lucchetto si richiude chiudendo la finestra; il formato della risposta chiede una conferma in più.",
+              "Nella stessa vista l’interruttore di un pezzo facoltativo lo spegne solo per quella fase; un pezzo spento resta come riga grigia, da cui riaccenderlo."
             ]
           },
           {
             "title": "Riutilizzare le istruzioni",
             "paragraphs": [
-              "Salva un prompt come modello per riutilizzarlo in altri lavori: mentre lo modifichi, il segnalibro chiede il nome (Invio salva, Esc annulla) e il libro apre l’elenco dei modelli salvati, con la ricerca; un clic applica quello scelto. I modelli sono distinti per contesto, per esempio traduzione, valutazione o persona, e si eliminano dalle risorse linguistiche.",
+              "Salva un prompt come modello per riutilizzarlo in altri lavori: mentre lo modifichi, il segnalibro chiede il nome (Invio salva, Esc annulla) e il libro apre l’elenco dei modelli salvati, con la ricerca; un clic applica quello scelto. I modelli sono distinti per contesto, per esempio istruzioni della fase, valutazione o Contesto di traduzione, e si eliminano dalle risorse linguistiche.",
               "Il comando con la bacchetta riscrive il prompt tramite il servizio configurato. Rileggi il testo proposto prima di usarlo: è un’elaborazione del modello e può modificare le tue istruzioni."
             ]
           }
@@ -2449,7 +2565,7 @@
             "title": "Lo Studio di traduzione",
             "paragraphs": [
               "La barra principale resta a sinistra: da lì passi a un’altra area, e la traduzione si chiude. Mentre la pipeline lavora le voci sono spente.",
-              "La riga in cima riporta al catalogo e mostra il nome della traduzione e la pipeline aperta con le sue lingue: un clic su un nome lo rinomina, ⇄ cambia pipeline, l’ingranaggio ne apre le opzioni. A destra trovi importa, esporta, risorse linguistiche del workspace, configurazione ed elimina.",
+              "La riga in cima riporta al catalogo e mostra il nome della traduzione, la pipeline aperta e l’icona della modalità: un clic sul nome dell’opera lo rinomina, il nome della pipeline apre il menu per sceglierla, rinominarla, crearne o eliminarne una, l’ingranaggio ne apre le opzioni. A destra trovi la coppia di lingue dell’opera in breve con l’icona che apre «Lingue dell’opera», poi importa, esporta, risorse linguistiche del workspace ed elimina.",
               "La colonna Strumenti a destra tiene in cima traduci, Blocchi multipli con il numero di frammenti e i costi. Sotto trovi Glossario, Memoria (frasi simili ed estrazione), Anteprima, Revisione (Audit, Note, Note del testo e Storico) e Documento (Indice, Statistiche e Coerenza). Chiusa, lascia in vista il solo pulsante traduci."
             ]
           },
@@ -2458,6 +2574,9 @@
             "paragraphs": [
               "Usa Importa nella riga in cima allo Studio. Sono supportati TXT e Markdown fino a 50 MiB, DOCX fino a 100 MiB e PDF fino a 50 MiB. L’estrazione DOCX è sperimentale; i PDF devono contenere testo, non soltanto immagini.",
               "Controlla l’anteprima prima di confermare. La segmentazione automatica divide il testo secondo una lunghezza obiettivo in parole. Per Markdown sono disponibili opzioni dedicate ai titoli.",
+              "La finestra di importazione si apre larga. A sinistra trovi Lingue dell’opera, Modello e Suddivisione in frammenti; a destra i conteggi, la vista a schede o a segmenti (due piccole icone tonde) e l’anteprima dei frammenti a tutta altezza. In fondo ci sono il controllo delle parole, Annulla e Importa.",
+              "Le Lingue dell’opera valgono per tutte le sue pipeline. Per ogni lato, Partenza e Arrivo, puoi scegliere la Lingua (anche storica, cercandola per nome italiano, inglese o codice), la Varietà (solo quelle della lingua scelta, per esempio latino medievale; resta spenta finché non scegli la lingua) e una Nota libera su epoca, area o mano. Tutto è facoltativo e la x svuota il campo. Una nuova opera parte con partenza non specificata e arrivo italiano; se la Biblioteca conosce la lingua del libro, viene proposta come partenza.",
+              "Puoi cambiarle anche dopo, dalla riga in cima allo Studio: clicca l’icona delle lingue a destra, accanto alla coppia, modifica e premi Conferma (non si salva altrimenti). Non si può farlo mentre la pipeline è in esecuzione. Se ci sono frasi salvate da questa opera con altre lingue, Glossa chiede se aggiornarle: testo e misure non cambiano e la versione precedente resta nello storico.",
               "Scegli una dimensione adatta al testo e rivedi i confini dei frammenti. Un file di testo con codifica diversa da UTF-8 deve essere convertito prima dell’importazione."
             ]
           },
@@ -2468,7 +2587,7 @@
               "Puoi ispezionare gli output delle fasi e confrontarli per capire dove è cambiato il testo: i comandi stanno in colonna nel margine destro del foglio della traduzione, accanto alla barra di scorrimento. In alto le fasi nell'ordine della pipeline, poi il confronto e le coppie da confrontare; quella che stai guardando è evidenziata. Abilita la modifica dell’originale con la matita solo quando devi correggere il sorgente: la traduzione viene segnalata come da aggiornare, con l’etichetta ocra «Sorgente modificata» accanto al titolo.",
               "Quando la traduzione è pronta, segnala come verificata con la spunta accanto al titolo «Traduzione candidata»: diventa verde, il testo si blocca e la traduzione automatica dei soli frammenti non verificati la salta. Segnarla come verificata toglie anche il «da aggiornare»: vuol dire che l’hai controllata sull’originale di adesso. Riporta in bozza con lo stesso comando. Se un comando è spento, passandoci sopra leggi il motivo.",
               "Revisione → Storico elenca le versioni del frammento, dalla più recente: chi l’ha prodotta (Pipeline o Manuale), quando, e quale è la corrente e quale la verificata. Una versione nasce a ogni passata della pipeline, a ogni salvataggio col dischetto se il testo è cambiato e alla verifica. Il comando di ripristino riporta il testo nel foglio e lo scrive come versione nuova, senza cancellare le altre; è spento su una traduzione verificata. Le versioni non si eliminano e non si possono ancora nominare.",
-              "Impostazioni → Tipografia regola caratteri, dimensioni, interlinea e aspetto. Le impostazioni delle traduzioni comprendono layout ed evidenziazioni."
+              "Impostazioni → Aspetto regola tema, accento, carattere dell’interfaccia, testo dei documenti (dimensione, interlinea, disposizione della lettura) ed evidenziazioni. Impostazioni → Lingue mostra l’elenco delle lingue in uso e lo riscarica dalle fonti ufficiali; le lingue ritirate restano leggibili."
             ]
           },
           {
@@ -2476,7 +2595,7 @@
             "paragraphs": [
               "Sopra il documento una finestra di sette cerchi: il frammento aperto sta fermo al centro. Le frecce singole passano al frammento vicino, le doppie saltano di sette; la rotella sopra i cerchi li scorre, un clic ne apre uno. A destra le spie delle fasi del frammento aperto e la lente per cercare in tutto il documento. Il segno centrale indica se il frammento è da tradurre, in elaborazione, completato o in errore.",
               "Gli indicatori agli angoli segnalano problemi dell’audit, note, traduzione verificata (verde) e originale modificato dopo la traduzione (ocra). Il triangolo identifica il frammento corrente. Il suggerimento fornisce il riepilogo completo.",
-              "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria, Anteprima e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti.",
+              "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti.",
               "Durante una traduzione in corso non puoi lasciare lo Studio: aspetta la fine o interrompi l’elaborazione. In caso di salvataggio fallito usa «Riprova»; i dettagli tecnici dell’errore sono nel log. Le schede disattivate restano raggiungibili col tabulatore per leggerne il motivo, ma non si aprono."
             ]
           },
@@ -2522,7 +2641,7 @@
           {
             "title": "Gestire i modelli di prompt",
             "paragraphs": [
-              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Persona, Memoria oppure OCR.",
+              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Contesto di traduzione, Sistema, Memoria oppure OCR. Se un modello salvato ha un ambito che l’app non riconosce più, non compare nell’elenco e un avviso ne indica il nome: gli altri modelli restano disponibili.",
               "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
               "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
             ]
@@ -2544,9 +2663,9 @@
           {
             "title": "Usare frasi già salvate",
             "paragraphs": [
-              "Apri Memoria → Riferimenti nel frammento. Glossa confronta soltanto testi della stessa coppia di lingue con un embedding dello stesso modello, dimensione e tipo di input del workspace. Regola la soglia e spunta soltanto i riferimenti pertinenti.",
-              "Ogni riferimento mostra libro quando noto, workspace, traduzione e frammento di origine, insieme al modello usato. La spunta decide se usarlo nella successiva traduzione; non modifica la raccolta. Le coppie già salvate nel frammento restano nella sottolinguetta Memoria: non vengono inserite automaticamente fra i risultati della ricerca.",
-              "Nelle impostazioni del workspace puoi attivare «Cerca anche nella memoria degli altri workspace» e salvare. Include anche frasi senza workspace, mantenendo compatibilità degli embedding e lingue. Consultare una frase non la collega al workspace."
+              "Apri Memoria → Riferimenti nel frammento. Glossa filtra solo per la lingua di arrivo e confronta testi con un embedding dello stesso modello, dimensione e tipo di input del workspace. Regola la soglia con il cursore o, per un centesimo alla volta, con − e +; poi spunta soltanto i riferimenti pertinenti.",
+              "Ogni riferimento mostra somiglianza e origine («questo documento», «altra opera del workspace» o «altro workspace»), poi l’originale in carattere da libro e la traduzione sotto, con il codice della lingua a margine e, in testa, la coppia di lingue con le varietà; una riga dice opera e frammento, e l’icona «i» apre workspace, libro e modello. In elenco vengono prima i risultati di questo documento, poi quelli del workspace, poi gli altri. La spunta decide se usarlo nella successiva traduzione; non modifica la raccolta. Le coppie già salvate nel frammento restano nella sottolinguetta Memoria: non vengono inserite automaticamente fra i risultati della ricerca.",
+              "Il globo accanto all’aggiornamento estende la ricerca agli altri workspace e alle frasi senza workspace; la scelta si ricorda per ogni workspace e non è più nelle impostazioni del workspace. Restano validi la lingua di arrivo e la compatibilità degli embedding. Consultare una frase non la collega al workspace."
             ]
           },
           {
@@ -2640,7 +2759,7 @@
           {
             "title": "Controllare cosa viene inviato",
             "paragraphs": [
-              "Nella scheda Anteprima del frammento scegli una fase e costruisci il messaggio. Puoi leggerne le istruzioni e il testo senza chiamare il modello o generare costi di traduzione.",
+              "Nelle opzioni della pipeline, Anteprima prompt in modo «Frammento aperto» mostra il messaggio di ogni fase per il frammento aperto nello Studio. Puoi leggerne istruzioni e testo senza chiamare il modello né generare costi.",
               "La revisione riceve originale e bozza. La formattazione riceve solo il testo tradotto. La verifica di coerenza confronta invece i passaggi tradotti."
             ]
           },
@@ -2650,14 +2769,14 @@
               "Alcuni servizi possono riutilizzare parti ripetute delle richieste tramite una cache. Il risparmio dipende dal servizio, dal modello e dal riuso effettivo: non è garantito.",
               "La cache Anthropic è disattivata per impostazione predefinita. Puoi abilitarla nella pipeline e scegliere una durata estesa, valutando quanto spesso riusi le stesse istruzioni.",
               "Le statistiche mostrano token, cache e costi calcolati quando questi dati sono disponibili. Un token è un’unità di testo usata dal modello, non necessariamente una parola. DeepL misura invece i caratteri fatturati.",
-              "Nella colonna Strumenti, passa sul costo stimato o sui consumi del frammento per aprire il dettaglio. La stima segue la modalità e il numero di blocchi selezionati; i consumi riguardano il frammento aperto."
+              "Nella colonna Strumenti, sotto i comandi, una riga riporta stima del prossimo lancio e speso sul frammento aperto; un clic apre il pannello dei costi, con una tabella per fase per ciascuno. Lo speso conta anche le chiamate al modello: un frammento ritradotto o un ciclo di revisione ne aggiungono, quindi non sono esecuzioni."
             ]
           }
         ]
       },
       "providers": {
         "title": "Configurare i servizi",
-        "intro": "Configura i servizi in Impostazioni → Provider, poi scegli il provider e il modello nelle fasi della pipeline.",
+        "intro": "Configura i servizi in Impostazioni → Modelli, poi scegli il provider e il modello nelle fasi della pipeline.",
         "blocks": [
           {
             "title": "Servizi remoti",
@@ -2693,7 +2812,7 @@
             "steps": [
               "Installa Ollama e scarica un modello compatibile con il tuo hardware.",
               "Avvia il server Ollama, se la tua installazione non lo avvia automaticamente.",
-              "Apri Impostazioni → Provider → Ollama e verifica l’URL e lo stato della connessione.",
+              "Apri Impostazioni → Modelli → Ollama e verifica l’URL e lo stato della connessione.",
               "Aggiorna l’elenco dei modelli, quindi scegli Ollama e il modello nelle fasi desiderate.",
               "Prova un frammento e controlla tempi, qualità e consumo di memoria."
             ]
@@ -2780,7 +2899,7 @@
             "title": "Per iniziare una traduzione",
             "paragraphs": [],
             "steps": [
-              "Apri Impostazioni → Provider e configura il servizio che vuoi usare. Per Ollama, verifica che il server sia avviato e che un modello sia installato.",
+              "Apri Impostazioni → Modelli e configura il servizio che vuoi usare. Per Ollama, verifica che il server sia avviato e che un modello sia installato.",
               "Crea un workspace e un progetto al suo interno. Il workspace raccoglie progetti e risorse da usare insieme.",
               "Importa un documento e controlla il testo e la suddivisione in frammenti nell’anteprima.",
               "Configura lingue e pipeline, quindi prova la traduzione su un frammento.",
@@ -2792,6 +2911,7 @@
             "paragraphs": [
               "La Dashboard mostra attività recenti, elementi da controllare e lavori in corso. Le altre due schede permettono di cercare fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
               "La Biblioteca contiene le opere che hai aggiunto al catalogo. Traduzioni mostra i progetti di tutti i workspace. Aprendo un workspace trovi i progetti e le risorse che gli appartengono.",
+              "La barra di sinistra porta Dashboard, aree nell’ordine del lavoro e workspace; in fondo il menu generale: salva tutto, risorse linguistiche, impostazioni, guida e lingua. Chiusa, restano le icone e un clic porta alla pagina senza riaprirla.",
               "Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio: petrolio, seppia e indaco. Lo vedi nell'icona dell'area nella barra di sinistra, nel filetto sotto il titolo grande e in una carta di fondo appena diversa. I colori di stato non cambiano: il verde segna sempre ciò che è scelto o attivo.",
               "Passa il puntatore sui comandi a icona, oppure raggiungili con la tastiera, per leggerne la funzione. Le barre laterali si possono ridimensionare o richiudere.",
               "I riquadri della Dashboard si spostano: prendi la maniglia a sinistra del titolo e trascina il riquadro più in alto, più in basso o nell'altra colonna. La disposizione resta come l'hai lasciata."
@@ -2822,7 +2942,7 @@
           {
             "title": "Creare e riconoscere un progetto",
             "paragraphs": [
-              "Crea una traduzione con il «+» accanto al titolo Traduzioni, o dalla pagina del workspace. La finestra chiede il nome, il workspace (se non lo sa già) e, se vuoi, il file da tradurre, negli stessi formati dell'import dall'editor. Il file si legge appena lo scegli: se non è leggibile, per esempio un PDF scansionato senza testo o un file non in UTF-8, il motivo compare sotto il campo e non si crea nulla. Premendo Crea la traduzione si apre nell'editor con l'anteprima dell'import, dove scegli lingue e frammenti; se chiudi l'anteprima la traduzione resta vuota e il file si importa poi dall'editor. Nome, descrizione e icona del workspace si modificano nelle sue impostazioni.",
+              "Crea una traduzione con il «+» accanto al titolo Traduzioni, o dalla pagina del workspace. La finestra chiede il nome, il workspace (se non lo sa già) e, se vuoi, il file da tradurre, negli stessi formati dell'import dall'editor. Il file si legge appena lo scegli: se non è leggibile, per esempio un PDF scansionato senza testo o un file non in UTF-8, il motivo compare sotto il campo e non si crea nulla. Il libro scelto compare con il titolo nella sua riga; l'icona del libro apre un elenco con ricerca (titolo, con la copia sotto) e la x lo toglie. Premendo Crea la traduzione si apre nell'editor con l'anteprima dell'import, dove scegli Lingue dell’opera e frammenti; se chiudi l'anteprima la traduzione resta vuota e il file si importa poi dall'editor. Nome, descrizione e icona del workspace si modificano nelle sue impostazioni.",
               "Un progetto può contenere più pipeline con impostazioni e risultati distinti. Scegli la pipeline su cui vuoi lavorare prima di modificare la configurazione."
             ]
           },
@@ -2996,7 +3116,7 @@
           {
             "title": "Cartella dati e deposito",
             "paragraphs": [
-              "Impostazioni → Dati distingue la cartella dati, con progetti e catalogo, dal deposito delle immagini. Il deposito può essere su un disco esterno.",
+              "Impostazioni → Dati → Cartelle distingue la cartella dati, con progetti e catalogo, dal deposito delle immagini. Il deposito può essere su un disco esterno.",
               "Cambiare la cartella dati copia il database e richiede il riavvio per usare la nuova posizione. Cambiare deposito non sposta i download esistenti: scegli una cartella vuota o un deposito Glossa già presente.",
               "Mantieni il database su disco locale. Se sincronizzi il deposito, imposta il servizio perché conservi i file anche sul computer: i soli segnaposto online non bastano."
             ]
@@ -3028,7 +3148,7 @@
               "Il file contiene schede delle opere, annotazioni, trascrizioni, traduzioni con il loro storico, glossari e memoria di frasi, ricerche con i risultati ottenuti, storico delle operazioni, servizi configurati a mano ed elenco dei documenti esportati."
             ],
             "steps": [
-              "Apri Impostazioni → Backup.",
+              "Apri Impostazioni → Dati → Backup e ripristino.",
               "Scegli il backup con password per proteggere il contenuto, oppure il formato Solo Glossa, che non è cifrato.",
               "Scegli dove salvare il file e attendi la conferma.",
               "Se hai usato una password, conserva anche il codice di recupero mostrato al termine, fuori dall’applicazione."
@@ -3158,7 +3278,6 @@
     "templatePromptPlaceholder": "Testo del prompt...",
     "templateStageHint": "Istruzioni delle fasi di traduzione.",
     "templateAuditHint": "Istruzioni per qualità e coerenza.",
-    "templatePersonaHint": "Ruolo e stile del traduttore.",
     "templateMemoryHint": "Istruzioni per estrarre coppie bilingui.",
     "templateDeleteTitle": "Elimina modello",
     "templateDeleteMessage": "Elimina il modello \"{{name}}\"?",
@@ -3242,7 +3361,9 @@
     "localScopeHint": "Correzioni valide solo per {{workspace}}.",
     "expandPrompt": "Leggi tutto il prompt",
     "collapsePrompt": "Riduci il prompt",
-    "searchEditingHint": "Termina la modifica per cercare."
+    "searchEditingHint": "Termina la modifica per cercare.",
+    "templateSystem": "Sistema",
+    "templateSystemHint": "Testi di sistema dei prompt della pipeline (ruoli, regole, formati di risposta). Si applicano dall’Anteprima prompt, dopo aver aperto il lucchetto del pezzo."
   },
   "stats": {
     "cacheHitRateHint": "Percentuale di token serviti dalla cache del provider. Più è alta, minore il costo.",
@@ -3266,19 +3387,59 @@
     "overrideInput": "Ingresso $/1M",
     "overrideOutput": "Uscita $/1M",
     "estimateDetails": "Dettaglio della stima",
-    "actualDetails": "Dettaglio dei consumi del frammento"
+    "actualDetails": "Dettaglio dei consumi del frammento",
+    "calls": "Chiamate",
+    "cost": "Costo",
+    "cacheShort": "cache {{rate}}",
+    "panelTitle": "Costi: stima e consumo",
+    "estimateShort": "Stima",
+    "spentShort": "Speso",
+    "estimateTitle": "Stima del prossimo lancio",
+    "spentTitle": "Speso su questo frammento",
+    "scopeDocument": "documento intero",
+    "scopeChunk": "questo frammento",
+    "scopeFirstChunks": "primi {{count}} frammenti",
+    "noUsage": "Nessun consumo registrato per questo frammento.",
+    "callsHint": "Chiamate al modello completate per fase, su tutto il documento: ogni frammento, ogni ritraduzione e ogni ciclo di revisione conta una chiamata."
   },
-  "languages": {
-    "English": "Inglese",
-    "Italian": "Italiano",
-    "Spanish": "Spagnolo",
-    "French": "Francese",
-    "German": "Tedesco",
-    "Portuguese": "Portoghese",
-    "Japanese": "Giapponese",
-    "Chinese": "Cinese",
-    "Korean": "Coreano",
-    "Russian": "Russo"
+  "workLanguages": {
+    "title": "Lingue dell’opera",
+    "source": "Partenza",
+    "target": "Arrivo",
+    "sourceHint": "La lingua del testo originale. Si riempie da sola con la lingua del libro, quando la Biblioteca la conosce.",
+    "targetHint": "La lingua della traduzione. I Riferimenti della memoria propongono solo frasi tradotte in questa lingua.",
+    "language": "Lingua",
+    "languageHint": "Codice ISO 639-3, il registro usato dai cataloghi delle biblioteche. Comprende le lingue storiche.",
+    "variety": "Varietà",
+    "varietyHint": "Varietà della lingua secondo Glottolog, per esempio latino medievale o italiano antico.",
+    "note": "Nota",
+    "noteHint": "Tutto quello che codice e varietà non dicono: periodo, area, mano.",
+    "notePlaceholder": "es. toscano, sec. XIV",
+    "notSpecified": "non indicata",
+    "chooseLanguage": "Scegli la lingua",
+    "chooseVariety": "Scegli la varietà",
+    "clearLanguage": "Togli la lingua",
+    "clearVariety": "Togli la varietà",
+    "searchLanguage": "Cerca per nome o codice",
+    "searchVariety": "Cerca la varietà",
+    "groupUsed": "Già usate nel workspace",
+    "groupHistorical": "Lingue storiche",
+    "groupAll": "Tutte",
+    "groupVarieties": "Varietà",
+    "typeToSearchAll": "Scrivi per cercare fra tutte le lingue.",
+    "noResults": "Nessuna lingua trovata",
+    "varietyNeedsLanguage": "scegli prima la lingua",
+    "noVarieties": "Glottolog non elenca varietà per questa lingua",
+    "loading": "elenco delle lingue in caricamento",
+    "edit": "Modifica le lingue dell’opera",
+    "saveFailed": "Impossibile salvare le lingue dell’opera",
+    "relabelTitle": "Aggiornare le frasi salvate?",
+    "relabelMessage_one": "In memoria c’è {{count}} frase salvata da quest’opera con lingue diverse da quelle appena confermate. Le do le lingue dell’opera? Il testo e le misure restano uguali; la versione precedente resta nello storico.",
+    "relabelMessage_other": "In memoria ci sono {{count}} frasi salvate da quest’opera con lingue diverse da quelle appena confermate. Do loro le lingue dell’opera? Il testo e le misure restano uguali; la versione precedente resta nello storico.",
+    "relabelConfirm": "Aggiorna",
+    "relabelDone_one": "{{count}} frase aggiornata",
+    "relabelDone_other": "{{count}} frasi aggiornate",
+    "relabelFailed": "Impossibile aggiornare le lingue delle frasi salvate"
   },
   "log": {
     "scopePipeline": "Pipeline",
@@ -3324,6 +3485,24 @@
     "dismiss": "Ignora"
   },
   "memory": {
+    "threshold": "Soglia",
+    "thresholdHint": "Somiglianza minima perché una frase compaia fra i Riferimenti. Spunta poi le frasi da usare per la traduzione di questo frammento.",
+    "thresholdDown": "Abbassa la soglia di 0,01",
+    "thresholdUp": "Alza la soglia di 0,01",
+    "reference": {
+      "original": "Originale",
+      "translation": "Traduzione",
+      "chunk": "frammento {{number}}",
+      "details": "Provenienza completa"
+    },
+    "searchAllWorkspacesOff": "Cerca anche negli altri workspace: ora i Riferimenti vengono solo da questo documento e dal suo workspace",
+    "searchAllWorkspacesOn": "Cerca solo in questo workspace: ora i Riferimenti vengono anche dagli altri workspace",
+    "searchScopeSaveFailed": "Impossibile cambiare dove cercano i Riferimenti",
+    "circle": {
+      "document": "questo documento",
+      "workspace": "altra opera del workspace",
+      "elsewhere": "altro workspace"
+    },
     "extractTermButton": "Aggiungi al glossario",
     "extractTermTitle": "Estrai termine",
     "sourcePhraseShort": "Sorgente",
@@ -3347,7 +3526,6 @@
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} match",
     "matchBadge": "{{count}} match",
-    "similarityThreshold": "Soglia di similarità",
     "extractButton": "Estrai frasi",
     "extracting": "Estrazione delle frasi in corso…",
     "extractFailed": "Estrazione delle frasi non riuscita",
@@ -3372,11 +3550,11 @@
     "toggleSavedListHide": "Nascondi frasi già salvate",
     "referencesGlossaryHint": "L'intero glossario del progetto viene sempre incluso nella traduzione di questo frammento.",
     "referencesMemorySectionTitle": "Frasi simili in memoria",
-    "selectionHint": "Seleziona le frasi da usare per la traduzione di questo frammento.",
     "addCheckedToMemory": "Aggiungi alla memoria le coppie spuntate",
     "reasonNoNewChecked": "nessuna coppia nuova spuntata",
     "reasonNotVerified": "traduzione non verificata",
     "inMemoryBadge": "In memoria",
+    "manualPair": "scritta a mano",
     "inMemoryCount_one": "coppia in memoria",
     "inMemoryCount_other": "coppie in memoria",
     "removeFromMemory": "Togli dalla memoria",

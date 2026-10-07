@@ -12,7 +12,7 @@ import type { CatalogView } from '../components/ui/CatalogViewSwitch';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
-export type ChunkRailTab = 'audit' | 'notes' | 'sourceNotes' | 'history' | 'memory' | 'references' | 'promptPreview';
+export type ChunkRailTab = 'audit' | 'notes' | 'sourceNotes' | 'history' | 'memory' | 'references';
 /** Le linguette della colonna destra dello Studio di traduzione: quelle del frammento e quelle del documento. */
 export type TranslationStudioTab = ChunkRailTab | InsightsDrawerTab;
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
@@ -51,14 +51,14 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab =
-  | 'translations'
+  | 'appearance'
+  | 'library'
   | 'transcriptions'
-  | 'provider'
-  | 'typography'
-  | 'storage'
-  | 'backup'
-  | 'jobs'
-  | 'library';
+  | 'translations'
+  | 'models'
+  | 'languages'
+  | 'data'
+  | 'jobs';
 
 export interface HLColorSet {
   sourceTerm: string;
@@ -365,7 +365,7 @@ export const useUiStore = create<UiState>()(
       documentLineHeight: 'normal',
       selectedChunkId: null,
       showSettings: false,
-      settingsTab: 'translations',
+      settingsTab: 'appearance',
       showHelp: false,
       helpSection: 'overview',
       showConfigDrawer: false,
@@ -409,7 +409,7 @@ export const useUiStore = create<UiState>()(
       projectContextUserExpanded: true,
       dashboardSidebarCollapsed: false,
       dashboardSections: {},
-      dashboardSidebarWidth: 240,
+      dashboardSidebarWidth: 198, // = RAIL_MIN_WIDTH: la barra larga quanto il menu generale
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       librarySourceInspectorWidth: 400,

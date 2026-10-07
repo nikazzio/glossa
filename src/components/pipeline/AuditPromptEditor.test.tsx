@@ -31,8 +31,16 @@ describe('AuditPromptEditor', () => {
     blocked.forEach((button) => expect(button).toBeDisabled());
   });
 
-  it('marks a prompt different from the default with the custom label', () => {
-    renderEditor({ customLabel: 'Personalizzata' });
-    expect(screen.getByText('Personalizzata')).toBeInTheDocument();
+  it('says whether the prompt is custom, the default or a saved template', () => {
+    const { unmount } = renderEditor();
+    expect(screen.getByText('pipeline.promptSource.custom')).toBeInTheDocument();
+    unmount();
+    renderEditor({ value: 'default text' });
+    expect(screen.getByText('pipeline.promptSource.default')).toBeInTheDocument();
+  });
+
+  it('names the saved template whose text is in use', () => {
+    renderEditor({ templates: [{ id: 't1', name: 'OCR v2', prompt: 'custom text', context: 'ocr', workflow: 'transcription', createdAt: '' }] });
+    expect(screen.getByText('pipeline.promptSource.template')).toBeInTheDocument();
   });
 });

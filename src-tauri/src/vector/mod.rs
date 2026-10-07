@@ -1,6 +1,7 @@
 pub mod embedding;
 pub mod memory_commands;
 pub mod memory_search;
+pub mod text_languages;
 pub mod text_units;
 #[cfg(test)]
 mod text_units_tests;

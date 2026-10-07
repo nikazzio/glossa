@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyRound, Check, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { IconButton, SectionLabel, SettingRow } from '../ui';
+import { IconButton, SettingRow, PanelSection } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { settingsService, type ApiKeyStorage } from '../../services/llmService';
 import { errorMessage, logger } from '../../utils/logger';
@@ -83,9 +83,8 @@ export function EuropeanaKeySection() {
   };
 
   return (
-    <section className="space-y-4">
-      <SectionLabel icon={KeyRound} label={t('settings.library.europeanaTitle')} />
-      <div className="divide-y divide-rule border-y border-rule">
+    <PanelSection icon={KeyRound} label={t('settings.library.europeanaTitle')}>
+      <div className="divide-y divide-rule border-b border-rule">
         <SettingRow
           label={t('settings.library.europeanaKey')}
           hint={
@@ -142,6 +141,6 @@ export function EuropeanaKeySection() {
           </div>
         </SettingRow>
       </div>
-    </section>
+    </PanelSection>
   );
 }

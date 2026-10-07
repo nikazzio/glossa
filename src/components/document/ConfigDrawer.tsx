@@ -121,7 +121,7 @@ export function ConfigDrawer() {
       }
     >
       <div className="flex h-full min-h-0 flex-col bg-editorial-bg/40">
-        <PipelineConfig activeTab={shownTab} />
+        <PipelineConfig activeTab={shownTab} onOpenSection={setActiveTab} />
       </div>
     </Dialog>
   );

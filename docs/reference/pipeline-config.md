@@ -15,14 +15,22 @@ rinomina dalla riga in cima allo Studio, non da qui. Le spiegazioni delle voci
 non sono scritte sotto i campi: compaiono passando sopra il titolo di una
 sezione o il nome di una voce.
 
+La barra affianca **opera / pipeline**, con i nomi lunghi troncati e il nome
+completo nel suggerimento. Il nome della pipeline, con la piccola freccia accanto, apre il menu
+per scegliere, creare, rinominare o eliminare; l’ingranaggio apre le opzioni.
+Il tipo **Semplice, Editoriale o DeepL** è sempre visibile con un’icona. Le
+lingue dell’opera, comuni a tutte le sue pipeline, compaiono in forma breve nella barra
+(vedi «Lingue dell’opera» nel [flusso di traduzione](../guides/document-pipeline)). Le operazioni sulla pipeline
+restano bloccate durante l’elaborazione.
+
 | Linguetta | Parametri |
 | --- | --- |
-| Generale | Modalità, lingue, persona |
+| Generale | Modalità, lingue DeepL, Contesto di traduzione |
 | Fasi | Servizio, modello, prompt e opzioni di ogni fase; memoria di contesto |
 | Controllo qualità | Ciclo di raffinamento, modello del giudizio, prompt di giudizio e coerenza |
 | Memoria | Memoria delle frasi ed esempi di traduzione (spenta in modalità DeepL) |
 | Glossario | Dizionario assegnato e suoi termini |
-| Anteprima prompt | Struttura delle richieste delle fasi attive |
+| Anteprima prompt | Ogni richiesta pezzo per pezzo: fasi, audit, coerenza, richiesta DeepL |
 
 Mentre la pipeline lavora la finestra resta aperta e leggibile, ma un velo ne
 blocca i comandi. In fondo, l’icona rossa **Azzera tutte le traduzioni** cancella
@@ -37,18 +45,84 @@ precedente.
 Le modalità Standard, Editoriale e DeepL Hybrid sono descritte nel
 [flusso di traduzione](../guides/document-pipeline).
 
-## Lingue e persona
+## Contesto di traduzione e lingue DeepL
 
-Imposta lingua sorgente e destinazione. La persona è un testo libero che
-sostituisce l’introduzione predefinita del messaggio di sistema: può specificare
-ruolo, ambito, lingue e registro. Se è personalizzata, deve descrivere
-correttamente la coppia linguistica, che resta ferma finché la persona non
-viene ripristinata.
+Le pipeline non hanno una coppia di lingue: le lingue appartengono all’opera.
+Per gli LLM la traduzione è guidata dal **Contesto di traduzione**: lingue e varietà storiche, destinatari, registro e obiettivo. È
+obbligatorio e non è mai vuoto: una pipeline nuova parte da un testo
+predefinito (dall’inglese all’italiano), che puoi riscrivere o sostituire con
+un template salvato; la freccia circolare lo ripristina e la conferma di un
+testo vuoto è spenta. Traduzione, revisione, audit e coerenza lo ricevono
+insieme alle proprie istruzioni; la formattazione resta limitata alla
+sintassi. Nessuna coppia linguistica viene aggiunta automaticamente ai prompt:
+le lingue stanno nel Contesto.
+
+Accanto al titolo di ogni prompt compare da dove viene il testo:
+**Predefinito**, **Personalizzato** oppure **Template «nome»** quando coincide
+con un template salvato della stessa categoria. Il riconoscimento confronta il
+testo: un template modificato dopo l’applicazione non è più riconosciuto,
+perché la pipeline conserva la copia applicata.
+
+La matita apre una bozza; la spunta conferma, la X annulla. Anche la rifinitura
+con un modello modifica solo la bozza. I prompt usano una carta tenue con
+accento verde, comandi a icona e anteprima espandibile. Il Contesto viene
+salvato con la pipeline e copiato nella duplicazione.
+
+La coppia **DeepL · lingue** resta visibile in Generale, disabilitata nelle
+modalità LLM e attiva in DeepL. Le fasi non usate restano visibili come
+linguette disabilitate. Cambiando modalità conservi la configurazione di tutte
+le fasi. In DeepL restano attive revisione LLM, audit e coerenza.
+Le lingue usate dalle memorie sono quelle dell’opera, non quelle DeepL.
+
+In **Anteprima prompt** scegli una fase, Audit o Coerenza: vedi la richiesta
+pezzo per pezzo, nell’ordine in cui parte, divisa in **messaggio di sistema**
+(istruzioni, regole e risorse, uguale per tutti i frammenti) e **messaggio
+utente** (il frammento e la consegna finale). I pezzi vengono dal backend, gli
+stessi che compongono la richiesta vera: anteprima e invio coincidono. Ogni
+pezzo dice se è **fisso nel programma**, **testo tuo**, **dati** o
+**automatico**, e dove si modifica; il titolo spiega a cosa serve. I pezzi che
+in questa pipeline non ci sono restano visibili, spenti, con il motivo (per
+esempio «solo per documenti importati come Markdown»). I segnaposto tra doppie
+graffe indicano dove entrano i dati del frammento: è una costruzione con la
+configurazione attuale, non la richiesta storica di un’esecuzione. Il modo
+**Frammento aperto** riempie gli stessi pezzi con i dati veri del frammento
+aperto nello Studio, comprese le frasi della memoria spuntate.
+
+Tutto il testo che il programma aggiunge attorno ai tuoi prompt — ruoli,
+regole, intestazioni, consegne, formato della risposta, messaggio utente — è un
+**prompt di sistema** e si modifica qui, in modo Struttura. Ogni prompt di
+sistema ha il lucchetto chiuso: aprendolo diventa come gli altri prompt (bozza
+con conferma e annullamento, bacchetta, template della categoria **Sistema**,
+freccia di ripristino al predefinito). Il lucchetto si richiude quando chiudi
+la finestra. Il formato della risposta di audit e coerenza chiede una conferma
+in più, perché l’app legge la risposta secondo quel formato. Nel messaggio
+utente e nelle cornici i segnaposto tra doppie graffe (per esempio
+`{{TEXT}}`) sono obbligatori: senza, la conferma resta spenta. I pezzi il cui
+contenuto sta in un’altra scheda (Contesto di traduzione, prompt delle fasi,
+tabella del glossario, esempi) non si modificano qui: hanno solo la freccia che
+apre quella scheda, e la loro intestazione resta quella predefinita. Le regole
+del glossario sono invece un prompt di sistema e si modificano qui. I prompt si
+leggono e si modificano sempre in carattere a spaziatura fissa. Ruolo, regole e cornici di Traduzione e Refine
+sono in comune: modificarli una volta vale per entrambe. I testi cambiati si
+salvano con la pipeline e passano alle pipeline nuove create per copia.
+
+I pezzi facoltativi si possono **spegnere fase per fase** con l’interruttore
+nella loro carta: ruolo, regole strutturali, regole del glossario, regole
+Markdown, esempi, frammenti vicini, tabella del glossario, metodo di controllo,
+consegna del risultato. Un pezzo spento resta nell’elenco come riga grigia
+«spento in questa fase», con l’interruttore per riaccenderlo; la scelta si salva
+con la pipeline e vale anche nell’esecuzione. Restano sempre accesi il Contesto
+di traduzione, il prompt della fase, il messaggio utente e il formato della
+risposta. Spegnendo i frammenti vicini sparisce anche l’identificativo del
+frammento, che serve solo a riconoscerlo fra quelli. DeepL
+mostra il corpo della richiesta.
 
 I prompt possono essere salvati come modelli riutilizzabili, separati per
 contesto: durante la modifica il segnalibro salva il prompt con un nome e il
 libro apre l’elenco dei modelli salvati, con la ricerca. I modelli si
-eliminano dalle risorse linguistiche. Il comando di rifinitura del prompt invia il testo a un modello
+eliminano dalle risorse linguistiche. Un modello con un ambito non più
+riconosciuto viene escluso dall’elenco e segnalato per nome, senza nascondere
+gli altri. Il comando di rifinitura del prompt invia il testo a un modello
 configurato e ne propone una riscrittura nel campo. Richiede la connessione
 e le eventuali credenziali del provider scelto: senza chiave il comando è
 spento e il suggerimento dice quale manca.
@@ -74,10 +148,21 @@ Il significato delle opzioni del servizio va verificato per il modello utilizzat
 
 ## DeepL Hybrid
 
-La prima fase usa le impostazioni DeepL: lingua, registro dove supportato,
+DeepL esegue la traduzione iniziale, poi revisione LLM e audit. La prima fase usa le impostazioni DeepL: lingua, registro dove supportato,
 modalità di traduzione e glossario remoto. La chiave DeepL è distinta da quella
 degli LLM usati per revisione e valutazione. Un errore di quota o del glossario
 DeepL deve essere risolto su quel servizio prima di completare la sequenza.
+
+La coppia DeepL si sceglie in Generale, dagli elenchi del servizio. La sorgente
+può essere rilevata automaticamente; per usare o caricare un glossario serve
+una sorgente esplicita. Cambiare coppia scollega il glossario remoto e cambiare
+destinazione ripristina il registro predefinito. La destinazione va scelta esplicitamente: una richiesta senza destinazione viene bloccata prima di contattare DeepL. Il Contesto di traduzione non viene
+inviato a DeepL: il suo campo Contesto è distinto.
+
+Anteprima prompt nelle opzioni e anteprima del
+frammento mostrano il corpo API, costruito dal backend come durante l’esecuzione;
+nelle opzioni il testo del frammento è un segnaposto. I log conservano la
+richiesta effettiva senza credenziali.
 
 ## Esempi e contesto
 

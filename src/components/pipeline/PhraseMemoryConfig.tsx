@@ -1,6 +1,6 @@
 import { Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PanelSection, ToggleRow } from '../ui';
+import { PanelSection, SECTION_SETTING_LIST_CLASSNAME, ToggleRow } from '../ui';
 import { NumberSettingRow } from './NumberSettingRow';
 
 const MAX_RESULTS_LIMIT = 50;
@@ -40,7 +40,7 @@ export function PhraseMemoryConfig({
 
   return (
     <PanelSection icon={Brain} label={t('settings.phraseMemoryTab')}>
-      <div className="divide-y divide-rule border-y border-rule">
+      <div className={SECTION_SETTING_LIST_CLASSNAME}>
         <div className="py-2.5">
           <ToggleRow
             icon={null}

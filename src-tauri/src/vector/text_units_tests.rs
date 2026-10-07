@@ -22,6 +22,19 @@ fn incremental_upgrade_preserves_texts_and_only_identified_embeddings() -> TestR
         "../../migrations/0002_workspace_memory_scope.sql"
     ))?;
     conn.execute_batch(include_str!("../../migrations/0003_text_corpus.sql"))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0004_pipeline_work_brief.sql"
+    ))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0005_pipeline_shared_context.sql"
+    ))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0006_pipeline_prompt_composition.sql"
+    ))?;
+    conn.execute_batch(include_str!("../../migrations/0007_work_languages.sql"))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0008_text_language_variety.sql"
+    ))?;
     let entries = list(&conn, None, None)?;
     assert_eq!(entries.len(), 2);
     for entry in &entries {
@@ -48,8 +61,21 @@ fn connection() -> Result<Connection, Box<dyn std::error::Error>> {
         "../../migrations/0002_workspace_memory_scope.sql"
     ))?;
     conn.execute_batch(include_str!("../../migrations/0003_text_corpus.sql"))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0004_pipeline_work_brief.sql"
+    ))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0005_pipeline_shared_context.sql"
+    ))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0006_pipeline_prompt_composition.sql"
+    ))?;
+    conn.execute_batch(include_str!("../../migrations/0007_work_languages.sql"))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0008_text_language_variety.sql"
+    ))?;
     conn.execute_batch("INSERT INTO workspaces(id,name,created_at) VALUES('ws-a','Archivio',CURRENT_TIMESTAMP),('ws-b','Studio',CURRENT_TIMESTAMP);
-        INSERT INTO projects(id,name,workspace_id) VALUES('project','Traduzione','ws-a');
+        INSERT INTO projects(id,name,workspace_id,source_language,target_language) VALUES('project','Traduzione','ws-a','la','en');
         INSERT INTO translations(id,project_id,source_processing_text,translation_processing_text,position,translation_locked)
         VALUES('chunk','project','Salve amice','Hello friend',2,1);
         INSERT INTO sources(id,title,kind) VALUES('book','Libro medievale','manuscript');
@@ -67,8 +93,6 @@ fn save(conn: &mut Connection, model: &str) -> Result<u32, super::embedding::Emb
         "project",
         "chunk",
         model,
-        "la",
-        "en",
         vec![PhrasePair {
             source_phrase: "Salve".into(),
             target_phrase: "Hello".into(),
@@ -304,8 +328,6 @@ fn equal_texts_from_different_chunks_remain_separate_units() -> TestResult {
         "project",
         "chunk-two",
         SMALL,
-        "la",
-        "en",
         vec![PhrasePair {
             source_phrase: "Salve".into(),
             target_phrase: "Hello".into(),
@@ -339,5 +361,75 @@ fn removing_translation_preserves_archived_texts_models_and_book_provenance() ->
     assert_eq!(archived.provenance["projectName"], "Traduzione");
     assert_eq!(find(&conn, SMALL, "ws-b", true, "en")?.len(), 1);
     assert!(find(&conn, SMALL, "ws-a", false, "en")?.is_empty());
+    Ok(())
+}
+
+#[test]
+fn relabelling_gives_saved_phrases_the_work_languages_keeping_text_and_measures() -> TestResult {
+    let mut conn = connection()?;
+    save(&mut conn, SMALL)?;
+    conn.execute(
+        "UPDATE projects SET source_language='lat', source_language_variety='medi1250',
+         source_language_note='sec. XV', target_language='ita' WHERE id='project'",
+        [],
+    )?;
+    assert_eq!(super::text_languages::count_relabels(&conn, "project")?, 1);
+
+    let before = list(&conn, Some("ws-a"), None)?.remove(0);
+    assert_eq!(
+        super::text_languages::relabel_project(&mut conn, "project")?,
+        1
+    );
+    let after = list(&conn, Some("ws-a"), None)?.remove(0);
+
+    assert_eq!(
+        (
+            after.source_language.as_str(),
+            after.target_language.as_str()
+        ),
+        ("lat", "ita")
+    );
+    assert_eq!(
+        (after.source_phrase, after.target_phrase),
+        (before.source_phrase, before.target_phrase)
+    );
+    assert_ne!(after.source_revision_id, before.source_revision_id);
+    assert_eq!(after.embeddings, before.embeddings);
+    let (variety, note): (Option<String>, String) = conn.query_row(
+        "SELECT language_variety, language_note FROM text_unit_revisions WHERE id=?1",
+        [&after.source_revision_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    assert_eq!(
+        (variety.as_deref(), note.as_str()),
+        (Some("medi1250"), "sec. XV")
+    );
+    // Le revisioni precedenti restano nello storico; un secondo passaggio non trova nulla.
+    let revisions: i64 =
+        conn.query_row("SELECT COUNT(*) FROM text_unit_revisions", [], |r| r.get(0))?;
+    assert_eq!(revisions, 4);
+    assert_eq!(super::text_languages::count_relabels(&conn, "project")?, 0);
+    Ok(())
+}
+
+#[test]
+fn relabelling_only_the_target_keeps_the_source_revision_and_its_measures() -> TestResult {
+    let mut conn = connection()?;
+    save(&mut conn, SMALL)?;
+    conn.execute(
+        "UPDATE projects SET source_language='la', target_language='ita' WHERE id='project'",
+        [],
+    )?;
+    let before = list(&conn, Some("ws-a"), None)?.remove(0);
+    assert_eq!(
+        super::text_languages::relabel_project(&mut conn, "project")?,
+        1
+    );
+    let after = list(&conn, Some("ws-a"), None)?.remove(0);
+
+    assert_eq!(after.source_revision_id, before.source_revision_id);
+    assert_ne!(after.target_revision_id, before.target_revision_id);
+    assert_eq!(after.target_language, "ita");
+    assert_eq!(after.embeddings, before.embeddings);
     Ok(())
 }
