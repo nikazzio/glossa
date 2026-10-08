@@ -144,6 +144,13 @@
   --color-area-transcriptions-paper: #F8F3EA;
   --color-area-translations-paper: #F3F3F1;
 
+  /* ── Serie dei grafici: seppia e indaco delle aree, più saturi. Gli
+     inchiostri d'area sono troppo spenti per distinguere due serie (verificato
+     con il controllo dei colori: croma e separazione sotto soglia); questi
+     passano anche per chi distingue male i colori. */
+  --color-chart-transcriptions: #9C5A28;
+  --color-chart-translations: #5058C0;
+
   /* ── Ombre — `shadow-modal`, `shadow-tooltip`… Le varianti scure sono in
      html.dark più sotto. ─────────────────────────────────────────────── */
   --shadow-modal:           0 24px 80px rgba(26,26,26,0.20);
@@ -210,6 +217,8 @@ html.dark {
   --color-area-translations:         #A3A5DE;
   --color-area-transcriptions-paper: #1e1813;
   --color-area-translations-paper:   #1a1919;
+  --color-chart-transcriptions:      #B97540;
+  --color-chart-translations:        #7F88EE;
 
   /* Gradient header */
   --header-bg-from: #201c18;

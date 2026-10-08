@@ -121,12 +121,13 @@ cautele, l'oro i lavori in corso.
 
 ## Dashboard
 
-La Dashboard comprende una panoramica, la ricerca su più fonti e la ricerca
-singola o per identificativo. Solo la scheda visibile viene montata
+La Dashboard comprende una panoramica, le statistiche, la ricerca su più fonti e
+la ricerca singola o per identificativo. Solo la scheda visibile viene montata
 nell’interfaccia; i lavori già avviati sono gestiti separatamente dal backend.
 
-La panoramica mostra opere e traduzioni recenti, elementi da controllare, lavori
-per stato, ricerche e attività recenti. L’apertura dei riquadri viene ricordata.
+La panoramica mostra i lavori a metà con quanto manca, opere, trascrizioni e
+traduzioni recenti, elementi da controllare (anche i job falliti), lavori per
+stato, ricerche recenti e una riga con il lavoro del mese. L’apertura dei riquadri viene ricordata.
 Il filtro workspace si applica ai riepiloghi pertinenti; lavori e ricerche
 mantengono ambito globale. Se una sezione non può caricare i dati, mostra un
 errore anziché un conteggio pari a zero.
@@ -134,7 +135,40 @@ errore anziché un conteggio pari a zero.
 I riquadri si dispongono come serve: la maniglia a sinistra del titolo permette
 di trascinare un riquadro più in alto, più in basso o nell’altra colonna, e la
 disposizione scelta viene ricordata. A destra della panoramica sta l’elenco
-completo dei jobs, in una colonna ridimensionabile e richiudibile.
+completo dei jobs, diviso per giorno, in una colonna ridimensionabile e
+richiudibile.
+
+### Statistiche
+
+In alto scegli il periodo (30 giorni, 6 mesi, tutto) e il workspace.
+
+- **Previsioni**: quante giornate di lavoro mancano per finire ogni lavoro, e
+  per le traduzioni quanto costa finire.
+- **Ritmo di lavoro**: un calendario delle ultime 26 settimane.
+- **Spesa**: per mese, fra traduzione e OCR, con la stima a fine mese.
+- **Modelli più usati**, **Qualità per modello**, **Precisione OCR**, **Tempi e
+  affidabilità**, **Token e cache**.
+- **Memoria e lingue**: frasi salvate e lingue delle traduzioni.
+- **Glossari**: quanto le traduzioni rispettano ogni glossario, le voci mai
+  trovate nei testi e i termini tradotti in modo diverso da glossari diversi.
+
+**Come si calcolano i numeri**
+
+- *Quanto manca*: il programma guarda quanto hai fatto nei giorni in cui hai
+  lavorato su quel testo e simula molte volte il resto del lavoro. Mostra il
+  numero di giornate più probabile e un intervallo. Servono almeno 3 giorni di
+  lavoro.
+- *Costo per finire*: è la stessa stima che lo Studio mostra prima di avviare
+  la pipeline, sui frammenti che mancano.
+- *Costi*: calcolati con i prezzi impostati nell'app, non letti dalla fattura
+  del fornitore.
+- *Percentuali*: accanto c'è un intervallo, cioè dove sta il valore vero con
+  buona probabilità. Con pochi casi l'intervallo è largo.
+- *Precisione OCR*: quanti caratteri hai dovuto cambiare a mano, sul totale.
+- *Glossari*: un termine è rispettato se la traduzione usa la forma scritta nel
+  glossario. Un plurale o un'altra forma conta come non rispettato.
+
+Con pochi dati un riquadro scrive «Dati insufficienti» invece di un numero.
 
 ## Spostamento e archiviazione
 

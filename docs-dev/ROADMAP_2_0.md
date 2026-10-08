@@ -4,12 +4,13 @@ Aggiornata: 7 ottobre 2026.
 
 ## Prossimi passi concordati (7 ottobre 2026)
 
-- **Dashboard**, insieme ai colori delle superfici (#485 D).
+- Dashboard: Panoramica rifatta e Statistiche nuove (previsioni, ritmo, spesa,
+  modelli, qualità, precisione OCR, tempi, token, memoria); da provare dal vivo.
+- Colori delle superfici (#485 D): applicare i tre ruoli ai punti incoerenti.
 - Unione di #488 su `main` con l'accorpamento delle migrazioni 0004-0008; poi
   chiusura di #489.
-- Da chiudere dopo verifica: #481, #467, #469.
 - Futuro, senza data: sblocco del prompt delle fasi quando esistono frammenti
-  tradotti.
+  tradotti; traduzione eseguita come job della coda (#469).
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 
@@ -337,6 +338,16 @@ o introdurre compatibilità dati implicita. #383 raccoglie riferimenti secondari
 #408: ricontrollare l'eccezione di sicurezza e rimuoverla quando risolta.
 #410 e #402: evoluzione delle risposte strutturate, evitando di duplicare il
 contratto di revisione già implementato. #396: Dashboard orientata alle attività.
+
+Punti aperti senza issue:
+
+- Chiusura dell'app: chiudendo l'ambiente di sviluppo a volte restano attivi
+  processi vecchi (app e server di sviluppo), e la X della finestra a volte non
+  chiude davvero l'app. Da indagare: ciclo di sviluppo o app, e se capita anche
+  nella versione installata.
+- Anteprima diretta di audit e coerenza nel singolo frammento: oggi le
+  conservano le opzioni e i log.
+- Fasi della pipeline configurabili: idea da valutare come issue a parte.
 
 Il Backlog conserva estensioni opzionali (nuovi formati, cloud, varianti di
 prompt e traduzione). Non sono cancellate; non dettano l'ordine del percorso base.
