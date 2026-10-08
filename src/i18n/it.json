@@ -124,34 +124,20 @@
     "searchGlobal": "Ricerche e lavori sono globali, indipendenti dal filtro workspace. Le ricerche con più fonti non si sommano ai loro lavori.",
     "resumeHint": "Opere e progetti modificati recentemente, non necessariamente aperti per ultimi.",
     "attentionHint": "Frammenti da rivedere e lavori che richiedono intervento. I grafici contano i lavori, non il completamento delle opere.",
-    "activityHint": "Ultimi 8 fatti registrati, non un registro di clic o navigazione.",
-    "events": {
-      "job": {
-        "started": "Lavoro avviato",
-        "finished": "Lavoro terminato"
-      },
-      "translation": {
-        "approved": "Traduzione approvata",
-        "approval_withdrawn": "Approvazione ritirata"
-      },
-      "workspace": {
-        "moved": "Elemento spostato"
-      }
-    },
-    "entities": {
-      "source": "Opera",
-      "job": "Lavoro",
-      "project": "Traduzione",
-      "workspace": "Workspace"
-    },
-    "outcomes": {
-      "success": "Riuscito",
-      "completed": "Completato",
-      "error": "Non riuscito",
-      "cancelled": "Annullato"
-    },
     "jobsHint": "Conta i lavori per stato, non il completamento delle opere. Lavori e ricerche restano globali, fuori dal filtro workspace.",
-    "title": "Panoramica"
+    "title": "Panoramica",
+    "thisMonth": "Questo mese",
+    "monthSummary": "{{pages}} pagine · {{fragments}} frammenti · {{phrases}} frasi · {{cost}}",
+    "openStats": "Apri le statistiche",
+    "progressTitle": "A che punto sei",
+    "progressHint": "Lavori iniziati e non ancora finiti.",
+    "progressEmpty": "Nessun lavoro a metà",
+    "resumeTranscriptions": "Trascrizioni",
+    "openTranscription": "Apri trascrizione",
+    "failedJobs_one": "{{count}} job fallito",
+    "failedJobs_other": "{{count}} job falliti",
+    "failedJobsDetail": "Nella coda dei job",
+    "runningTitle": "In corso"
   },
   "app": {
     "title": "Glossa // Pipeline",
@@ -2081,8 +2067,6 @@
     "attentionCount_one": "{{count}} frammento da rivedere",
     "resumeTitle": "Riprendi",
     "resumeEmpty": "Nessun progetto ancora: creane uno dall'area Traduzioni.",
-    "activityTitle": "Attività recente",
-    "activityEmpty": "Nessuna esecuzione registrata.",
     "runOutcome": {
       "success": "Esecuzione completata",
       "warn": "Esecuzione parziale o annullata",
@@ -2090,7 +2074,6 @@
     },
     "refresh": "Aggiorna la Dashboard",
     "openArea": "Apri {{area}}",
-    "jobsTitle": "Lavori in corso",
     "resumeSources": "Opere",
     "resumeProjects": "Traduzioni",
     "section": {
@@ -2909,12 +2892,13 @@
           {
             "title": "Orientarsi nell’applicazione",
             "paragraphs": [
-              "La Dashboard mostra attività recenti, elementi da controllare e lavori in corso. Le altre due schede permettono di cercare fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
+              "La Dashboard mostra i lavori a metà con quanto manca, cosa riprendere, elementi da controllare, lavori in corso e il lavoro del mese. La scheda Ricerca cerca fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
+              "Le Statistiche mostrano come procede il lavoro: previsioni, giorni di lavoro, spesa, modelli, qualità, precisione dell'OCR, glossari. In alto scegli il periodo e il workspace. Passa sul titolo di un riquadro per sapere cosa misura. Se i dati sono pochi, il riquadro lo dice invece di mostrare un numero.",
               "La Biblioteca contiene le opere che hai aggiunto al catalogo. Traduzioni mostra i progetti di tutti i workspace. Aprendo un workspace trovi i progetti e le risorse che gli appartengono.",
               "La barra di sinistra porta Dashboard, aree nell’ordine del lavoro e workspace; in fondo il menu generale: salva tutto, risorse linguistiche, impostazioni, guida e lingua. Chiusa, restano le icone e un clic porta alla pagina senza riaprirla.",
               "Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio: petrolio, seppia e indaco. Lo vedi nell'icona dell'area nella barra di sinistra, nel filetto sotto il titolo grande e in una carta di fondo appena diversa. I colori di stato non cambiano: il verde segna sempre ciò che è scelto o attivo.",
               "Passa il puntatore sui comandi a icona, oppure raggiungili con la tastiera, per leggerne la funzione. Le barre laterali si possono ridimensionare o richiudere.",
-              "I riquadri della Dashboard si spostano: prendi la maniglia a sinistra del titolo e trascina il riquadro più in alto, più in basso o nell'altra colonna. La disposizione resta come l'hai lasciata."
+              "I riquadri della Panoramica e delle Statistiche si spostano: prendi la maniglia a sinistra del titolo e trascina il riquadro più in alto, più in basso o nell'altra colonna. La disposizione resta come l'hai lasciata."
             ]
           },
           {
@@ -3747,7 +3731,8 @@
       "source_download": "Scaricamento pagine",
       "vault_verification": "Verifica del deposito",
       "image_optimization": "Ottimizzazione delle immagini",
-      "source_pdf_download": "Scaricamento documento"
+      "source_pdf_download": "Scaricamento documento",
+      "ocr_page": "Lettura OCR della pagina"
     },
     "phase": {
       "starting": "avvio",
@@ -3887,6 +3872,182 @@
     "failed": "Non è stato possibile leggere lo storico dei jobs.",
     "deleteBlocked": "Non è stato eliminato niente: un job che appartiene a una ricerca resta finché resta la ricerca.",
     "cleared_one": "Eliminato {{count}} job.",
-    "cleared_other": "Eliminati {{count}} jobs."
+    "cleared_other": "Eliminati {{count}} jobs.",
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "undated": "Senza data"
+  },
+  "dashboardStats": {
+    "title": "Statistiche",
+    "headline": "In sintesi",
+    "wordsTranscribed": "Parole trascritte",
+    "wordsTranslated": "Parole tradotte",
+    "spentIn": {
+      "30d": "Spesa in 30 giorni",
+      "6m": "Spesa in 6 mesi",
+      "all": "Spesa totale"
+    },
+    "insufficient": "Dati insufficienti",
+    "period": {
+      "label": "Periodo",
+      "30d": "Ultimi 30 giorni",
+      "6m": "Ultimi 6 mesi",
+      "all": "Tutto lo storico"
+    },
+    "weekdayShort": {
+      "0": "Lun",
+      "1": "Mar",
+      "2": "Mer",
+      "3": "Gio",
+      "4": "Ven",
+      "5": "Sab",
+      "6": "Dom"
+    },
+    "weekday": {
+      "0": "lunedì",
+      "1": "martedì",
+      "2": "mercoledì",
+      "3": "giovedì",
+      "4": "venerdì",
+      "5": "sabato",
+      "6": "domenica"
+    },
+    "forecast": {
+      "title": "Previsioni",
+      "hint": "Quanto manca, calcolato dal tuo ritmo nei giorni in cui hai lavorato.",
+      "unit": {
+        "transcription_one": "pagina",
+        "transcription_other": "pagine",
+        "translation_one": "frammento",
+        "translation_other": "frammenti"
+      },
+      "kind": {
+        "transcription": "Trascrizione",
+        "translation": "Traduzione"
+      },
+      "progress": "Avanzamento",
+      "pace": "{{value}} {{unit}} per giorno lavorato",
+      "toFinish": "Per finire: circa {{cost}}",
+      "open": "Apri",
+      "remaining": "mancano {{count}} {{unit}}",
+      "days": "Circa {{median}} giornate di lavoro ({{low}}–{{high}})",
+      "notEnough_one": "Stima dopo {{min}} giorni di lavoro (finora {{count}})",
+      "notEnough_other": "Stima dopo {{min}} giorni di lavoro (finora {{count}})",
+      "toFinishFree": "Per finire: gratis (modelli locali)",
+      "daysExact": "Circa {{median}} giornate di lavoro"
+    },
+    "rhythm": {
+      "title": "Ritmo di lavoro",
+      "hint": "Il lavoro di ogni giorno nelle ultime 26 settimane.",
+      "none": "{{date}}: nessun lavoro",
+      "day": "{{date}}: {{transcription}} pagine a mano · {{ocr}} con OCR · {{translation}} frammenti · {{source}} opere",
+      "hover": "Passa su un giorno per il dettaglio",
+      "less": "meno",
+      "more": "più",
+      "streak_one": "{{count}} giorno di fila",
+      "streak_other": "{{count}} giorni di fila",
+      "busiest": "più produttivo il {{day}}"
+    },
+    "memory": {
+      "title": "Memoria e lingue",
+      "hint": "Frasi salvate e lingue delle traduzioni.",
+      "phrases": "Frasi in memoria",
+      "thisMonth": "+{{count}} questo mese",
+      "growth": "Crescita della memoria",
+      "pairs": "Frasi per lingue",
+      "translations": "Traduzioni per lingue"
+    },
+    "models": {
+      "title": "Modelli più usati",
+      "hint": "Chiamate ai modelli nel periodo.",
+      "metric": "Misura",
+      "calls": "Chiamate",
+      "tokens": "Token",
+      "cost": "Spesa",
+      "ocrShare": "{{count}} OCR"
+    },
+    "quality": {
+      "title": "Qualità per modello",
+      "hint": "Giudizi dei frammenti tradotti con ogni modello.",
+      "judged_one": "{{count}} giudicato",
+      "judged_other": "{{count}} giudicati",
+      "rating": {
+        "critical": "Critico",
+        "poor": "Scarso",
+        "fair": "Discreto",
+        "good": "Buono",
+        "excellent": "Ottimo"
+      },
+      "goodShare": "buoni o ottimi: {{share}} ({{low}}–{{high}})",
+      "perGood_one": "{{cost}} per frammento buono",
+      "perGood_other": "{{cost}} per frammento buono",
+      "perGoodMissing_one": "costo per frammento buono: pochi dati",
+      "perGoodMissing_other": "costo per frammento buono: pochi dati"
+    },
+    "ocr": {
+      "title": "Precisione OCR",
+      "hint": "Quanto testo letto dall'OCR hai corretto a mano. Più è basso, meglio legge il modello.",
+      "pages_one": "{{count}} pagina corretta",
+      "pages_other": "{{count}} pagine corrette",
+      "corrected": "{{rate}} corretto",
+      "pagesRange_one": "{{count}} pagina · {{low}}–{{high}}",
+      "pagesRange_other": "{{count}} pagine · {{low}}–{{high}}"
+    },
+    "performance": {
+      "title": "Tempi e affidabilità",
+      "hint": "Tempo di risposta e tentativi falliti per modello.",
+      "p90": "9 su 10 entro {{seconds}}",
+      "noFailures_one": "nessun errore",
+      "noFailures_other": "nessun errore",
+      "failures_one": "{{rate}} falliti ({{low}}–{{high}})",
+      "failures_other": "{{rate}} falliti ({{low}}–{{high}})"
+    },
+    "spend": {
+      "title": "Spesa",
+      "hint": "Spesa calcolata con i prezzi impostati nell'app.",
+      "translation": "Traduzione",
+      "ocr": "OCR",
+      "period": "Nel periodo",
+      "month": "Questo mese",
+      "projected": "≈ {{cost}} a fine mese",
+      "perThousand": "Ogni 1.000 parole",
+      "chart": "Spesa per mese",
+      "unpriced_one": "{{count}} chiamata senza prezzo noto non è contata",
+      "unpriced_other": "{{count}} chiamate senza prezzo noto non sono contate",
+      "projectedLater": "stima dal 4° giorno del mese",
+      "perThousandRange_one": "{{low}}–{{high}} · {{count}} frammento",
+      "perThousandRange_other": "{{low}}–{{high}} · {{count}} frammenti",
+      "perThousandSample_one": "su {{count}} frammento",
+      "perThousandSample_other": "su {{count}} frammenti"
+    },
+    "tokens": {
+      "title": "Token e cache",
+      "hint": "Token inviati e ricevuti. La cache è la parte riusata dal fornitore.",
+      "input": "In ingresso",
+      "output": "In uscita",
+      "cache": "Dalla cache",
+      "cached": "{{value}} token",
+      "split": "Ingresso {{input}} del totale"
+    },
+    "glossaries": {
+      "title": "Glossari",
+      "hint": "Quanto le traduzioni rispettano ogni glossario.",
+      "entries_one": "{{count}} voce",
+      "entries_other": "{{count}} voci",
+      "projects_one": "usato da {{count}} traduzione",
+      "projects_other": "usato da {{count}} traduzioni",
+      "growth": "Voci di {{name}} nel tempo",
+      "unused": "Nessuna traduzione lo usa.",
+      "noCases": "Nessun suo termine nei frammenti tradotti.",
+      "respected_one": "Rispettato: {{rate}} ({{low}}–{{high}}) · {{count}} caso",
+      "respected_other": "Rispettato: {{rate}} ({{low}}–{{high}}) · {{count}} casi",
+      "mostMissed": "Più disattesi: {{terms}}",
+      "neverSeen_one": "{{count}} voce mai trovata nei testi",
+      "neverSeen_other": "{{count}} voci mai trovate nei testi",
+      "conflictsTitle": "Conflitti fra glossari ({{count}})",
+      "noConflicts": "Nessun conflitto.",
+      "moreConflicts_one": "e {{count}} altro",
+      "moreConflicts_other": "e altri {{count}}"
+    }
   }
 }

@@ -7,8 +7,11 @@
  */
 export type GlobalArea = 'library' | 'transcriptions' | 'translations' | 'analysis';
 
+/** Viste della Dashboard oltre alla Panoramica, che è quella senza nome. */
+export type DashboardView = 'search' | 'stats';
+
 export type AppLocation =
-  | { area: 'dashboard'; view?: 'search'; searchId?: string }
+  | { area: 'dashboard'; view?: DashboardView; searchId?: string }
   | { area: 'workspace'; workspaceId: string }
   | { area: 'library'; itemId?: string; workspaceFilter?: string }
   | { area: 'transcriptions'; documentId?: string; workspaceFilter?: string }
@@ -22,7 +25,7 @@ export const GLOBAL_AREAS: readonly GlobalArea[] = [
   'analysis',
 ];
 
-export function dashboardLocation(opts?: { view?: 'search'; searchId?: string }): AppLocation {
+export function dashboardLocation(opts?: { view?: DashboardView; searchId?: string }): AppLocation {
   return { area: 'dashboard', ...opts };
 }
 

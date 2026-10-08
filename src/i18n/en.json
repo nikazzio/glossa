@@ -124,34 +124,20 @@
     "searchGlobal": "Searches and jobs are global, independent of the workspace filter. Multi-source searches are not added to their job counts.",
     "resumeHint": "Recently modified works and projects, not necessarily recently opened.",
     "attentionHint": "Chunks to review and jobs requiring intervention. Charts count jobs, not work completion.",
-    "activityHint": "Latest 8 recorded facts, not a click or navigation log.",
-    "events": {
-      "job": {
-        "started": "Job started",
-        "finished": "Job finished"
-      },
-      "translation": {
-        "approved": "Translation approved",
-        "approval_withdrawn": "Approval withdrawn"
-      },
-      "workspace": {
-        "moved": "Item moved"
-      }
-    },
-    "entities": {
-      "source": "Work",
-      "job": "Job",
-      "project": "Translation",
-      "workspace": "Workspace"
-    },
-    "outcomes": {
-      "success": "Succeeded",
-      "completed": "Completed",
-      "error": "Failed",
-      "cancelled": "Cancelled"
-    },
     "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
-    "title": "Overview"
+    "title": "Overview",
+    "thisMonth": "This month",
+    "monthSummary": "{{pages}} pages · {{fragments}} fragments · {{phrases}} phrases · {{cost}}",
+    "openStats": "Open statistics",
+    "progressTitle": "Where you are",
+    "progressHint": "Work started and not finished yet.",
+    "progressEmpty": "No work in progress",
+    "resumeTranscriptions": "Transcriptions",
+    "openTranscription": "Open transcription",
+    "failedJobs_one": "{{count}} failed job",
+    "failedJobs_other": "{{count}} failed jobs",
+    "failedJobsDetail": "In the job queue",
+    "runningTitle": "Running"
   },
   "app": {
     "title": "Glossa // Pipeline",
@@ -2081,8 +2067,6 @@
     "attentionCount_one": "{{count}} chunk to review",
     "resumeTitle": "Resume",
     "resumeEmpty": "No projects yet: create one from the Translations area.",
-    "activityTitle": "Recent activity",
-    "activityEmpty": "No runs recorded yet.",
     "runOutcome": {
       "success": "Run completed",
       "warn": "Run partial or cancelled",
@@ -2090,7 +2074,6 @@
     },
     "refresh": "Refresh the dashboard",
     "openArea": "Open {{area}}",
-    "jobsTitle": "Jobs running",
     "resumeSources": "Works",
     "resumeProjects": "Translations",
     "section": {
@@ -2909,12 +2892,13 @@
           {
             "title": "Finding your way around",
             "paragraphs": [
-              "The Dashboard shows recent activity, items requiring attention and current jobs. Its other two tabs search across multiple sources or within one source, including by identifier.",
+              "The Dashboard shows work in progress with what is left, what to resume, items requiring attention, current jobs and this month's work. Its Search tab searches across multiple sources or within one source, including by identifier.",
+              "Statistics show how your work is going: forecasts, working days, spend, models, quality, OCR accuracy, glossaries. Choose the period and workspace at the top. Hover a card title to see what it measures. With too little data, a card says so instead of showing a number.",
               "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
               "The left bar holds the Dashboard, the areas in working order and the workspaces; at the bottom the general menu: save all, language resources, settings, help and language. Collapsed, the icons remain and a click opens the page without expanding it.",
               "Library, Transcriptions and Translations each have their own ink: petrol, sepia and indigo. You see it in the area icon in the left sidebar, in the short rule under the large title and in a slightly different background paper. State colours do not change: green always marks what is selected or active.",
               "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed.",
-              "The Dashboard cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
+              "Overview and Statistics cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
             ]
           },
           {
@@ -3747,7 +3731,8 @@
       "source_download": "Page download",
       "vault_verification": "Vault check",
       "image_optimization": "Image optimisation",
-      "source_pdf_download": "Document download"
+      "source_pdf_download": "Document download",
+      "ocr_page": "Page OCR reading"
     },
     "phase": {
       "starting": "starting",
@@ -3887,6 +3872,182 @@
     "failed": "The job history could not be read.",
     "deleteBlocked": "Nothing was deleted: a job that belongs to a search stays as long as the search does.",
     "cleared_one": "{{count}} job deleted.",
-    "cleared_other": "{{count}} jobs deleted."
+    "cleared_other": "{{count}} jobs deleted.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "undated": "Undated"
+  },
+  "dashboardStats": {
+    "title": "Statistics",
+    "headline": "At a glance",
+    "wordsTranscribed": "Words transcribed",
+    "wordsTranslated": "Words translated",
+    "spentIn": {
+      "30d": "Spent in 30 days",
+      "6m": "Spent in 6 months",
+      "all": "Total spent"
+    },
+    "insufficient": "Not enough data",
+    "period": {
+      "label": "Period",
+      "30d": "Last 30 days",
+      "6m": "Last 6 months",
+      "all": "All history"
+    },
+    "weekdayShort": {
+      "0": "Mon",
+      "1": "Tue",
+      "2": "Wed",
+      "3": "Thu",
+      "4": "Fri",
+      "5": "Sat",
+      "6": "Sun"
+    },
+    "weekday": {
+      "0": "Monday",
+      "1": "Tuesday",
+      "2": "Wednesday",
+      "3": "Thursday",
+      "4": "Friday",
+      "5": "Saturday",
+      "6": "Sunday"
+    },
+    "forecast": {
+      "title": "Forecasts",
+      "hint": "What is left, based on your pace on the days you worked.",
+      "unit": {
+        "transcription_one": "page",
+        "transcription_other": "pages",
+        "translation_one": "fragment",
+        "translation_other": "fragments"
+      },
+      "kind": {
+        "transcription": "Transcription",
+        "translation": "Translation"
+      },
+      "progress": "Progress",
+      "pace": "{{value}} {{unit}} per working day",
+      "toFinish": "To finish: about {{cost}}",
+      "open": "Open",
+      "remaining": "{{count}} {{unit}} left",
+      "days": "About {{median}} working days ({{low}}–{{high}})",
+      "notEnough_one": "Estimate after {{min}} working days (so far {{count}})",
+      "notEnough_other": "Estimate after {{min}} working days (so far {{count}})",
+      "toFinishFree": "To finish: free (local models)",
+      "daysExact": "About {{median}} working days"
+    },
+    "rhythm": {
+      "title": "Work rhythm",
+      "hint": "Your work each day over the last 26 weeks.",
+      "none": "{{date}}: no work",
+      "day": "{{date}}: {{transcription}} pages by hand · {{ocr}} with OCR · {{translation}} fragments · {{source}} works",
+      "hover": "Hover a day for details",
+      "less": "less",
+      "more": "more",
+      "streak_one": "{{count}} day in a row",
+      "streak_other": "{{count}} days in a row",
+      "busiest": "busiest on {{day}}"
+    },
+    "memory": {
+      "title": "Memory and languages",
+      "hint": "Saved phrases and translation languages.",
+      "phrases": "Phrases in memory",
+      "thisMonth": "+{{count}} this month",
+      "growth": "Memory growth",
+      "pairs": "Phrases by language",
+      "translations": "Translations by language"
+    },
+    "models": {
+      "title": "Most used models",
+      "hint": "Model calls in the period.",
+      "metric": "Measure",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Spend",
+      "ocrShare": "{{count}} OCR"
+    },
+    "quality": {
+      "title": "Quality by model",
+      "hint": "Ratings of the fragments translated with each model.",
+      "judged_one": "{{count}} rated",
+      "judged_other": "{{count}} rated",
+      "rating": {
+        "critical": "Critical",
+        "poor": "Poor",
+        "fair": "Fair",
+        "good": "Good",
+        "excellent": "Excellent"
+      },
+      "goodShare": "good or excellent: {{share}} ({{low}}–{{high}})",
+      "perGood_one": "{{cost}} per good fragment",
+      "perGood_other": "{{cost}} per good fragment",
+      "perGoodMissing_one": "cost per good fragment: not enough data",
+      "perGoodMissing_other": "cost per good fragment: not enough data"
+    },
+    "ocr": {
+      "title": "OCR accuracy",
+      "hint": "How much OCR text you corrected by hand. Lower means the model reads better.",
+      "pages_one": "{{count}} corrected page",
+      "pages_other": "{{count}} corrected pages",
+      "corrected": "{{rate}} corrected",
+      "pagesRange_one": "{{count}} page · {{low}}–{{high}}",
+      "pagesRange_other": "{{count}} pages · {{low}}–{{high}}"
+    },
+    "performance": {
+      "title": "Speed and reliability",
+      "hint": "Response time and failed attempts per model.",
+      "p90": "9 out of 10 within {{seconds}}",
+      "noFailures_one": "no errors",
+      "noFailures_other": "no errors",
+      "failures_one": "{{rate}} failed ({{low}}–{{high}})",
+      "failures_other": "{{rate}} failed ({{low}}–{{high}})"
+    },
+    "spend": {
+      "title": "Spend",
+      "hint": "Spend computed with the prices set in the app.",
+      "translation": "Translation",
+      "ocr": "OCR",
+      "period": "In the period",
+      "month": "This month",
+      "projected": "≈ {{cost}} by month end",
+      "perThousand": "Per 1,000 words",
+      "chart": "Spend per month",
+      "unpriced_one": "{{count}} call without a known price is not counted",
+      "unpriced_other": "{{count}} calls without a known price are not counted",
+      "projectedLater": "estimate from the 4th day of the month",
+      "perThousandRange_one": "{{low}}–{{high}} · {{count}} fragment",
+      "perThousandRange_other": "{{low}}–{{high}} · {{count}} fragments",
+      "perThousandSample_one": "over {{count}} fragment",
+      "perThousandSample_other": "over {{count}} fragments"
+    },
+    "tokens": {
+      "title": "Tokens and cache",
+      "hint": "Tokens sent and received. The cache is the part the provider reused.",
+      "input": "Input",
+      "output": "Output",
+      "cache": "From cache",
+      "cached": "{{value}} tokens",
+      "split": "Input {{input}} of the total"
+    },
+    "glossaries": {
+      "title": "Glossaries",
+      "hint": "How closely translations follow each glossary.",
+      "entries_one": "{{count}} entry",
+      "entries_other": "{{count}} entries",
+      "projects_one": "used by {{count}} translation",
+      "projects_other": "used by {{count}} translations",
+      "growth": "Entries of {{name}} over time",
+      "unused": "No translation uses it.",
+      "noCases": "None of its terms in translated fragments.",
+      "respected_one": "Followed: {{rate}} ({{low}}–{{high}}) · {{count}} case",
+      "respected_other": "Followed: {{rate}} ({{low}}–{{high}}) · {{count}} cases",
+      "mostMissed": "Most often missed: {{terms}}",
+      "neverSeen_one": "{{count}} entry never found in the texts",
+      "neverSeen_other": "{{count}} entries never found in the texts",
+      "conflictsTitle": "Conflicts between glossaries ({{count}})",
+      "noConflicts": "No conflicts.",
+      "moreConflicts_one": "and {{count}} more",
+      "moreConflicts_other": "and {{count}} more"
+    }
   }
 }

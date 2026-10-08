@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Group, Panel, usePanelCallbackRef } from 'react-resizable-panels';
-import { Activity, AlertTriangle, ArrowRight, BookOpenText, History, RefreshCw, Search } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowRight, BookOpenText, History, RefreshCw, Search, Timer, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { dashboardCounts, recentFacts, recentSources } from '../../services/dashboardService';
+import { dashboardCounts, recentSources, recentTranscriptions } from '../../services/dashboardService';
+import { loadMonthSummary } from '../../services/statsService';
+import { loadWorkProgress } from '../../services/workProgressService';
+import { usePricingStore } from '../../stores/pricingStore';
+import { rowCost } from '../../utils/dashboardStats';
+import { formatUsd } from '../../utils/operationLogStats';
 import { listProjectsNeedingAttention, listRecentProjectsAllWorkspaces } from '../../services/projectService';
 import { useDashboardResource } from '../../hooks/useDashboardResource';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
@@ -13,7 +18,7 @@ import { useJobsStore } from '../../stores/jobsStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { dashboardLocation, libraryLocation, translationsLocation, workspaceLocation } from '../../navigation/appLocation';
+import { dashboardLocation, libraryLocation, transcriptionsLocation, translationsLocation, workspaceLocation } from '../../navigation/appLocation';
 import { formatDateTime } from '../../utils';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
@@ -21,6 +26,7 @@ import { DashboardBoard, type BoardSection } from './DashboardBoard';
 import { DashboardSection } from './DashboardSection';
 import { JobsOverviewChart } from './JobsOverviewChart';
 import { JobsHistoryList } from '../jobs/JobsHistoryList';
+import { WorkProgressList } from './stats/StatsWorkSections';
 import { EmptyState, FieldLabel, IconButton, InspectorShell, ResizeHandle, Select, Spinner, StatBlock, Tooltip } from '../ui';
 
 const JOBS_COLLAPSED = 56;
@@ -30,6 +36,7 @@ const OVERVIEW_MIN = 420;
 
 const recentProjects = (id: string | null) => listRecentProjectsAllWorkspaces(5, id);
 const attentionProjects = (id: string | null) => listProjectsNeedingAttention(8, id);
+const monthSummary = (id: string | null) => loadMonthSummary(id);
 const RECENT_SEARCHES = 5;
 
 export function AppDashboard() {
@@ -44,10 +51,17 @@ export function AppDashboard() {
   const sources = useDashboardResource(recentSources, scope, revision);
   const projects = useDashboardResource(recentProjects, scope, revision);
   const attention = useDashboardResource(attentionProjects, scope, revision);
-  const facts = useDashboardResource(recentFacts, scope, revision);
+  const transcriptions = useDashboardResource(recentTranscriptions, scope, revision);
+  const pricing = usePricingStore((s) => s.overrides);
+  const workProgress = useCallback((id: string | null) => loadWorkProgress(id, pricing), [pricing]);
+  const progress = useDashboardResource(workProgress, scope, revision);
+  const month = useDashboardResource(monthSummary, scope, revision);
+  const failedJobs = jobs.filter((job) => job.status === 'error').length;
   // Il riquadro ne mostra cinque: chiederne cinquanta a ogni evento dei lavori
   // sarebbe dieci volte il lavoro per lo stesso schermo.
   const searches = useFederatedSearch(undefined, RECENT_SEARCHES);
+  const columns = useUiStore((s) => s.dashboardSectionColumns);
+  const setColumns = useUiStore((s) => s.setDashboardSectionColumns);
   const jobsWidth = useUiStore((s) => s.dashboardJobsWidth);
   const jobsCollapsed = useUiStore((s) => s.dashboardJobsCollapsed);
   const setJobsWidth = useUiStore((s) => s.setDashboardJobsWidth);
@@ -90,7 +104,7 @@ export function AppDashboard() {
         : null;
   const metrics = [
     { key: 'sources' as const, label: t('federation.catalog'), open: () => navigate(libraryLocation({ workspaceFilter: scope ?? undefined })) },
-    { key: 'transcriptions' as const, label: t('overview.transcriptions'), open: null },
+    { key: 'transcriptions' as const, label: t('overview.transcriptions'), open: () => navigate(transcriptionsLocation({ workspaceFilter: scope ?? undefined })) },
     { key: 'projects' as const, label: t('dashboard.stats.projects'), open: () => navigate(translationsLocation({ workspaceFilter: scope ?? undefined })) },
     { key: 'workspaces' as const, label: t('overview.workspaces'), open: scope ? () => navigate(workspaceLocation(scope)) : null },
   ];
@@ -114,7 +128,25 @@ export function AppDashboard() {
       {sectionState(counts) && <div className="col-span-full">{sectionState(counts)}</div>}
     </section>
 
-    <DashboardBoard sections={[
+    {month.data && <div className="mb-4 flex items-center justify-between gap-3 border-b border-editorial-border pb-3">
+      <p className="min-w-0 truncate text-sm text-editorial-ink">
+        <span className="caption-label mr-2">{t('overview.thisMonth')}</span>
+        {t('overview.monthSummary', {
+          pages: month.data.pages,
+          fragments: month.data.fragments,
+          phrases: month.data.phrases,
+          cost: formatUsd(month.data.usage.reduce((sum, row) => sum + (rowCost(row, pricing) ?? 0), 0)),
+        })}
+      </p>
+      <IconButton size="sm" title={t('overview.openStats')} onClick={() => navigate(dashboardLocation({ view: 'stats' }))}><TrendingUp size={16} /></IconButton>
+    </div>}
+
+    <DashboardBoard columns={columns} onColumnsChange={setColumns} sections={[
+      { id: 'progress', node: <DashboardSection id="progress" icon={Timer} label={t('overview.progressTitle')} hint={t('overview.progressHint')}>
+          {sectionState(progress) ?? (progress.data?.length
+            ? <WorkProgressList items={progress.data} />
+            : <EmptyState icon={<Timer size={18} />} message={t('overview.progressEmpty')} className={EMPTY_CLASSNAME} />)}
+        </DashboardSection> },
       { id: 'resume', node: <DashboardSection id="resume" icon={History} label={t('dashboard.resumeTitle')} hint={t('overview.resumeHint')}>
           {sectionState(sources) ?? (sources.data?.length ? <>
             <FieldLabel block>{t('dashboard.resumeSources')}</FieldLabel>
@@ -128,7 +160,13 @@ export function AppDashboard() {
               detail={project.workspace_name} label={t('overview.openProject')}
               onOpen={() => void openProject(project.id, project.workspace_id)} />)}
           </> : null)}
-          {(sources.data?.length ?? 0) === 0 && (projects.data?.length ?? 0) === 0 &&
+          {sectionState(transcriptions) ?? (transcriptions.data?.length ? <>
+            <FieldLabel block>{t('overview.resumeTranscriptions')}</FieldLabel>
+            {transcriptions.data.map((document) => <DashboardRow key={document.id} title={document.title}
+              detail={formatDateTime(document.edited_at)} label={t('overview.openTranscription')}
+              onOpen={() => navigate(transcriptionsLocation({ documentId: document.id }))} />)}
+          </> : null)}
+          {(sources.data?.length ?? 0) === 0 && (projects.data?.length ?? 0) === 0 && (transcriptions.data?.length ?? 0) === 0 &&
             !sources.loading && !projects.loading && !sources.error && !projects.error &&
             <EmptyState icon={<BookOpenText size={18} />} message={t('dashboard.resumeEmpty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection> },
@@ -148,23 +186,16 @@ export function AppDashboard() {
                 </>
                 : <EmptyState icon={<Search size={18} />} message={t('federation.empty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection> },
-      { id: 'activity', node: <DashboardSection id="activity" icon={Activity} label={t('dashboard.activityTitle')} hint={t('overview.activityHint')} initiallyOpen={false}>
-          {sectionState(facts)}
-          {facts.data?.map((fact) => <div key={fact.id} className="border-b border-rule py-2 last:border-0">
-            <p className="text-sm text-editorial-ink">{t('overview.events.' + fact.event_type, { defaultValue: fact.event_type })}</p>
-            <p className="truncate font-display italic text-editorial-muted">{fact.title ?? t('overview.entities.' + fact.entity_type, { defaultValue: fact.entity_type })}</p>
-            <p className="text-xs text-editorial-muted">{formatDateTime(fact.occurred_at)}{fact.outcome ? ' · ' + t('overview.outcomes.' + fact.outcome, { defaultValue: fact.outcome }) : ''}</p>
-          </div>)}
-          {facts.data?.length === 0 && <EmptyState icon={<Activity size={18} />} message={t('dashboard.activityEmpty')} className={EMPTY_CLASSNAME} />}
-        </DashboardSection> },
       { id: 'attention', node: <DashboardSection id="attention" icon={AlertTriangle} label={t('dashboard.attentionTitle')} hint={t('overview.attentionHint')}>
+          {failedJobs > 0 && <DashboardRow title={t('overview.failedJobs', { count: failedJobs })}
+            detail={t('overview.failedJobsDetail')} label={t('overview.openJobs')} onOpen={openJobs} />}
           {sectionState(attention)}
           {attention.data?.map((project) => <DashboardRow key={project.project_id} title={project.project_name}
             detail={`${project.workspace_name} · ${t('dashboard.attentionCount', { count: project.issue_count })}`}
             label={t('overview.openProject')} onOpen={() => void openProject(project.project_id, project.workspace_id)} />)}
-          {attention.data?.length === 0 && <EmptyState icon={<AlertTriangle size={18} />} message={t('dashboard.attentionEmpty')} className={EMPTY_CLASSNAME} />}
+          {attention.data?.length === 0 && failedJobs === 0 && <EmptyState icon={<AlertTriangle size={18} />} message={t('dashboard.attentionEmpty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection> },
-      { id: 'jobs', node: <DashboardSection id="jobs" icon={Activity} label={t('dashboard.jobsTitle')} hint={t('overview.jobsHint')}>
+      { id: 'jobs', node: <DashboardSection id="jobs" icon={Activity} label={t('overview.runningTitle')} hint={t('overview.jobsHint')}>
           <JobsOverviewChart jobs={jobs} />
           <div className="flex items-center justify-between gap-3 border-t border-editorial-border pt-2.5">
             <p className="text-xs text-editorial-muted">{t('overview.jobsSummary', { active: jobs.filter((job) => !isTerminal(job)).length, failed: jobs.filter((job) => job.status === 'error').length })}</p>

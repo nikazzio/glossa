@@ -1,5 +1,5 @@
 import {
-  Ban, CheckCircle2, ChevronRight, Download, Layers, Pause, Play, RotateCcw, Search,
+  Ban, CheckCircle2, ChevronRight, Download, FileDown, Layers, Pause, Play, RotateCcw, ScanText, Search,
   ShieldCheck, Trash2, Wand2, X, XCircle, type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -57,11 +57,11 @@ export function JobRow({ job, onRemove, removeLabel, singleColumn = false }: {
   const description = job.message ?? jobTypeLabel(job, t);
 
   return (
-    <div className="rounded border border-editorial-border bg-surface-panel">
-      <div className="flex items-center gap-2 px-2.5 py-2">
+    <div className="border-b border-rule">
+      <div className="flex items-center gap-2 px-1 py-2">
         <IconButton title={t('federation.details')} aria-expanded={open} onClick={() => setOpen((current) => !current)} size="xs">
           <ChevronRight
-            size={11}
+            size={14}
             className={`shrink-0 text-editorial-muted motion-safe:transition-transform ${open ? 'rotate-90' : ''}`}
             aria-hidden="true"
           />
@@ -72,7 +72,7 @@ export function JobRow({ job, onRemove, removeLabel, singleColumn = false }: {
               <JobTypeIcon jobType={job.jobType} />
             </span>
           </Tooltip>
-          <span className="min-w-0 flex-1 truncate text-xs text-editorial-ink">
+          <span className="min-w-0 flex-1 truncate text-sm text-editorial-ink">
             {searchId ? <SearchJobLabel message={description} /> : description}
           </span>
           {detail.units && (
@@ -102,48 +102,48 @@ export function JobRow({ job, onRemove, removeLabel, singleColumn = false }: {
           {searchId && <IconButton title={t('federation.open')} onClick={() => navigate(dashboardLocation({view:'search',searchId}))}><ChevronRight size={14} /></IconButton>}
           {job.status === 'running' && (
             <IconButton title={t('jobs.pause')} onClick={() => void pause(job.id)}>
-              <Pause size={11} />
+              <Pause size={14} />
             </IconButton>
           )}
           {job.status === 'paused' && (
             <IconButton title={t('jobs.resume')} onClick={() => void resume(job.id)}>
-              <Play size={11} />
+              <Play size={14} />
             </IconButton>
           )}
           {waitingToRetry && (
             <IconButton title={t('jobs.retryNow')} onClick={() => void resume(job.id)}>
-              <Play size={11} />
+              <Play size={14} />
             </IconButton>
           )}
           {waitingToRetry && (
             <IconButton title={t('jobs.pause')} onClick={() => void pause(job.id)}>
-              <Pause size={11} />
+              <Pause size={14} />
             </IconButton>
           )}
           {job.status === 'error' && job.jobType !== 'provider_search' && (
             <IconButton title={t('jobs.retry')} onClick={() => void retry(job.id)}>
-              <RotateCcw size={11} />
+              <RotateCcw size={14} />
             </IconButton>
           )}
           {!isTerminal(job) && (
             <IconButton title={t('jobs.cancel')} tone="danger" onClick={() => void cancel(job.id)}>
-              <X size={11} />
+              <X size={14} />
             </IconButton>
           )}
           {isTerminal(job) && onRemove && (
             <IconButton title={removeLabel ?? t('jobs.dismiss')} onClick={onRemove}>
-              <Trash2 size={11} />
+              <Trash2 size={14} />
             </IconButton>
           )}
         </div>
       </div>
 
-      <div className="px-2.5 pb-2">
+      <div className="px-1 pb-2">
         <JobProgress job={job} />
       </div>
 
       <div
-        className={`grid px-2.5 motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${
+        className={`grid px-1 motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${
           open ? 'grid-rows-[1fr] pb-2' : 'grid-rows-[0fr]'
         }`}
       >
@@ -359,11 +359,13 @@ const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   source_download: Download,
   image_optimization: Wand2,
   vault_verification: ShieldCheck,
+  source_pdf_download: FileDown,
+  ocr_page: ScanText,
 };
 
 export function JobTypeIcon({ jobType }: { jobType: string }) {
   const Icon = JOB_TYPE_ICONS[jobType] ?? Layers;
-  return <Icon size={13} aria-hidden />;
+  return <Icon size={14} aria-hidden />;
 }
 
 function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {

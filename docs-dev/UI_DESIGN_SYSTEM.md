@@ -430,6 +430,37 @@ che apre un `ClickPopover` con le due tabelle: solo titoli e tabelle, né
 paragrafi né suggerimenti dentro (sarebbe un secondo riquadro sopra il primo).
 Il consumo non si colora: il verde resta per scelta e stato attivo.
 
+### Grafici
+
+I grafici stanno solo nella Dashboard (Panoramica e Statistiche), dentro i suoi
+riquadri, e sono scritti a mano con i token dell'app (`components/dashboard/charts`):
+nessuna libreria di grafici.
+
+- **Quantità** (calendario del lavoro, barre di classifica, linea di
+  andamento): una sola tinta, `editorial-ink`, dal chiaro allo scuro; il vuoto è
+  `editorial-textbox`. Il calendario usa quattro toni (`/25`, `/45`, `/70`,
+  pieno) a soglie sui quartili dei giorni lavorati.
+- **Due serie** (traduzione e OCR nella spesa): `chart-translations` (indaco) e
+  `chart-transcriptions` (seppia), versioni sature degli inchiostri d'area. Gli
+  inchiostri d'area restano sui segni piccoli: come serie sono troppo spenti e si
+  confondono fra loro (verificato col controllo dei colori, anche per chi
+  distingue male i colori). Mai l'inchiostro d'area e la serie nello stesso
+  grafico.
+- **Giudizi** (`RatingBar`): due poli con il centro neutro — critico `danger`,
+  scarso `danger/45`, discreto `editorial-border`, buono `success/55`, ottimo
+  `success` — con legenda sotto.
+- Segni sottili: barre di classifica alte 6 px, colonne larghe al massimo 24 px
+  con l'estremo arrotondato e la base dritta, linea di 2 px con punto finale e
+  anello del colore di fondo; due pixel di fondo fra fasce vicine, mai un bordo.
+- Il testo non prende mai il colore della serie: valori e nomi nei colori del
+  testo, il quadratino accanto porta l'identità. Due serie hanno sempre la
+  legenda; una sola no, la dice il titolo.
+- Ogni segno ha il suo valore al passaggio (suggerimento o riga di dettaglio
+  sotto il calendario) e un nome per chi legge con la voce.
+- Un numero di testa (`Figure`): valore `font-display text-2xl italic`,
+  etichetta `caption-label` sotto, nota `text-xs` muted.
+- Dati che mancano: «Dati insufficienti», mai uno zero.
+
 ### Completamento in una riga di elenco
 
 Quanto di una cosa è già disponibile si dice con una **riga di dati a
