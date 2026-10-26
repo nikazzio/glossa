@@ -6,17 +6,21 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 
-const mocks=vi.hoisted(() => ({counts:vi.fn(),sources:vi.fn(),facts:vi.fn(),projects:vi.fn(),attention:vi.fn()}));
-vi.mock('../../services/dashboardService', () => ({dashboardCounts:mocks.counts,recentSources:mocks.sources,recentFacts:mocks.facts}));
+const mocks=vi.hoisted(() => ({counts:vi.fn(),sources:vi.fn(),transcriptions:vi.fn(),projects:vi.fn(),attention:vi.fn(),progress:vi.fn(),month:vi.fn(),failures:vi.fn()}));
+vi.mock('../../services/dashboardService', () => ({dashboardCounts:mocks.counts,recentSources:mocks.sources,recentTranscriptions:mocks.transcriptions}));
 vi.mock('../../services/projectService', () => ({listRecentProjectsAllWorkspaces:mocks.projects,listProjectsNeedingAttention:mocks.attention}));
+vi.mock('../../services/workProgressService', () => ({loadWorkProgress:mocks.progress}));
+vi.mock('../../services/statsService', () => ({loadMonthSummary:mocks.month,loadFailedJobCount:mocks.failures}));
 vi.mock('../../hooks/useFederatedSearch', () => ({useFederatedSearch:() => ({runs:[],loading:false,error:null,refresh:vi.fn()})}));
 
 describe('Dashboard overview', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    for(const mock of [mocks.sources,mocks.facts,mocks.projects,mocks.attention]) mock.mockResolvedValue([]);
+    for(const mock of [mocks.sources,mocks.transcriptions,mocks.projects,mocks.attention,mocks.progress]) mock.mockResolvedValue([]);
+    mocks.failures.mockResolvedValue(0);
+    mocks.month.mockResolvedValue({pages:3,fragments:5,phrases:2,usage:[]});
     mocks.counts.mockResolvedValue({sources:12,transcriptions:3,projects:4,workspaces:2});
-    useUiStore.setState({location:{area:'dashboard'}});
+    useUiStore.setState({location:{area:'dashboard'},dashboardSections:{}});
     useWorkspaceStore.setState({workspaces:[{id:'w',name:'Workspace'}] as never});
     useProjectStore.setState({openProjectInWorkspace:vi.fn().mockResolvedValue(undefined)});
   });
@@ -44,10 +48,42 @@ describe('Dashboard overview', () => {
   });
   it('allows sections to collapse with keyboard-accessible controls', async () => {
     render(<AppDashboard />);
-    const control=screen.getByRole('button',{name:'dashboard.section.expand'});
-    expect(control).toHaveAttribute('aria-expanded','false');
-    await userEvent.click(control);
+    expect(await screen.findByText('overview.progressEmpty')).toBeVisible();
+    const control=screen.getAllByRole('button',{name:'dashboard.section.collapse'})[0];
     expect(control).toHaveAttribute('aria-expanded','true');
-    await waitFor(() => expect(screen.getByText('dashboard.activityEmpty')).toBeVisible());
+    await userEvent.click(control);
+    expect(control).toHaveAttribute('aria-expanded','false');
+    await waitFor(() => expect(screen.queryByText('overview.progressEmpty')).not.toBeInTheDocument());
   });
+  it('lists recent transcriptions in resume and opens them', async () => {
+    mocks.transcriptions.mockResolvedValue([{id:'d',title:'Vat. lat. 3225',workspace_id:'w',edited_at:'2026-10-07 10:00:00'}]);
+    render(<AppDashboard />);
+    await screen.findByText('Vat. lat. 3225');
+    await userEvent.click(screen.getByRole('button',{name:'overview.openTranscription'}));
+    expect(useUiStore.getState().location).toMatchObject({area:'transcriptions',documentId:'d'});
+  });
+  it('shows this month in one line and links to statistics', async () => {
+    render(<AppDashboard />);
+    await screen.findByText('overview.thisMonth');
+    await userEvent.click(screen.getByRole('button',{name:'overview.openStats'}));
+    expect(useUiStore.getState().location).toMatchObject({area:'dashboard',view:'stats'});
+  });
+  it('does not claim Resume is empty while transcriptions are loading or failed', async () => {
+    let reject!: (error: Error) => void;
+    mocks.transcriptions.mockReturnValue(new Promise((_resolve, fail) => { reject = fail; }));
+    render(<AppDashboard />);
+    await screen.findByText('12');
+    expect(screen.queryByText('dashboard.resumeEmpty')).not.toBeInTheDocument();
+    reject(new Error('offline'));
+    await screen.findByText('dashboard.loadFailed');
+    expect(screen.queryByText('dashboard.resumeEmpty')).not.toBeInTheDocument();
+  });
+
+  it('shows failures from the full history and does not claim an unread history is empty', async () => {
+    mocks.failures.mockResolvedValue(2);
+    render(<AppDashboard />);
+    expect(await screen.findByText('overview.failedJobs')).toBeInTheDocument();
+    expect(screen.queryByText('dashboard.attentionEmpty')).not.toBeInTheDocument();
+  });
+
 });

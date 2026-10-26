@@ -9,6 +9,7 @@ import {
   PanelLeftClose,
   Plus,
   Search,
+  TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +17,7 @@ import { useProjectStore } from '../../../stores/projectStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { dashboardLocation, workspaceLocation, type AppLocation, type GlobalArea } from '../../../navigation/appLocation';
+import { dashboardLocation, workspaceLocation, type AppLocation, type DashboardView, type GlobalArea } from '../../../navigation/appLocation';
 import type { Workspace } from '../../../types';
 import { AREA_INK_CLASSNAME, IconButton, type InkedArea } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
@@ -106,11 +107,12 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
 }
 
 /**
- * Le due viste della Dashboard: panoramica e ricerca. Stanno qui, sotto la voce a cui appartengono, invece di occupare
+ * Le viste della Dashboard: panoramica, statistiche e ricerca. Stanno qui, sotto la voce a cui appartengono, invece di occupare
  * una riga di linguette dentro la pagina.
  */
-const DASHBOARD_VIEWS: { view?: 'search'; labelKey: string; icon: LucideIcon }[] = [
+const DASHBOARD_VIEWS: { view?: DashboardView; labelKey: string; icon: LucideIcon }[] = [
   { labelKey: 'overview.title', icon: LayoutDashboard },
+  { view: 'stats', labelKey: 'dashboardStats.title', icon: TrendingUp },
   { view: 'search', labelKey: 'federation.title', icon: Search },
 ];
 

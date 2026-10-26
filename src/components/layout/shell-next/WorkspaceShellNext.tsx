@@ -87,7 +87,7 @@ export function WorkspaceShellNext({ children }: WorkspaceShellNextProps) {
         defaultSize={initialWidth.current}
         panelRef={setRailPanel}
         onResize={syncRailFlag}
-        className={`overflow-hidden border-r border-editorial-border bg-editorial-page ${
+        className={`overflow-hidden border-r border-editorial-border bg-surface-panel ${
           dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
         }`}
       >

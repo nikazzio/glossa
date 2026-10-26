@@ -133,16 +133,23 @@
   --color-resource-muted: #666666; /* testo secondario sulla carta delle risorse */
   --color-surface-hover: var(--color-editorial-textbox);  /* usa con /50 — hover su riga/voce cliccabile */
 
-  /* ── Inchiostro e carta d'area — identità di Biblioteca, Trascrizioni e
-     Traduzioni. Solo segni piccoli (filetto del titolo, icona, segnaposto) e
-     una carta appena percepibile: verde, rosso, ocra e oro restano agli stati.
+  /* ── Inchiostro d'area — identità di Biblioteca, Trascrizioni e Traduzioni.
+     Solo segni piccoli (filetto del titolo, icona, segnaposto); fondo comune
+     dei cataloghi. Verde, rosso, ocra e oro restano agli stati.
      Contrasto sul fondo ≥ 7:1 (5.66:1 per la Biblioteca, che è l'inchiostro). */
   --color-area-library: var(--color-editorial-ink);
   --color-area-transcriptions: #6B4A3A; /* seppia */
   --color-area-translations: #4B4C8C;   /* indaco */
   --color-area-library-paper: var(--color-surface-panel);
-  --color-area-transcriptions-paper: #F8F3EA;
-  --color-area-translations-paper: #F3F3F1;
+  --color-area-transcriptions-paper: var(--color-surface-panel);
+  --color-area-translations-paper: var(--color-surface-panel);
+
+  /* ── Serie dei grafici: seppia e indaco delle aree, più saturi. Gli
+     inchiostri d'area sono troppo spenti per distinguere due serie (verificato
+     con il controllo dei colori: croma e separazione sotto soglia); questi
+     passano anche per chi distingue male i colori. */
+  --color-chart-transcriptions: #9C5A28;
+  --color-chart-translations: #5058C0;
 
   /* ── Ombre — `shadow-modal`, `shadow-tooltip`… Le varianti scure sono in
      html.dark più sotto. ─────────────────────────────────────────────── */
@@ -205,11 +212,11 @@ html.dark {
   --color-editorial-divider-soft: #261f1c;
   --color-on-ink:                 #1c1814;
 
-  /* Inchiostri e carte d'area schiariti per il fondo scuro: ≥ 7:1. */
+  /* Inchiostri d'area schiariti per il fondo scuro: ≥ 7:1. */
   --color-area-transcriptions:       #C9A08A;
   --color-area-translations:         #A3A5DE;
-  --color-area-transcriptions-paper: #1e1813;
-  --color-area-translations-paper:   #1a1919;
+  --color-chart-transcriptions:      #B97540;
+  --color-chart-translations:        #7F88EE;
 
   /* Gradient header */
   --header-bg-from: #201c18;

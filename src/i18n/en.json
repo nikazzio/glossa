@@ -124,34 +124,21 @@
     "searchGlobal": "Searches and jobs are global, independent of the workspace filter. Multi-source searches are not added to their job counts.",
     "resumeHint": "Recently modified works and projects, not necessarily recently opened.",
     "attentionHint": "Chunks to review and jobs requiring intervention. Charts count jobs, not work completion.",
-    "activityHint": "Latest 8 recorded facts, not a click or navigation log.",
-    "events": {
-      "job": {
-        "started": "Job started",
-        "finished": "Job finished"
-      },
-      "translation": {
-        "approved": "Translation approved",
-        "approval_withdrawn": "Approval withdrawn"
-      },
-      "workspace": {
-        "moved": "Item moved"
-      }
-    },
-    "entities": {
-      "source": "Work",
-      "job": "Job",
-      "project": "Translation",
-      "workspace": "Workspace"
-    },
-    "outcomes": {
-      "success": "Succeeded",
-      "completed": "Completed",
-      "error": "Failed",
-      "cancelled": "Cancelled"
-    },
     "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
-    "title": "Overview"
+    "title": "Overview",
+    "thisMonth": "This month",
+    "costUnavailable": "Spend unavailable: missing prices",
+    "monthSummary": "{{pages}} pages · {{fragments}} fragments · {{phrases}} phrases · {{cost}}",
+    "openStats": "Open statistics",
+    "progressTitle": "Where you are",
+    "progressHint": "Work started and not finished yet.",
+    "progressEmpty": "No work in progress",
+    "resumeTranscriptions": "Transcriptions",
+    "openTranscription": "Open transcription",
+    "failedJobs_one": "{{count}} failed job",
+    "failedJobs_other": "{{count}} failed jobs",
+    "failedJobsDetail": "In the job queue",
+    "runningTitle": "Running"
   },
   "app": {
     "title": "Glossa // Pipeline",
@@ -1299,9 +1286,10 @@
       "readingThisPage": "Reading page {{page}}",
       "readingPage": "reading {{page}}",
       "readingInProgress": "Reading…",
-      "imageMode": "Image sent",
-      "imageOptimized": "Optimised: {{edge}} px, recompressed",
-      "imageLocal": "Copy on this computer as it is; if missing, optimised",
+      "imageMode": "Send",
+      "imageModeHint": "Optimised: resized and recompressed. Copy on this computer: unchanged; if missing, the optimised image is used. Applies to this session. The image goes to the selected model.",
+      "imageOptimized": "Optimised · {{edge}} px",
+      "imageLocal": "Copy on this computer",
       "imageSettingsFailed": "Could not read the image settings"
     },
     "log": {
@@ -2081,8 +2069,6 @@
     "attentionCount_one": "{{count}} chunk to review",
     "resumeTitle": "Resume",
     "resumeEmpty": "No projects yet: create one from the Translations area.",
-    "activityTitle": "Recent activity",
-    "activityEmpty": "No runs recorded yet.",
     "runOutcome": {
       "success": "Run completed",
       "warn": "Run partial or cancelled",
@@ -2090,7 +2076,6 @@
     },
     "refresh": "Refresh the dashboard",
     "openArea": "Open {{area}}",
-    "jobsTitle": "Jobs running",
     "resumeSources": "Works",
     "resumeProjects": "Translations",
     "section": {
@@ -2489,7 +2474,7 @@
               "The command stays disabled until the conditions are met: the page must belong to a digitization linked to the document, and you need a provider and a model that can read images, chosen for the document or inherited from the workspace settings. The reason a command is disabled is in its own tooltip.",
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
               "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt.",
-              "Under the model two small circles choose the image sent: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
+              "After the prompt, the Image for OCR section shows the active choice beside the two selectors: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
               "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a gold label in the top row names the page being read.",
               "Reading is queued like a download: you find it in the jobs panel while it runs, and you can pause or cancel it the same way. A passing problem is retried on its own; a wrong key or an empty answer is not, because retrying would give the same answer. An empty answer usually means the model found no text on the page.",
               "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens, estimated cost and the number of the revision created. On top there are search, filters by row type and by level, and grouping by page."
@@ -2587,7 +2572,7 @@
               "Inspect and compare stage outputs to see where the text changed: the controls sit in a column in the right margin of the translation page, next to the scrollbar. At the top the stages in pipeline order, then comparison and the pairs to compare; the one you are viewing is highlighted. Enable source editing with the pencil only when you need to correct the original; its translation will be flagged for updating, with the ochre “Source changed” label next to the title.",
               "When the translation is ready, mark it as verified with the check next to the “Candidate translation” title: it turns green, the text locks and automatic translation of unverified segments skips it. Marking it as verified also clears “needs updating”: it means you checked it against the current original. Return it to draft with the same control. When a control is off, hover it to read why.",
               "Review → History lists the segment’s versions, newest first: who produced it (Pipeline or Manual), when, and which is current and which verified. A version is written at every pipeline pass, at every save with the disk if the text changed, and on verification. Restore puts the text back on the page and writes it as a new version, without deleting the others; it is off on a verified translation. Versions cannot be deleted and cannot be named yet.",
-              "Settings → Appearance sets theme, accent, interface font, document text (size, line height, reading layout) and highlights. Settings → Languages shows the language list in use and downloads it again from the official sources; retired languages stay readable."
+              "Dialogs and menus share the same background; panels, fields and hovered rows use consistent colours across screens. Settings → Appearance sets theme, accent, interface font, document text (size, line height, reading layout) and highlights. Settings → Languages shows the language list in use and downloads it again from the official sources; retired languages stay readable."
             ]
           },
           {
@@ -2909,12 +2894,13 @@
           {
             "title": "Finding your way around",
             "paragraphs": [
-              "The Dashboard shows recent activity, items requiring attention and current jobs. Its other two tabs search across multiple sources or within one source, including by identifier.",
+              "The Dashboard shows work in progress with what is left, what to resume, items requiring attention, current jobs and this month's work. Failed jobs remain visible beyond 24 hours. Job history can be filtered by state and type, including PDF downloads and OCR, and searched by text. Its Search tab searches across multiple sources or within one source, including by identifier.",
+              "Statistics show how your work is going: forecasts, working days, spend, models, quality, OCR accuracy, glossaries. Choose the period and workspace at the top. Hover a card title to see what it measures. With too little data, a card says so instead of showing a number. Forecasts show the central estimate (median). Cost per 1,000 words covers fragments completed in the period and all their calls. Missing prices make total spend unavailable. Glossary conflicts compare the same language pair.",
               "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
               "The left bar holds the Dashboard, the areas in working order and the workspaces; at the bottom the general menu: save all, language resources, settings, help and language. Collapsed, the icons remain and a click opens the page without expanding it.",
-              "Library, Transcriptions and Translations each have their own ink: petrol, sepia and indigo. You see it in the area icon in the left sidebar, in the short rule under the large title and in a slightly different background paper. State colours do not change: green always marks what is selected or active.",
+              "Library, Transcriptions and Translations each have their own ink: petrol, sepia and indigo. You see it in the area icon in the left sidebar, in the short rule under the large title. Catalogues and Analysis share the same background; text pages and previews keep a dedicated reading surface. State colours do not change: green always marks what is selected or active.",
               "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed.",
-              "The Dashboard cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
+              "Overview and Statistics cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
             ]
           },
           {
@@ -3747,7 +3733,8 @@
       "source_download": "Page download",
       "vault_verification": "Vault check",
       "image_optimization": "Image optimisation",
-      "source_pdf_download": "Document download"
+      "source_pdf_download": "Document download",
+      "ocr_page": "Page OCR reading"
     },
     "phase": {
       "starting": "starting",
@@ -3887,6 +3874,182 @@
     "failed": "The job history could not be read.",
     "deleteBlocked": "Nothing was deleted: a job that belongs to a search stays as long as the search does.",
     "cleared_one": "{{count}} job deleted.",
-    "cleared_other": "{{count}} jobs deleted."
+    "cleared_other": "{{count}} jobs deleted.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "undated": "Undated"
+  },
+  "dashboardStats": {
+    "title": "Statistics",
+    "headline": "At a glance",
+    "wordsTranscribed": "Words transcribed",
+    "wordsTranslated": "Words translated",
+    "spentIn": {
+      "30d": "Spent in 30 days",
+      "6m": "Spent in 6 months",
+      "all": "Total spent"
+    },
+    "insufficient": "Not enough data",
+    "period": {
+      "label": "Period",
+      "30d": "Last 30 days",
+      "6m": "Last 6 months",
+      "all": "All history"
+    },
+    "weekdayShort": {
+      "0": "Mon",
+      "1": "Tue",
+      "2": "Wed",
+      "3": "Thu",
+      "4": "Fri",
+      "5": "Sat",
+      "6": "Sun"
+    },
+    "weekday": {
+      "0": "Monday",
+      "1": "Tuesday",
+      "2": "Wednesday",
+      "3": "Thursday",
+      "4": "Friday",
+      "5": "Saturday",
+      "6": "Sunday"
+    },
+    "forecast": {
+      "title": "Forecasts",
+      "hint": "What is left, based on your pace on the days you worked.",
+      "unit": {
+        "transcription_one": "page",
+        "transcription_other": "pages",
+        "translation_one": "fragment",
+        "translation_other": "fragments"
+      },
+      "kind": {
+        "transcription": "Transcription",
+        "translation": "Translation"
+      },
+      "progress": "Progress",
+      "pace": "{{value}} {{unit}} per working day",
+      "toFinish": "To finish: about {{cost}}",
+      "open": "Open",
+      "remaining": "{{count}} {{unit}} left",
+      "days": "About {{median}} working days ({{low}}–{{high}})",
+      "notEnough_one": "Estimate after {{min}} working days (so far {{count}})",
+      "notEnough_other": "Estimate after {{min}} working days (so far {{count}})",
+      "toFinishFree": "To finish: free (local models)",
+      "daysExact": "About {{median}} working days"
+    },
+    "rhythm": {
+      "title": "Work rhythm",
+      "hint": "Your work each day over the last 26 weeks.",
+      "none": "{{date}}: no work",
+      "day": "{{date}}: {{transcription}} pages by hand · {{ocr}} with OCR · {{translation}} fragments · {{source}} works",
+      "hover": "Hover a day for details",
+      "less": "less",
+      "more": "more",
+      "streak_one": "{{count}} day in a row",
+      "streak_other": "{{count}} days in a row",
+      "busiest": "busiest on {{day}}"
+    },
+    "memory": {
+      "title": "Memory and languages",
+      "hint": "Saved phrases and translation languages.",
+      "phrases": "Phrases in memory",
+      "thisMonth": "+{{count}} this month",
+      "growth": "Memory growth",
+      "pairs": "Phrases by language",
+      "translations": "Translations by language"
+    },
+    "models": {
+      "title": "Most used models",
+      "hint": "Model calls in the period.",
+      "metric": "Measure",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Spend",
+      "ocrShare": "{{count}} OCR"
+    },
+    "quality": {
+      "title": "Quality by model",
+      "hint": "Ratings of the fragments translated with each model.",
+      "judged_one": "{{count}} rated",
+      "judged_other": "{{count}} rated",
+      "rating": {
+        "critical": "Critical",
+        "poor": "Poor",
+        "fair": "Fair",
+        "good": "Good",
+        "excellent": "Excellent"
+      },
+      "goodShare": "good or excellent: {{share}} ({{low}}–{{high}})",
+      "perGood_one": "{{cost}} per good fragment",
+      "perGood_other": "{{cost}} per good fragment",
+      "perGoodMissing_one": "cost per good fragment: not enough data",
+      "perGoodMissing_other": "cost per good fragment: not enough data"
+    },
+    "ocr": {
+      "title": "OCR accuracy",
+      "hint": "How much OCR text you corrected by hand. Lower means the model reads better.",
+      "pages_one": "{{count}} corrected page",
+      "pages_other": "{{count}} corrected pages",
+      "corrected": "{{rate}} corrected",
+      "pagesRange_one": "{{count}} page · {{low}}–{{high}}",
+      "pagesRange_other": "{{count}} pages · {{low}}–{{high}}"
+    },
+    "performance": {
+      "title": "Speed and reliability",
+      "hint": "Response time and failed attempts per model.",
+      "p90": "9 out of 10 within {{seconds}}",
+      "noFailures_one": "no errors",
+      "noFailures_other": "no errors",
+      "failures_one": "{{rate}} failed ({{low}}–{{high}})",
+      "failures_other": "{{rate}} failed ({{low}}–{{high}})"
+    },
+    "spend": {
+      "title": "Spend",
+      "hint": "Spend computed with the prices set in the app.",
+      "translation": "Translation",
+      "ocr": "OCR",
+      "period": "In the period",
+      "month": "This month",
+      "projected": "≈ {{cost}} by month end",
+      "perThousand": "Per 1,000 words",
+      "chart": "Spend per month",
+      "unpriced_one": "{{count}} call without a known price is not counted",
+      "unpriced_other": "{{count}} calls without a known price are not counted",
+      "projectedLater": "estimate from the 4th day of the month",
+      "perThousandRange_one": "{{low}}–{{high}} · {{count}} fragment",
+      "perThousandRange_other": "{{low}}–{{high}} · {{count}} fragments",
+      "perThousandSample_one": "over {{count}} fragment",
+      "perThousandSample_other": "over {{count}} fragments"
+    },
+    "tokens": {
+      "title": "Tokens and cache",
+      "hint": "Tokens sent and received. The cache is the part the provider reused.",
+      "input": "Input",
+      "output": "Output",
+      "cache": "From cache",
+      "cached": "{{value}} tokens",
+      "split": "Input {{input}} of the total"
+    },
+    "glossaries": {
+      "title": "Glossaries",
+      "hint": "How closely translations follow each glossary.",
+      "entries_one": "{{count}} entry",
+      "entries_other": "{{count}} entries",
+      "projects_one": "used by {{count}} translation",
+      "projects_other": "used by {{count}} translations",
+      "growth": "Entries of {{name}} over time",
+      "unused": "No translation uses it.",
+      "noCases": "None of its terms in translated fragments.",
+      "respected_one": "Followed: {{rate}} ({{low}}–{{high}}) · {{count}} case",
+      "respected_other": "Followed: {{rate}} ({{low}}–{{high}}) · {{count}} cases",
+      "mostMissed": "Most often missed: {{terms}}",
+      "neverSeen_one": "{{count}} entry never found in the texts",
+      "neverSeen_other": "{{count}} entries never found in the texts",
+      "conflictsTitle": "Conflicts between glossaries ({{count}})",
+      "noConflicts": "No conflicts.",
+      "moreConflicts_one": "and {{count}} more",
+      "moreConflicts_other": "and {{count}} more"
+    }
   }
 }

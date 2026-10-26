@@ -138,7 +138,8 @@ Al modello partono l'immagine della pagina e il prompt, senza il numero di
 pagina: la numerazione stampata dalla biblioteca raramente coincide con la
 posizione nella scansione e confonderebbe solo la lettura.
 
-Sotto il modello due cerchietti scelgono quale immagine inviare:
+Dopo il prompt, la sezione **Immagine per l’OCR** mostra il nome della scelta
+attiva accanto ai due selettori, con la dimensione quando è ottimizzata:
 
 - **ottimizzata**: ridotta al lato lungo scelto nelle Impostazioni, scheda
   Trascrizioni (1500, 2000, 2500 o 3000 pixel), e ricompressa. Un'immagine più
@@ -150,6 +151,7 @@ Sotto il modello due cerchietti scelgono quale immagine inviare:
   svuotata per il limite di spazio, libro scaricato solo in parte) si invia
   l'ottimizzata.
 
+Entrambe le scelte inviano l’immagine al modello selezionato.
 La scelta di partenza sta nelle Impostazioni; nello Studio la cambi per la
 sessione, senza che resti salvata nel documento. Con il pannello a destra
 chiuso il comando di lettura resta sotto il comando di riapertura.

@@ -131,7 +131,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             <input id="extract-term-input" type="text" value={isLoading ? '…' : term}
               onChange={(e) => setTerm(e.target.value)} disabled={isLoading}
               aria-label={t('memory.termLabel')}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50" />
           </div>
 
           <div>
@@ -141,7 +141,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             </label>
             <input id="extract-translation-input" type="text" value={translation}
               onChange={(e) => setTranslation(e.target.value)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
           </div>
 
           <div>
@@ -151,7 +151,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             </label>
             <input id="extract-notes-input" type="text" value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
           </div>
 
           <div>
@@ -176,7 +176,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
                 aria-label={t('glossary.newGlossaryNamePlaceholder')}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
                 autoFocus
-                className="mt-2 w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+                className="mt-2 w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
             )}
           </div>
       </div>

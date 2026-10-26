@@ -43,15 +43,20 @@ Usare ruoli semantici per le superfici:
 | `bg-surface-resource` | unica carta tenue per ciascuna voce delle risorse linguistiche |
 | `bg-surface-hover/50` | hover su righe cliccabili |
 
-Ogni area con un catalogo ha un **inchiostro** e una **carta** propri
-(`area-library`, `area-transcriptions` seppia, `area-translations` indaco, e le
-rispettive `-paper`), con le classi in `AREA_INK_CLASSNAME` e
-`AREA_PAPER_CLASSNAME`. L'inchiostro va solo su segni piccoli: il filetto sotto
-il titolo (`AreaHeading`), l'icona dell'area a riposo nella barra di sinistra,
-il segnaposto di una copertina mancante. La carta è il fondo dell'elenco e dei
-titoletti di gruppo fermi in cima; la colonna degli scaffali resta
-`surface-panel`. Mai su comandi, selezione o stati: lì restano verde, rosso,
-ocra e oro. Contrasto sul fondo ≥ 7:1 in entrambi i temi.
+I cataloghi di Biblioteca, Trascrizioni e Traduzioni e l’area Analisi usano
+lo stesso fondo `surface-panel`. Gli alias `area-*-paper` puntano a questo
+fondo comune, anche per i titoletti di gruppo fermi in cima.
+Ogni catalogo mantiene il proprio inchiostro (`area-library`,
+`area-transcriptions` seppia, `area-translations` indaco) solo su segni piccoli:
+filetto sotto il titolo, icona dell’area e copertine mancanti.
+Comandi, selezione e stati mantengono i colori semantici.
+Le pagine di testo e le anteprime Markdown usano `editorial-page`, con testo
+`editorial-ink`: la lettura resta distinta dai pannelli e dai campi di input.
+
+Finestre, menu e intestazioni ferme usano `surface-elevated` pieno; pannelli
+e colonne `surface-panel`. I riquadri nella panoramica workspace usano
+`surface-elevated`, le righe interattive `surface-hover/50`. Le intestazioni
+degli editor non sfocano né lasciano trasparire il testo sottostante.
 
 Campi, select e textarea usano `editorial-textbox` pieno. Vietati colori
 Tailwind grezzi e valori esadecimali nei componenti.
@@ -274,6 +279,10 @@ frecce/Home/End spostano scelta e fuoco, suggerimento per opzione, la scelta in
 accento pieno con `text-on-accent`. L'icona di categoria accanto è muted dentro
 un `Hint`, mai in ocra. Nessun cerchietto scritto a mano.
 
+La scelta dell’immagine OCR vive in una `PanelSection` autonoma dopo il prompt,
+con `SettingChoiceRow`: etichetta, opzione attiva e dimensione dell’ottimizzata
+sempre leggibili. Il suggerimento della riga spiega le alternative e il ripiego.
+
 ### Barre strette
 
 Una barra che non ci sta non taglia i comandi: sfoglio, salto a pagina e zoom
@@ -429,6 +438,37 @@ sotto i comandi è un solo pulsante senza suggerimento (le cifre si leggono già
 che apre un `ClickPopover` con le due tabelle: solo titoli e tabelle, né
 paragrafi né suggerimenti dentro (sarebbe un secondo riquadro sopra il primo).
 Il consumo non si colora: il verde resta per scelta e stato attivo.
+
+### Grafici
+
+I grafici stanno solo nella Dashboard (Panoramica e Statistiche), dentro i suoi
+riquadri, e sono scritti a mano con i token dell'app (`components/dashboard/charts`):
+nessuna libreria di grafici.
+
+- **Quantità** (calendario del lavoro, barre di classifica, linea di
+  andamento): una sola tinta, `editorial-ink`, dal chiaro allo scuro; il vuoto è
+  `editorial-textbox`. Il calendario usa quattro toni (`/25`, `/45`, `/70`,
+  pieno) a soglie sui quartili dei giorni lavorati.
+- **Due serie** (traduzione e OCR nella spesa): `chart-translations` (indaco) e
+  `chart-transcriptions` (seppia), versioni sature degli inchiostri d'area. Gli
+  inchiostri d'area restano sui segni piccoli: come serie sono troppo spenti e si
+  confondono fra loro (verificato col controllo dei colori, anche per chi
+  distingue male i colori). Mai l'inchiostro d'area e la serie nello stesso
+  grafico.
+- **Giudizi** (`RatingBar`): due poli con il centro neutro — critico `danger`,
+  scarso `danger/45`, discreto `editorial-border`, buono `success/55`, ottimo
+  `success` — con legenda sotto.
+- Segni sottili: barre di classifica alte 6 px, colonne larghe al massimo 24 px
+  con l'estremo arrotondato e la base dritta, linea di 2 px con punto finale e
+  anello del colore di fondo; due pixel di fondo fra fasce vicine, mai un bordo.
+- Il testo non prende mai il colore della serie: valori e nomi nei colori del
+  testo, il quadratino accanto porta l'identità. Due serie hanno sempre la
+  legenda; una sola no, la dice il titolo.
+- Ogni segno ha il suo valore al passaggio (suggerimento o riga di dettaglio
+  sotto il calendario) e un nome per chi legge con la voce.
+- Un numero di testa (`Figure`): valore `font-display text-2xl italic`,
+  etichetta `caption-label` sotto, nota `text-xs` muted.
+- Dati che mancano: «Dati insufficienti», mai uno zero.
 
 ### Completamento in una riga di elenco
 

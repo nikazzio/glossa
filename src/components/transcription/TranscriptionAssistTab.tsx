@@ -38,7 +38,7 @@ interface TranscriptionAssistTabProps {
 
 /** Scheda OCR dello Studio di trascrizione (#220): fornitore, modello e
  *  prompt del documento, e il comando di lettura della pagina aperta. Stessa
- *  resa della scheda traduzione: due sezioni, pochissime scritte. */
+ *  resa della scheda traduzione, con la scelta dell'immagine dopo il prompt. */
 export function TranscriptionAssistTab({
   document,
   workspace,
@@ -215,7 +215,6 @@ export function TranscriptionAssistTab({
             {overridden ? <LockOpen size={13} /> : <Lock size={13} />}
           </IconButton>
         </div>
-        <OcrImageModePicker value={image.mode} edge={image.edge} onChange={onImageModeChange} />
       </PanelSection>
 
       {/* Il prompt del documento: modificato da una pagina qualsiasi vale per
@@ -241,6 +240,7 @@ export function TranscriptionAssistTab({
         templateContext="ocr"
         templateWorkflow="transcription"
       />
+      <OcrImageModePicker value={image.mode} edge={image.edge} onChange={onImageModeChange} />
     </div>
   );
 }

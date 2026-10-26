@@ -66,7 +66,7 @@
     "sonner": "^2.0.7",
     "unified": "^11.0.5",
     "write-excel-file": "^4.1.1",
-    "zod": "^4.4.3",
+    "zod": "^4.6.7",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

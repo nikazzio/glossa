@@ -52,7 +52,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
   return <form onSubmit={(event) => { event.preventDefault(); onSubmit(); }} className="space-y-5 p-4">
     {/* Il comando di avvio non sta in fondo a una colonna che scorre: resta in
         vista mentre si scrivono i criteri e si scelgono le fonti. */}
-    <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-center justify-between gap-2 border-b border-editorial-border bg-surface-panel px-4 py-2.5">
+    <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-center justify-between gap-2 border-b border-editorial-border bg-surface-elevated px-4 py-2.5">
       {/* La spiegazione la porta il conteggio delle fonti, che è il testo a cui
           si riferisce: i criteri valgono per la prossima ricerca. */}
       <span className="min-w-0 truncate text-xs text-editorial-muted">

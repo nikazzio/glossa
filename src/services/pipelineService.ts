@@ -164,6 +164,16 @@ export async function getPipelineConfig(pipelineId: string): Promise<{
   };
 }
 
+/** Cost estimates only need pipeline settings, not glossary contents or footnotes. */
+export async function loadPipelineEstimateConfigs(pipelineIds: string[]): Promise<Map<string, PipelineConfig>> {
+  if (pipelineIds.length === 0) return new Map();
+  const rows = await select<DbPipeline>(
+    `SELECT * FROM pipelines WHERE id IN (${pipelineIds.map((_, index) => `$${index + 1}`).join(',')})`,
+    pipelineIds,
+  );
+  return new Map(rows.map((row) => [row.id, rowToPipelineConfig(row, [], null)]));
+}
+
 export async function createPipeline(
   projectId: string,
   name: string,

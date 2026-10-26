@@ -135,7 +135,8 @@ The model receives the page image and the prompt, without the page number: the
 library's printed numbering rarely matches the position in the scan and would
 only confuse the reading.
 
-Under the model, two small circles choose which image is sent:
+After the prompt, the **Image for OCR** section shows the active choice beside
+the two selectors, including the size when optimised:
 
 - **optimised**: reduced to the long side chosen in Settings, Transcriptions
   tab (1500, 2000, 2500 or 3000 pixels), and recompressed. A smaller image is
@@ -146,6 +147,7 @@ Under the model, two small circles choose which image is sent:
   library for a ready-made size. If the copy is missing (cache emptied by its
   space limit, book only partly downloaded) the optimised one is sent.
 
+Both choices send the image to the selected model.
 The starting choice is in Settings; in the Studio you change it for the
 session, without it being saved in the document. With the right panel closed,
 the reading command stays under the reopen command.

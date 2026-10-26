@@ -1,5 +1,7 @@
 ---
 title: Workspaces and projects
+Dialogs and menus share the same background; panels, fields and hovered rows use consistent colours across screens.
+
 ---
 
 # Workspaces and projects
@@ -109,26 +111,70 @@ the top expands it again.
 
 Library, Transcriptions and Translations each have their own ink — petrol,
 sepia and indigo — so you can tell them apart at a glance: the area icon in the
-left sidebar, a short rule under the large title and a slightly different
-background paper. State colours stay the same in every area: green marks what
+left sidebar and a short rule under the large title.
+Catalogues and Analysis share the same background; text pages and previews
+keep a dedicated reading surface. State colours stay the same in every area: green marks what
 is selected or active, red errors, ochre cautions, gold running jobs.
 
 ## Dashboard
 
-The Dashboard contains an overview, a search across multiple sources, and a
-single-source or identifier search. Only the visible tab is mounted in the
+The Dashboard contains an overview, statistics, a search across multiple
+sources, and a single-source or identifier search. Only the visible tab is mounted in the
 interface; the backend manages jobs that have already started independently.
 
-The overview shows recent works and translations, items requiring attention,
-jobs by status, recent searches and recent activity. Expanded and collapsed
+The overview shows work in progress with what is left, recent works,
+transcriptions and translations, items requiring attention (including failed
+jobs), jobs by status, recent searches and one line with this month's work. Expanded and collapsed
 sections retain their state. The workspace filter applies to the relevant
 summaries; jobs and searches remain global. A section that cannot load its
 data displays an error rather than a zero count.
 
 The cards can be arranged as needed: the handle to the left of the title drags a
 card higher, lower or into the other column, and the chosen arrangement is
-remembered. The full job list sits to the right of the overview, in a column
-that can be resized and closed.
+remembered. The full job list sits to the right of the overview, grouped by
+day, in a column that can be resized and closed.
+
+### Statistics
+
+Choose the period (30 days, 6 months, all) and the workspace at the top.
+
+- **Forecasts**: how many working days are left to finish each work, and for
+  translations how much it costs to finish.
+- **Work rhythm**: a calendar of the last 26 weeks.
+- **Spend**: per month, between translation and OCR, with the month-end
+  estimate.
+- **Most used models**, **Quality by model**, **OCR accuracy**, **Speed and
+  reliability**, **Tokens and cache**.
+- **Memory and languages**: saved phrases and translation languages.
+- **Glossaries**: how closely translations follow each glossary, entries never
+  found in the texts and terms translated differently by different glossaries.
+
+**How the figures are computed**
+
+- *What is left*: the app looks at what you did on the days you worked on that
+  text and simulates the rest of the work many times. It shows the central (median)
+  number of working days and a range. At least 3 working days are needed.
+- *Cost to finish*: the same estimate the Studio shows before running the
+  pipeline, on the remaining fragments.
+- *Costs*: recorded call prices, falling back to the app's price list.
+  They do not replace the provider's invoice.
+- *Percentages*: they come with a range, where the true value most likely
+  lies. With few cases the range is wide.
+- *OCR accuracy*: how many characters you had to change by hand, out of the
+  total.
+- *Glossaries*: a term is followed if the translation uses the form written in
+  the glossary. A plural or another form counts as not followed.
+
+With too little data a card shows "Not enough data" instead of a number.
+
+Failed jobs remain in Needs attention beyond 24 hours. Month and calendar
+boundaries follow the computer's time zone. Chart columns also reveal their
+breakdown on keyboard focus.
+
+Costs use the recorded call price, falling back to the price list. Missing
+prices make total spend and projections unavailable; charts show known costs
+only. Cost per 1,000 words includes fragments completed in the selected period
+and all their recorded calls. Glossary conflicts compare the same language pair.
 
 ## Moving and archiving
 

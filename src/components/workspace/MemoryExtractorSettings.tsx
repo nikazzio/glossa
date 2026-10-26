@@ -290,7 +290,7 @@ export function MemoryExtractorSettings({
                 </li>
               ) : (
                 filteredTemplates.map((template) => (
-                  <li key={template.id} className="group flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40">
+                  <li key={template.id} className="group flex items-start gap-2 px-3 py-2 hover:bg-surface-hover/50">
                     <button
                       type="button"
                       onClick={() => {
@@ -325,7 +325,7 @@ export function MemoryExtractorSettings({
           disabled={!isEditingPrompt}
           className={`min-h-[10rem] w-full resize-y rounded-md border p-4 font-mono text-sm leading-relaxed outline-none ${
             isEditingPrompt
-              ? 'border-rule bg-editorial-textbox/40 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+              ? 'border-rule bg-editorial-textbox focus-visible:ring-2 focus-visible:ring-editorial-accent'
               : 'cursor-default border-rule-faint bg-editorial-textbox/10 text-editorial-muted/60'
           }`}
           aria-label={t('workspace.memoryExtractorPrompt')}

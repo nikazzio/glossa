@@ -76,8 +76,8 @@ sempre visibile in Generale, abilitata soltanto in DeepL.
 
 ## Ricerca federata e Dashboard
 
-Le due viste vivono nella Dashboard (`DashboardArea`): `overview` e ricerca
-(`view: 'search'`). Si scelgono dalla barra a sinistra,
+Le tre viste vivono nella Dashboard (`DashboardArea`): `overview`, statistiche
+(`view: 'stats'`) e ricerca (`view: 'search'`). Si scelgono dalla barra a sinistra,
 come voci sotto la Dashboard (`WorkspaceRailNext`, che in fondo porta anche il
 menu generale `ShellNavFooter`, tolto dalla testata), non da una fila di linguette
 dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
@@ -830,6 +830,11 @@ coprono il caso di un workspace con le colonne vuote: fascia media di
 proposito, il fondo del listino sbaglia abbastanza da sembrare rotto su una
 pagina manoscritta.
 
+**Interfaccia immagine OCR.** Dopo il prompt, una sezione autonoma «Immagine per
+l’OCR» usa `SettingChoiceRow`: etichetta «Invio», nome della scelta visibile e
+misura per l’ottimizzata. Il suggerimento chiarisce ricompressione, ripiego,
+ambito di sessione e invio al modello selezionato.
+
 **Immagine inviata** (`ocrImageSettingsService`, chiavi `app_settings`
 `ocr_image_edge` e `ocr_image_mode`, nessuna colonna): globale, scheda
 Impostazioni → Trascrizioni; nello Studio si cambia per la sessione (stato
@@ -1288,10 +1293,93 @@ significa retention, non filtro di vista.
 
 La Panoramica tiene in `uiStore` anche la disposizione dei riquadri
 (`dashboardSectionColumns`: due elenchi, sinistra e destra) e la geometria della
-colonna dei lavori (`dashboardJobsWidth`, `dashboardJobsCollapsed`). Il riordino
-usa `@dnd-kit/core` e `@dnd-kit/sortable`; un riquadro nuovo nel codice che
-l'ordine salvato non conosce compare in fondo alla colonna sinistra invece di
-sparire.
+colonna dei lavori (`dashboardJobsWidth`, `dashboardJobsCollapsed`); le
+Statistiche hanno la propria (`statsSectionColumns`) e il periodo scelto
+(`statsPeriod`). `DashboardBoard` riceve la disposizione da chi lo monta. Il
+riordino usa `@dnd-kit/core` e `@dnd-kit/sortable`; un riquadro nuovo nel codice
+che l'ordine salvato non conosce compare in fondo alla colonna sinistra invece di
+sparire, uno tolto dal codice si ignora.
+
+L'elenco completo divide le righe per giorno di creazione (intestazione ferma in
+cima) e filtra per esito e per tutti i tipi di job registrati
+(`JOB_TYPES` in `JobsHistoryList`: scaricamento pagine e PDF, ottimizzazione,
+lettura OCR, ricerca, verifica del deposito). Un tipo nuovo va aggiunto lì, in
+`JOB_TYPE_ICONS` e in `jobs.type.*` dei testi.
+
+### Panoramica e Statistiche: da dove vengono i numeri
+
+I confini locali del mese e del calendario sono passati a SQLite come istanti
+ISO con offset UTC. Le spese con prezzi mancanti non diventano zero né una
+proiezione completa. Gli errori di fase registrano provider e modello; per lo
+storico senza questi campi si usa l’avvio precedente della stessa fase,
+frammento e pipeline. I conflitti dei glossari rispettano la coppia di lingue;
+il confronto testuale usa lowercase Unicode indipendente dal locale.
+
+
+Nessun contatore nuovo e nessuna tabella nuova: tutto è letto da dati già
+registrati e calcolato nel frontend.
+
+- **Panoramica** (`AppDashboard`): «A che punto sei» viene da
+  `workProgressService.loadWorkProgress`, che riusa i servizi dei cataloghi
+  (pagine scritte sul totale atteso dell'opera; frammenti tradotti sulla prima
+  pipeline del progetto), aggiunge la previsione e, per le traduzioni, la stima
+  a listino per finire; «Riprendi» unisce opere, trascrizioni
+  (`recentTranscriptions`, ultima revisione scritta) e traduzioni; «Richiede
+  attenzione» aggiunge ai frammenti critici i job falliti di tutto lo storico (escluse le ricerche); la riga del
+  mese viene da `statsService.loadMonthSummary`.
+- **Statistiche** (`StatsDashboard`, letture in `useDashboardStats`, una per
+  sezione con il proprio stato di errore): `statsService` legge storico delle
+  chiamate (`operation_logs` con token, errori e `phase = 'retry'`), attività per
+  giorno, lavoro per giorno lavorato (`loadDailyOutput`: una pagina nel giorno
+  del suo primo testo, un frammento nel giorno della sua prima fase conclusa),
+  parole per frammento, giudizi con il modello dell'ultima fase conclusa sul
+  frammento, pagine OCR poi corrette a mano (ultima revisione `ocr` contro
+  l'ultima `user` successiva, al massimo 200 pagine; il modello è quello
+  del primo esito OCR riuscito dopo la revisione, sulla stessa pagina entro cinque minuti e prima di un’altra revisione OCR; errori e risultati invariati sono esclusi, perché la
+  riga di log non porta l'identificativo della revisione), memoria delle frasi,
+  lingue dei progetti, glossari (`loadGlossaryData`: glossari, voci, legami ai
+  progetti, correzioni per workspace, testi della prima pipeline dei progetti
+  legati).
+- **Metodi** (`utils/statistics.ts`, generatore con seme fisso: stessi dati,
+  stessi numeri):
+  - *Previsione di completamento*: Monte Carlo sul lavoro dei giorni lavorati
+    (ultimi 20, almeno 3): 5.000 corse estraggono giornate con reinserimento
+    finché coprono quanto manca; mediana e 10°–90° percentile delle giornate.
+    Niente data di calendario: non si sa quando si lavorerà.
+  - *Costo per finire una traduzione*: `estimatePipelineCost` (la stessa stima
+    dello Studio) sui frammenti non completati della prima pipeline, con la sua
+    configurazione e il listino; non dipende dallo storico. Frammenti mancanti e
+    configurazioni delle sei voci si leggono in due query complessive, senza
+    caricare glossari e note.
+  - *Costo per 1.000 parole*: stimatore a rapporto Σcosti/Σparole sui soli
+    frammenti completati nel periodo con costo registrato, includendo tutte le
+    loro chiamate (i frammenti tradotti prima che lo storico
+    registrasse i costi restano fuori da numeratore e denominatore), intervallo
+    bootstrap al 95% sui frammenti, almeno 3.
+  - *Qualità*: quota di buoni o ottimi con intervallo di Wilson al 95%; costo per
+    frammento buono = spesa dei frammenti giudicati con costo registrato / quanti
+    di essi sono buoni o ottimi, almeno 3.
+  - *Precisione OCR*: Character Error Rate = Σ distanze di Levenshtein (punti di
+    codice dopo NFC) / Σ lunghezze del testo corretto, intervallo bootstrap
+    sulle pagine.
+  - *Tempi*: mediana e 90° percentile (quantili di tipo 7). *Affidabilità*:
+    tentativi falliti (righe d'errore e «retry») / tentativi, Wilson al 95%.
+  - *Glossari* (`utils/glossaryStats.ts`): un caso è una coppia frammento
+    completato–termine presente nell'originale (parola intera Unicode, senza
+    maiuscole, NFC); rispettato se la traduzione contiene una forma ammessa (la
+    traduzione della voce o quella corretta nel workspace del progetto,
+    alternative separate da «/» o «;»); voci nascoste nel workspace escluse;
+    Wilson al 95%. Voci mai incontrate: mai trovate nell'originale di nessun
+    frammento delle traduzioni legate. Conflitti: stesso termine normalizzato
+    con traduzioni normalizzate diverse fra glossari.
+  - *Spesa a fine mese*: spesa del mese / frazione di mese trascorsa, dal quarto
+    giorno. Costo di una chiamata = `cost_usd` fissato alla scrittura, altrimenti
+    `costForEntry` con il listino attuale; le chiamate senza prezzo noto escono
+    dai totali e si contano a parte. La cache si mostra come quota dell'input:
+    il listino non ha un prezzo per i token in cache.
+- Il periodo filtra in memoria lo storico delle chiamate, letto intero una volta
+  (serve anche alle previsioni); memoria, lingue, glossari e calendario (sempre
+  26 settimane) non dipendono dal periodo.
 
 La riga di un job è un solo componente (`JobRow`): pannello in basso ed elenco
 completo la condividono, e cambia solo cosa fa il comando in coda — togliere la
@@ -2163,3 +2251,29 @@ altrimenti alla prima abilitata. `TabButton` usa aria-disabled e blocca il click
 le linguette indisponibili sono focusabili per la spiegazione e saltate dalle frecce.
 
 Lo Studio conserva le viste dei gruppi Memoria/Revisione/Documento in `studioGroupViews`; cambio e creazione pipeline sono bloccati durante elaborazione anche nello store. `CatalogSearchField` supporta `disabled` e motivo accessibile; il catalogo memorie disabilita la ricerca durante modifica. Le stringhe di provenienza lunghe usano `StatBlock` per andare a capo.
+
+
+### Eccezioni temporanee dell'audit ZIP
+
+L’audit Cargo mantiene tre eccezioni circoscritte alla dipendenza transitiva
+`tauri-plugin-updater 2.10.1 → zip 4.6.1`, usata dall’updater Windows:
+
+| Avviso | Problema |
+|---|---|
+| [RUSTSEC-2026-0368](https://rustsec.org/advisories/RUSTSEC-2026-0368) | Creazione di link simbolici verso destinazioni esterne alla cartella di estrazione. |
+| [RUSTSEC-2026-0369](https://rustsec.org/advisories/RUSTSEC-2026-0369) | Modifica di permessi Unix attraverso link simbolici. |
+| [RUSTSEC-2026-0367](https://rustsec.org/advisories/RUSTSEC-2026-0367) | Conservazione dei bit Unix SUID/SGID durante l’estrazione. |
+
+L’updater verifica la firma del pacchetto prima dell’installazione. La release
+pubblica `glossa-v1.3.0` indica installer Windows MSI/EXE nel suo `latest.json`,
+non archivi ZIP; il percorso ZIP resta una capacità del componente. Le due
+segnalazioni sui permessi Unix non si applicano al target Windows. Gli archivi
+gestiti direttamente dall’app (documenti e backup) usano invece ZIP 9.1.2.
+L’eccezione accetta un rischio residuo: non corregge la libreria transitiva e
+non deve essere estesa ai documenti importati o a nuove dipendenze.
+
+**Rimozione (#408):** a ogni aggiornamento dell’updater o prima di cambiare il
+formato degli installer, verificare se la dipendenza ZIP 4 è eliminata o corretta.
+Aggiornare il componente, rimuovere i tre `--ignore` dalla CI e rieseguire l’audit.
+Le versioni updater 2.13.0/2.14.0 conservano ZIP 4: il solo aggiornamento a queste
+versioni non elimina le segnalazioni. Tutti gli altri controlli restano attivi.

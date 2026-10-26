@@ -9,6 +9,7 @@ import type { TranscriptionGrouping } from '../utils/transcriptionCatalogFilters
 import type { TranslationGrouping } from '../utils/translationCatalogFilters';
 import type { ImportedTextFile } from '../services/fileService';
 import type { CatalogView } from '../components/ui/CatalogViewSwitch';
+import type { StatsPeriod } from '../utils/dashboardStats';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
@@ -189,6 +190,10 @@ interface UiState {
    *  colonna, e spostarla dentro la sua o nell'altra dev'essere la stessa
    *  operazione con lo stesso risultato visibile. */
   dashboardSectionColumns: { left: string[]; right: string[] };
+  /** Le sezioni delle Statistiche: stesso meccanismo, disposizione propria. */
+  statsSectionColumns: { left: string[]; right: string[] };
+  /** Periodo scelto nelle Statistiche. */
+  statsPeriod: StatsPeriod;
   /** I gruppi di campi aperti nella scheda dell'opera. La scelta vale per
    *  tutta la Biblioteca e non per la singola opera: chi lavora su un tipo di
    *  materiale tiene aperti sempre gli stessi. */
@@ -257,6 +262,8 @@ interface UiState {
   markLibraryOpened: (sourceId: string) => void;
   setLibrarySourceGroupOpen: (group: string, open: boolean) => void;
   setDashboardSectionColumns: (columns: { left: string[]; right: string[] }) => void;
+  setStatsSectionColumns: (columns: { left: string[]; right: string[] }) => void;
+  setStatsPeriod: (period: StatsPeriod) => void;
   setDashboardJobsWidth: (width: number) => void;
   setDashboardJobsCollapsed: (collapsed: boolean) => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
@@ -418,9 +425,14 @@ export const useUiStore = create<UiState>()(
       libraryOpenedAt: {},
       librarySourceGroups: {},
       dashboardSectionColumns: {
-        left: ['resume', 'searches', 'activity'],
+        left: ['progress', 'resume', 'searches'],
         right: ['attention', 'jobs'],
       },
+      statsSectionColumns: {
+        left: ['forecast', 'rhythm', 'quality', 'spend', 'tokens'],
+        right: ['models', 'ocr', 'performance', 'memory', 'glossaries'],
+      },
+      statsPeriod: '6m',
       dashboardJobsWidth: 380,
       dashboardJobsCollapsed: false,
       pendingAnnotationAnchor: null,
@@ -626,6 +638,8 @@ export const useUiStore = create<UiState>()(
       setLibrarySourceGroupOpen: (group, open) =>
         set((state) => ({ librarySourceGroups: { ...state.librarySourceGroups, [group]: open } })),
       setDashboardSectionColumns: (columns) => set({ dashboardSectionColumns: columns }),
+      setStatsSectionColumns: (columns) => set({ statsSectionColumns: columns }),
+      setStatsPeriod: (period) => set({ statsPeriod: period }),
       setDashboardJobsWidth: (width) => set({ dashboardJobsWidth: width }),
       setDashboardJobsCollapsed: (collapsed) => set({ dashboardJobsCollapsed: collapsed }),
       setActivePanel: (panel, tab) =>
@@ -700,6 +714,8 @@ export const useUiStore = create<UiState>()(
         libraryOpenedAt: state.libraryOpenedAt,
         librarySourceGroups: state.librarySourceGroups,
         dashboardSectionColumns: state.dashboardSectionColumns,
+        statsSectionColumns: state.statsSectionColumns,
+        statsPeriod: state.statsPeriod,
         dashboardJobsWidth: state.dashboardJobsWidth,
         dashboardJobsCollapsed: state.dashboardJobsCollapsed,
         consoleDrawerHeight: state.consoleDrawerHeight,

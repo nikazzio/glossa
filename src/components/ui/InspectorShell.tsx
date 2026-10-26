@@ -167,7 +167,7 @@ export function InspectorShell({
       )}
       {beforeTabs && <div className="shrink-0 border-b border-editorial-border">{beforeTabs}</div>}
       {tabs.length > 0 && (
-        <div className={`flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 ${tabRowHeightClassName ?? 'py-2'}`}>
+        <div className={`flex shrink-0 items-center gap-2 border-b border-editorial-border bg-surface-elevated px-3 ${tabRowHeightClassName ?? 'py-2'}`}>
           <div role="tablist" aria-orientation="horizontal" aria-label={ariaLabel} className="flex min-w-0 shrink-0 items-center gap-1">
             {tabs.map((tab) => (
               <TabButton

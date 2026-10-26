@@ -190,8 +190,8 @@ pub async fn read_backup(
 
 fn pack(payload: &str, options: &BackupOptions) -> Result<Vec<u8>, String> {
     if options.privacy == BackupPrivacy::Password
-        && (options.password.as_deref().map_or(true, str::is_empty)
-            || options.recovery_code.as_deref().map_or(true, str::is_empty))
+        && (options.password.as_deref().is_none_or(str::is_empty)
+            || options.recovery_code.as_deref().is_none_or(str::is_empty))
     {
         return Err("backup_password_required".to_string());
     }

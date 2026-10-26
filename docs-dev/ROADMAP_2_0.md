@@ -1,15 +1,23 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 7 ottobre 2026.
+Aggiornata: 26 ottobre 2026.
 
-## Prossimi passi concordati (7 ottobre 2026)
+## Prossimi passi concordati (26 ottobre 2026)
 
-- **Dashboard**, insieme ai colori delle superfici (#485 D).
+- Studio di traduzione accettabile per il maintainer; affinamenti UI/UX rimandati.
+- OCR: scelta dell’immagine in sezione autonoma dopo il prompt, con opzione
+  attiva leggibile; pubblicata, da provare dal vivo.
+- Colori delle superfici (#485 D): uniformati finestre/menu, pannelli, intestazioni,
+  campi e hover; resta la prova visiva nei due temi.
+- Dashboard (#491): corretti i rilievi su costi, periodi, errori, OCR, glossari,
+  letture delle previsioni, accessibilità e documentazione; verifica dal vivo
+  di Panoramica e Statistiche prima del merge in #488.
 - Unione di #488 su `main` con l'accorpamento delle migrazioni 0004-0008; poi
   chiusura di #489.
-- Da chiudere dopo verifica: #481, #467, #469.
+- Dopo i merge di #491 e #488: nuova PR da `main` per Home con ricerca in
+  primo piano, Ricerca autonoma e Statistiche dentro Analisi.
 - Futuro, senza data: sblocco del prompt delle fasi quando esistono frammenti
-  tradotti.
+  tradotti; traduzione eseguita come job della coda (#469).
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 
@@ -262,8 +270,9 @@ Schema aggiornato da `0003_text_corpus.sql`, baseline applicata conservata;
 consolidamento prima del merge riservato all'utente.
 Costi T8 su pannelli comuni; conteggio blocchi confermato dall'utente.
 T9: revisione finale e nove correzioni della review implementate; i due Studio
-sono inclusi nello stesso ramo della PR #488. Restano CI e prova dal vivo;
-la UI/UX non è approvata dall'utente e richiede una nuova revisione visuale.
+sono inclusi nello stesso ramo della PR #488. CI verde sull’ultimo commit pubblicato. Lo Studio di traduzione è accettabile
+per il maintainer; affinamenti UI/UX rimandati. Restano uniformità delle superfici
+e verifica delle nuove modifiche OCR prima dell’integrazione.
 quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
 ora.
@@ -334,9 +343,22 @@ consultati, adozione/adattamento/scarto e motivo; non copiare la sua interfaccia
 o introdurre compatibilità dati implicita. #383 raccoglie riferimenti secondari;
 #404 riguarda approfondimento bibliografico.
 
-#408: ricontrollare l'eccezione di sicurezza e rimuoverla quando risolta.
+#408: ricontrollare le eccezioni di sicurezza e rimuoverle quando risolte.
+Comprende i tre avvisi ZIP transitivi dell’updater Windows (RUSTSEC-2026-0367,
+0368, 0369); motivazione e criterio di rimozione in ARCHITECTURE,
+«Eccezioni temporanee dell’audit ZIP».
 #410 e #402: evoluzione delle risposte strutturate, evitando di duplicare il
 contratto di revisione già implementato. #396: Dashboard orientata alle attività.
+
+Punti aperti senza issue:
+
+- Chiusura dell'app: chiudendo l'ambiente di sviluppo a volte restano attivi
+  processi vecchi (app e server di sviluppo), e la X della finestra a volte non
+  chiude davvero l'app. Da indagare: ciclo di sviluppo o app, e se capita anche
+  nella versione installata.
+- Anteprima diretta di audit e coerenza nel singolo frammento: oggi le
+  conservano le opzioni e i log.
+- Fasi della pipeline configurabili: idea da valutare come issue a parte.
 
 Il Backlog conserva estensioni opzionali (nuovi formati, cloud, varianti di
 prompt e traduzione). Non sono cancellate; non dettano l'ordine del percorso base.

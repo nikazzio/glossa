@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Ban, CheckCircle2, Layers, RotateCw, Search, Trash2, XCircle } from 'lucide-react';
+import { Activity, Ban, CheckCircle2, ChevronDown, FilterX, Layers, RotateCw, Trash2, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -12,8 +12,9 @@ import {
 import { errorMessage, logger } from '../../utils/logger';
 import { confirm } from '../../stores/confirmStore';
 import { useJobsStore } from '../../stores/jobsStore';
-import { EmptyState, IconButton, ListReveal, Spinner } from '../ui';
-import { FIELD_INLINE_CLASSNAME } from '../ui/fieldStyles';
+import { CatalogSearchField, EmptyState, IconButton, ListReveal, Spinner } from '../ui';
+import { localDay } from '../../utils/dashboardActivity';
+import { parseStoredDate } from '../../utils/dashboardStats';
 import { JobRow, JobTypeIcon } from './JobRow';
 
 /** Quanti lavori per pagina. L'elenco non si svuota da solo: si legge a tratti. */
@@ -34,7 +35,7 @@ const OUTCOMES: { key: string; statuses: JobStatus[]; icon: typeof Activity }[] 
   { key: 'cancelled', statuses: ['cancelled'], icon: Ban },
 ];
 
-const JOB_TYPES = ['source_download', 'provider_search', 'vault_verification', 'image_optimization'];
+const JOB_TYPES = ['source_download', 'source_pdf_download', 'image_optimization', 'ocr_page', 'provider_search', 'vault_verification'];
 
 /**
  * Tutti i lavori con il loro esito, nella colonna di destra della Panoramica.
@@ -44,7 +45,7 @@ const JOB_TYPES = ['source_download', 'provider_search', 'vault_verification', '
  * una o in blocco su quello che i filtri stanno mostrando.
  */
 export function JobsHistoryList() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [outcomes, setOutcomes] = useState<string[]>([]);
   const [jobTypes, setJobTypes] = useState<string[]>([]);
   const [search, setSearch] = useState('');
@@ -143,24 +144,23 @@ export function JobsHistoryList() {
   // quando è arrivata la pagina, e un lavoro che nel frattempo è avanzato
   // resterebbe fermo a schermo.
   const rows = jobs.map((job) => liveJobs.find((live) => live.id === job.id) ?? job);
+  const today = localDay(new Date());
+  const yesterday = localDay(new Date(Date.now() - 86_400_000));
+  const dayLabel = (day: string) => day === today ? t('jobsHistory.today')
+    : day === yesterday ? t('jobsHistory.yesterday')
+      : day === '' ? t('jobsHistory.undated')
+        : new Date(`${day}T12:00`).toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'long' });
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-col gap-2 border-b border-editorial-border px-3 py-2">
         <div className="flex items-center gap-2">
-          <span className="relative flex min-w-0 flex-1 items-center">
-            <Search size={13} className="pointer-events-none absolute left-2.5 text-editorial-muted" aria-hidden="true" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('jobsHistory.searchPlaceholder')}
-              aria-label={t('jobsHistory.searchPlaceholder')}
-              className={`${FIELD_INLINE_CLASSNAME} w-full pl-8`}
-            />
-          </span>
+          <div className="min-w-0 flex-1">
+            <CatalogSearchField value={search} onChange={setSearch}
+              placeholder={t('jobsHistory.searchPlaceholder')} label={t('jobsHistory.searchPlaceholder')} />
+          </div>
           <IconButton size="sm" title={t('jobsHistory.reload')} onClick={() => void load(0)}>
-            <RotateCw size={13} />
+            <RotateCw size={14} />
           </IconButton>
           {/* Elimina quello che i filtri mostrano, non «tutto»: con un filtro
               attivo il comando fa una cosa più piccola, e lo dice. */}
@@ -174,7 +174,7 @@ export function JobsHistoryList() {
             disabled={total === 0}
             onClick={() => void removeShown()}
           >
-            <Trash2 size={13} />
+            <Trash2 size={14} />
           </IconButton>
         </div>
 
@@ -188,7 +188,7 @@ export function JobsHistoryList() {
               title={t(`jobsHistory.outcome.${key}`)}
               onClick={() => setOutcomes((current) => toggle(current, key))}
             >
-              <Icon size={13} />
+              <Icon size={14} />
             </IconButton>
           ))}
           <span className="mx-1 h-4 w-px bg-editorial-border" aria-hidden="true" />
@@ -209,13 +209,10 @@ export function JobsHistoryList() {
         <div className="flex items-center justify-between gap-2 text-xs text-editorial-muted">
           <span>{t('jobsHistory.count', { shown: jobs.length, total })}</span>
           {hasFilters && (
-            <button
-              type="button"
-              onClick={() => { setOutcomes([]); setJobTypes([]); setSearch(''); }}
-              className="text-xs text-editorial-muted underline-offset-2 transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              {t('jobsHistory.clearFilters')}
-            </button>
+            <IconButton size="sm" title={t('jobsHistory.clearFilters')}
+              onClick={() => { setOutcomes([]); setJobTypes([]); setSearch(''); }}>
+              <FilterX size={14} />
+            </IconButton>
           )}
         </div>
       </div>
@@ -225,15 +222,20 @@ export function JobsHistoryList() {
           <p role="alert" className="py-4 text-xs text-editorial-danger">{t('jobsHistory.failed')}</p>
         )}
 
-        <ul className="flex flex-col gap-1">
-          {rows.map((job, index) => (
-            <li key={job.id}>
-              <ListReveal index={index}>
-                <JobRow job={job} onRemove={() => void removeOne(job)} removeLabel={t('jobsHistory.delete')} singleColumn />
-              </ListReveal>
-            </li>
-          ))}
-        </ul>
+        {groupByDay(rows).map((group) => (
+          <section key={group.day} aria-label={dayLabel(group.day)}>
+            <h3 className="sticky top-0 z-[1] bg-surface-panel pb-1 pt-2 caption-label">{dayLabel(group.day)}</h3>
+            <ul className="flex flex-col">
+              {group.jobs.map((job, index) => (
+                <li key={job.id}>
+                  <ListReveal index={index}>
+                    <JobRow job={job} onRemove={() => void removeOne(job)} removeLabel={t('jobsHistory.delete')} singleColumn />
+                  </ListReveal>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
 
         {loading && (
           <Spinner
@@ -253,16 +255,23 @@ export function JobsHistoryList() {
 
         {jobs.length < total && !loading && (
           <div className="flex justify-center py-4">
-            <button
-              type="button"
-              onClick={() => void load(jobs.length)}
-              className="text-xs uppercase tracking-section text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              {t('jobsHistory.loadMore')}
-            </button>
+            <IconButton title={t('jobsHistory.loadMore')} onClick={() => void load(jobs.length)}>
+              <ChevronDown size={16} />
+            </IconButton>
           </div>
         )}
       </div>
     </div>
   );
+}
+
+/** I lavori nell'ordine in cui arrivano, divisi per giorno di creazione. */
+function groupByDay(jobs: Job[]): { day: string; jobs: Job[] }[] {
+  return jobs.reduce<{ day: string; jobs: Job[] }[]>((groups, job) => {
+    const day = job.createdAt ? localDay(parseStoredDate(job.createdAt)) : '';
+    const last = groups.at(-1);
+    return last && last.day === day
+      ? [...groups.slice(0, -1), { day, jobs: [...last.jobs, job] }]
+      : [...groups, { day, jobs: [job] }];
+  }, []);
 }
