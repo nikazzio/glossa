@@ -111,8 +111,9 @@ the top expands it again.
 
 Library, Transcriptions and Translations each have their own ink — petrol,
 sepia and indigo — so you can tell them apart at a glance: the area icon in the
-left sidebar, a short rule under the large title and a slightly different
-background paper. State colours stay the same in every area: green marks what
+left sidebar and a short rule under the large title.
+Catalogues and Analysis share the same background; text pages and previews
+keep a dedicated reading surface. State colours stay the same in every area: green marks what
 is selected or active, red errors, ochre cautions, gold running jobs.
 
 ## Dashboard

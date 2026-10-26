@@ -408,7 +408,7 @@ export function MarkdownEditor({
   const preview = (
     <div
       data-scroll-sync="true"
-      className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto custom-scrollbar' : minHeightClassName} rounded-xl border border-editorial-border bg-editorial-textbox p-4 ${previewClassName}`}
+      className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto custom-scrollbar' : minHeightClassName} rounded-xl border border-editorial-border bg-editorial-page p-4 ${previewClassName}`}
       style={effectiveStyle}
     >
       {value.trim() ? (

@@ -43,15 +43,15 @@ Usare ruoli semantici per le superfici:
 | `bg-surface-resource` | unica carta tenue per ciascuna voce delle risorse linguistiche |
 | `bg-surface-hover/50` | hover su righe cliccabili |
 
-Ogni area con un catalogo ha un **inchiostro** e una **carta** propri
-(`area-library`, `area-transcriptions` seppia, `area-translations` indaco, e le
-rispettive `-paper`), con le classi in `AREA_INK_CLASSNAME` e
-`AREA_PAPER_CLASSNAME`. L'inchiostro va solo su segni piccoli: il filetto sotto
-il titolo (`AreaHeading`), l'icona dell'area a riposo nella barra di sinistra,
-il segnaposto di una copertina mancante. La carta è il fondo dell'elenco e dei
-titoletti di gruppo fermi in cima; la colonna degli scaffali resta
-`surface-panel`. Mai su comandi, selezione o stati: lì restano verde, rosso,
-ocra e oro. Contrasto sul fondo ≥ 7:1 in entrambi i temi.
+I cataloghi di Biblioteca, Trascrizioni e Traduzioni e l’area Analisi usano
+lo stesso fondo `surface-panel`. Gli alias `area-*-paper` puntano a questo
+fondo comune, anche per i titoletti di gruppo fermi in cima.
+Ogni catalogo mantiene il proprio inchiostro (`area-library`,
+`area-transcriptions` seppia, `area-translations` indaco) solo su segni piccoli:
+filetto sotto il titolo, icona dell’area e copertine mancanti.
+Comandi, selezione e stati mantengono i colori semantici.
+Le pagine di testo e le anteprime Markdown usano `editorial-page`, con testo
+`editorial-ink`: la lettura resta distinta dai pannelli e dai campi di input.
 
 Finestre, menu e intestazioni ferme usano `surface-elevated` pieno; pannelli
 e colonne `surface-panel`. I riquadri nella panoramica workspace usano

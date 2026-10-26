@@ -159,7 +159,7 @@ export function DocumentView({
 
   if (!currentChunk) {
     return (
-      <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
+      <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-surface-panel px-6 py-10">
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
           <div className="flex flex-wrap items-center justify-center gap-2 text-caption font-bold uppercase tracking-section text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>

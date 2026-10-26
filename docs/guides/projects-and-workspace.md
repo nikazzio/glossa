@@ -116,8 +116,9 @@ alto la riapre.
 
 Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio —
 petrolio, seppia e indaco — per riconoscerle a colpo d'occhio: l'icona
-dell'area nella barra di sinistra, un filetto corto sotto il titolo grande e una
-carta di fondo appena diversa. I colori di stato restano gli stessi in ogni
+dell'area nella barra di sinistra e un filetto corto sotto il titolo grande.
+I cataloghi e Analisi condividono lo stesso fondo; le pagine di testo e le
+anteprime mantengono una superficie dedicata alla lettura. I colori di stato restano gli stessi in ogni
 area: il verde segna ciò che è scelto o attivo, il rosso gli errori, l'ocra le
 cautele, l'oro i lavori in corso.
 
