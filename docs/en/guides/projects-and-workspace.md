@@ -1,5 +1,7 @@
 ---
 title: Workspaces and projects
+Dialogs and menus share the same background; panels, fields and hovered rows use consistent colours across screens.
+
 ---
 
 # Workspaces and projects

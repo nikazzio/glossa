@@ -1,6 +1,7 @@
 import { HardDrive, ImageIcon, Shrink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ChoiceDots, type ChoiceDotsOption } from '../ui';
+import { PanelSection, SECTION_SETTING_LIST_CLASSNAME, type ChoiceDotsOption } from '../ui';
+import { SettingChoiceRow } from '../settings/SettingChoiceRow';
 import type { OcrImageMode } from '../../services/ocrImageSettingsService';
 
 interface OcrImageModePickerProps {
@@ -9,8 +10,7 @@ interface OcrImageModePickerProps {
   onChange: (mode: OcrImageMode) => void;
 }
 
-/** Quale immagine parte verso il modello: stessi cerchietti del livello di
- *  ragionamento nella scheda traduzione. */
+/** Session-only image choice, separate from model and prompt settings. */
 export function OcrImageModePicker({ value, edge, onChange }: OcrImageModePickerProps) {
   const { t } = useTranslation();
   const options: ChoiceDotsOption<OcrImageMode>[] = [
@@ -19,12 +19,16 @@ export function OcrImageModePicker({ value, edge, onChange }: OcrImageModePicker
   ];
 
   return (
-    <ChoiceDots
-      options={options}
-      value={value}
-      onChange={onChange}
-      ariaLabel={t('transcription.assist.imageMode')}
-      categoryIcon={ImageIcon}
-    />
+    <PanelSection icon={ImageIcon} label={t('settings.transcriptions.ocrImage')}>
+      <div className={SECTION_SETTING_LIST_CLASSNAME}>
+        <SettingChoiceRow
+          label={t('transcription.assist.imageMode')}
+          hint={t('transcription.assist.imageModeHint')}
+          options={options}
+          value={value}
+          onChange={onChange}
+        />
+      </div>
+    </PanelSection>
   );
 }

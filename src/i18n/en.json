@@ -1285,9 +1285,10 @@
       "readingThisPage": "Reading page {{page}}",
       "readingPage": "reading {{page}}",
       "readingInProgress": "Reading…",
-      "imageMode": "Image sent",
-      "imageOptimized": "Optimised: {{edge}} px, recompressed",
-      "imageLocal": "Copy on this computer as it is; if missing, optimised",
+      "imageMode": "Send",
+      "imageModeHint": "Optimised: resized and recompressed. Copy on this computer: unchanged; if missing, the optimised image is used. Applies to this session. The image goes to the selected model.",
+      "imageOptimized": "Optimised · {{edge}} px",
+      "imageLocal": "Copy on this computer",
       "imageSettingsFailed": "Could not read the image settings"
     },
     "log": {
@@ -2472,7 +2473,7 @@
               "The command stays disabled until the conditions are met: the page must belong to a digitization linked to the document, and you need a provider and a model that can read images, chosen for the document or inherited from the workspace settings. The reason a command is disabled is in its own tooltip.",
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
               "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt.",
-              "Under the model two small circles choose the image sent: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
+              "After the prompt, the Image for OCR section shows the active choice beside the two selectors: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
               "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a gold label in the top row names the page being read.",
               "Reading is queued like a download: you find it in the jobs panel while it runs, and you can pause or cancel it the same way. A passing problem is retried on its own; a wrong key or an empty answer is not, because retrying would give the same answer. An empty answer usually means the model found no text on the page.",
               "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens, estimated cost and the number of the revision created. On top there are search, filters by row type and by level, and grouping by page."
@@ -2570,7 +2571,7 @@
               "Inspect and compare stage outputs to see where the text changed: the controls sit in a column in the right margin of the translation page, next to the scrollbar. At the top the stages in pipeline order, then comparison and the pairs to compare; the one you are viewing is highlighted. Enable source editing with the pencil only when you need to correct the original; its translation will be flagged for updating, with the ochre “Source changed” label next to the title.",
               "When the translation is ready, mark it as verified with the check next to the “Candidate translation” title: it turns green, the text locks and automatic translation of unverified segments skips it. Marking it as verified also clears “needs updating”: it means you checked it against the current original. Return it to draft with the same control. When a control is off, hover it to read why.",
               "Review → History lists the segment’s versions, newest first: who produced it (Pipeline or Manual), when, and which is current and which verified. A version is written at every pipeline pass, at every save with the disk if the text changed, and on verification. Restore puts the text back on the page and writes it as a new version, without deleting the others; it is off on a verified translation. Versions cannot be deleted and cannot be named yet.",
-              "Settings → Appearance sets theme, accent, interface font, document text (size, line height, reading layout) and highlights. Settings → Languages shows the language list in use and downloads it again from the official sources; retired languages stay readable."
+              "Dialogs and menus share the same background; panels, fields and hovered rows use consistent colours across screens. Settings → Appearance sets theme, accent, interface font, document text (size, line height, reading layout) and highlights. Settings → Languages shows the language list in use and downloads it again from the official sources; retired languages stay readable."
             ]
           },
           {

@@ -88,7 +88,7 @@ export function AuditPromptEditor({
   const handleCloseEdit = () => setIsEditing(false);
 
   return (
-    <div className={`border-l-4 ${styles.card} border-y border-rule bg-editorial-bg/85 px-5 py-4 space-y-3`}>
+    <div className={`border-l-4 ${styles.card} border-y border-rule bg-surface-resource px-5 py-4 space-y-3`}>
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
@@ -164,8 +164,8 @@ export function AuditPromptEditor({
         rows={isEditing ? 16 : 4}
         className={`w-full rounded-md border-2 p-4 text-xs font-mono outline-none leading-6 resize-y min-h-[12rem] ${
           isEditing
-            ? `bg-editorial-paper ${styles.editing} focus-visible:ring-2 focus-visible:ring-editorial-accent`
-            : 'bg-editorial-textbox/12 border-rule-faint text-editorial-muted/70 cursor-default'
+            ? `bg-editorial-textbox ${styles.editing} focus-visible:ring-2 focus-visible:ring-editorial-accent`
+            : 'bg-transparent border-rule-faint text-editorial-muted/70 cursor-default'
         }`}
       />
     </div>

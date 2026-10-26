@@ -1,5 +1,7 @@
 ---
 title: Workspace e progetti
+Finestre e menu condividono lo stesso fondo; pannelli, campi e righe evidenziate mantengono colori coerenti fra le schermate.
+
 ---
 
 # Workspace e progetti

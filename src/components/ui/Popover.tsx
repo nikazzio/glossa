@@ -56,7 +56,7 @@ export function Popover({ trigger, children, side = 'bottom', align = 'end', cla
           collisionPadding={12}
           onMouseEnter={openNow}
           onMouseLeave={scheduleClose}
-          className={`popover-content z-[210] rounded-xl border border-editorial-border bg-editorial-page shadow-lg ${className}`.trim()}
+          className={`popover-content z-[210] rounded-xl border border-editorial-border bg-surface-elevated shadow-lg ${className}`.trim()}
         >
           {children}
         </RadixPopover.Content>

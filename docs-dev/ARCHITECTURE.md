@@ -830,6 +830,11 @@ coprono il caso di un workspace con le colonne vuote: fascia media di
 proposito, il fondo del listino sbaglia abbastanza da sembrare rotto su una
 pagina manoscritta.
 
+**Interfaccia immagine OCR.** Dopo il prompt, una sezione autonoma «Immagine per
+l’OCR» usa `SettingChoiceRow`: etichetta «Invio», nome della scelta visibile e
+misura per l’ottimizzata. Il suggerimento chiarisce ricompressione, ripiego,
+ambito di sessione e invio al modello selezionato.
+
 **Immagine inviata** (`ocrImageSettingsService`, chiavi `app_settings`
 `ocr_image_edge` e `ocr_image_mode`, nessuna colonna): globale, scheda
 Impostazioni → Trascrizioni; nello Studio si cambia per la sessione (stato

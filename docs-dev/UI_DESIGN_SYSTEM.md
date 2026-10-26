@@ -53,6 +53,11 @@ titoletti di gruppo fermi in cima; la colonna degli scaffali resta
 `surface-panel`. Mai su comandi, selezione o stati: lì restano verde, rosso,
 ocra e oro. Contrasto sul fondo ≥ 7:1 in entrambi i temi.
 
+Finestre, menu e intestazioni ferme usano `surface-elevated` pieno; pannelli
+e colonne `surface-panel`. I riquadri nella panoramica workspace usano
+`surface-elevated`, le righe interattive `surface-hover/50`. Le intestazioni
+degli editor non sfocano né lasciano trasparire il testo sottostante.
+
 Campi, select e textarea usano `editorial-textbox` pieno. Vietati colori
 Tailwind grezzi e valori esadecimali nei componenti.
 
@@ -273,6 +278,10 @@ visibile, il motivo è nell'etichetta, le frecce la saltano; `role="radiogroup"`
 frecce/Home/End spostano scelta e fuoco, suggerimento per opzione, la scelta in
 accento pieno con `text-on-accent`. L'icona di categoria accanto è muted dentro
 un `Hint`, mai in ocra. Nessun cerchietto scritto a mano.
+
+La scelta dell’immagine OCR vive in una `PanelSection` autonoma dopo il prompt,
+con `SettingChoiceRow`: etichetta, opzione attiva e dimensione dell’ottimizzata
+sempre leggibili. Il suggerimento della riga spiega le alternative e il ripiego.
 
 ### Barre strette
 

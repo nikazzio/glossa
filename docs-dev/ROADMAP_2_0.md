@@ -1,12 +1,16 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 7 ottobre 2026.
+Aggiornata: 26 ottobre 2026.
 
-## Prossimi passi concordati (7 ottobre 2026)
+## Prossimi passi concordati (26 ottobre 2026)
 
-- Dashboard: Panoramica rifatta e Statistiche nuove (previsioni, ritmo, spesa,
-  modelli, qualità, precisione OCR, tempi, token, memoria); da provare dal vivo.
-- Colori delle superfici (#485 D): applicare i tre ruoli ai punti incoerenti.
+- Studio di traduzione accettabile per il maintainer; affinamenti UI/UX rimandati.
+- OCR: scelta dell’immagine in sezione autonoma dopo il prompt, con opzione
+  attiva leggibile; modifica locale da provare.
+- Colori delle superfici (#485 D): uniformati finestre/menu, pannelli, intestazioni,
+  campi e hover; resta la prova visiva nei due temi.
+- Dashboard (#491): valutare e risolvere i 17 thread di review aperti, poi
+  provare Panoramica e Statistiche dal vivo. CI precedente verde.
 - Unione di #488 su `main` con l'accorpamento delle migrazioni 0004-0008; poi
   chiusura di #489.
 - Futuro, senza data: sblocco del prompt delle fasi quando esistono frammenti
@@ -263,8 +267,9 @@ Schema aggiornato da `0003_text_corpus.sql`, baseline applicata conservata;
 consolidamento prima del merge riservato all'utente.
 Costi T8 su pannelli comuni; conteggio blocchi confermato dall'utente.
 T9: revisione finale e nove correzioni della review implementate; i due Studio
-sono inclusi nello stesso ramo della PR #488. Restano CI e prova dal vivo;
-la UI/UX non è approvata dall'utente e richiede una nuova revisione visuale.
+sono inclusi nello stesso ramo della PR #488. CI verde sull’ultimo commit pubblicato. Lo Studio di traduzione è accettabile
+per il maintainer; affinamenti UI/UX rimandati. Restano uniformità delle superfici
+e verifica delle nuove modifiche OCR prima dell’integrazione.
 quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
 ora.

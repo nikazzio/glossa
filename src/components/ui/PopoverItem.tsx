@@ -22,7 +22,7 @@ export function PopoverItem({ label, onSelect, disabled = false, description }: 
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className="min-w-0 flex-1 truncate rounded px-3 py-1.5 text-left text-sm text-editorial-ink transition-colors hover:bg-surface-hover/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+      className="min-w-0 flex-1 truncate rounded px-3 py-1.5 text-left text-sm text-editorial-ink transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
     >
       {description === undefined ? label : (
         <>
