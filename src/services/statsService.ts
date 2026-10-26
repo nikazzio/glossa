@@ -34,11 +34,22 @@ export interface UsageRow {
 /** Le chiamate ai modelli (righe con token), più errori e tentativi ripetuti. */
 export function loadUsageRows(workspaceId: string | null, since: string | null): Promise<UsageRow[]> {
   return select<UsageRow>(
-    `SELECT ol.at, ol.scope, ol.level, ol.phase, ol.provider, ol.model,
+    `SELECT ol.at, ol.scope, ol.level, ol.phase,
+            COALESCE(ol.provider, json_extract(start.meta, '$.provider')) AS provider,
+            COALESCE(ol.model, json_extract(start.meta, '$.model')) AS model,
             ol.input_tokens, ol.output_tokens, ol.cached_input_tokens, ol.cache_miss_input_tokens,
             ol.duration_ms, ol.cost_usd, ol.is_free, ol.attempt_number,
             ol.chunk_id, ol.project_id, ol.transcription_document_id
        FROM operation_logs ol
+       LEFT JOIN operation_logs start ON start.id = (
+         SELECT previous.id FROM operation_logs previous
+          WHERE ol.scope = 'stage' AND ol.model IS NULL
+            AND previous.scope = 'stage' AND previous.phase = 'start'
+            AND previous.pipeline_id = ol.pipeline_id
+            AND previous.chunk_id = ol.chunk_id AND previous.stage_id = ol.stage_id
+            AND julianday(previous.at) <= julianday(ol.at)
+            AND json_valid(previous.meta)
+          ORDER BY julianday(previous.at) DESC, previous.rowid DESC LIMIT 1)
        LEFT JOIN projects p ON p.id = ol.project_id
        LEFT JOIN transcription_documents d ON d.id = ol.transcription_document_id
       WHERE (ol.input_tokens IS NOT NULL OR ol.output_tokens IS NOT NULL
@@ -172,8 +183,8 @@ export interface OcrCorrectionRow {
 /**
  * Pagine lette con l'OCR e poi corrette a mano: il testo dell'ultima lettura
  * OCR e quello dell'ultima versione scritta a mano dopo di essa. Il modello è
- * quello dell'esito di lettura registrato per la stessa pagina subito prima
- * della revisione OCR (la riga di log non porta l'identificativo della
+ * quello del primo esito riuscito registrato per la stessa pagina subito dopo
+ * la revisione OCR (la riga di log non porta l'identificativo della
  * revisione, solo la pagina).
  */
 export function loadOcrCorrections(workspaceId: string | null, since: string | null): Promise<OcrCorrectionRow[]> {
@@ -181,9 +192,14 @@ export function loadOcrCorrections(workspaceId: string | null, since: string | n
     `SELECT o.text AS ocr_text, u.text AS final_text,
             (SELECT ol.model FROM operation_logs ol
               WHERE ol.transcription_segment_id = o.segment_id AND ol.scope = 'ocr'
-                AND ol.phase = 'end' AND ol.model IS NOT NULL
-                AND datetime(ol.at) <= datetime(o.created_at, '+5 minutes')
-              ORDER BY ol.at DESC LIMIT 1) AS model
+                AND ol.phase = 'end' AND ol.level = 'success' AND ol.model IS NOT NULL
+                AND julianday(ol.at) >= julianday(o.created_at)
+                AND julianday(ol.at) <= julianday(o.created_at, '+5 minutes')
+                AND NOT EXISTS (SELECT 1 FROM transcription_revisions next
+                  WHERE next.segment_id = o.segment_id AND next.created_by = 'ocr'
+                    AND next.revision_number > o.revision_number
+                    AND julianday(next.created_at) <= julianday(ol.at))
+              ORDER BY julianday(ol.at) ASC, ol.rowid ASC LIMIT 1) AS model
        FROM transcription_revisions o
        JOIN transcription_segments s ON s.id = o.segment_id
        JOIN transcription_documents d ON d.id = s.document_id
@@ -397,7 +413,7 @@ export interface ChunkWordsRow {
 }
 
 /** Parole tradotte per frammento completato, per i rapporti costo/parole. */
-export function loadChunkWords(workspaceId: string | null): Promise<ChunkWordsRow[]> {
+export function loadChunkWords(workspaceId: string | null, since: string | null = null): Promise<ChunkWordsRow[]> {
   return select<ChunkWordsRow>(
     `SELECT t.id,
             CASE WHEN TRIM(t.translation_display_text) = '' THEN 0
@@ -405,27 +421,42 @@ export function loadChunkWords(workspaceId: string | null): Promise<ChunkWordsRo
                       - LENGTH(REPLACE(TRIM(t.translation_display_text), ' ', '')) + 1 END AS words
        FROM translations t
        JOIN projects p ON p.id = t.project_id
-      WHERE t.chunk_status = 'completed' AND ($1 IS NULL OR p.workspace_id = $1)`,
-    [workspaceId],
+      WHERE t.chunk_status = 'completed' AND ($1 IS NULL OR p.workspace_id = $1)
+        AND ($2 IS NULL OR EXISTS (
+          SELECT 1 FROM operation_logs ol WHERE ol.chunk_id = t.id
+            AND ol.scope = 'stage' AND ol.phase = 'end' AND ol.level = 'success'
+            AND datetime(ol.at) >= datetime($2)))`,
+    [workspaceId, since],
   );
 }
 
 export interface RemainingChunksRow {
+  project_id: string;
   pipeline_id: string;
   source_text: string;
 }
 
 /** Testo dei frammenti ancora da tradurre nella prima pipeline del progetto. */
-export function loadRemainingChunks(projectId: string): Promise<RemainingChunksRow[]> {
+export function loadRemainingChunks(projectIds: string[]): Promise<RemainingChunksRow[]> {
+  if (projectIds.length === 0) return Promise.resolve([]);
   return select<RemainingChunksRow>(
-    `SELECT t.pipeline_id, t.source_display_text AS source_text
+    `SELECT t.project_id, t.pipeline_id, t.source_display_text AS source_text
        FROM translations t
-      WHERE t.pipeline_id = (SELECT pi.id FROM pipelines pi WHERE pi.project_id = $1
+      WHERE t.project_id IN (${projectIds.map((_, index) => `$${index + 1}`).join(',')})
+        AND t.pipeline_id = (SELECT pi.id FROM pipelines pi WHERE pi.project_id = t.project_id
                               ORDER BY pi.created_at ASC LIMIT 1)
         AND t.chunk_status <> 'completed'
       ORDER BY t.position ASC`,
-    [projectId],
+    projectIds,
   );
+}
+
+/** Failed jobs remain actionable beyond the operational 24-hour window. */
+export async function loadFailedJobCount(): Promise<number> {
+  const [row] = await select<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM jobs WHERE status = 'error' AND job_type <> 'provider_search'`,
+  );
+  return row?.count ?? 0;
 }
 
 export interface MonthSummary {
@@ -438,7 +469,7 @@ export interface MonthSummary {
 /** Il mese in corso in una riga: pagine scritte o lette, frammenti tradotti,
  *  frasi salvate e le chiamate ai modelli da cui si calcola la spesa. */
 export async function loadMonthSummary(workspaceId: string | null, now: Date = new Date()): Promise<MonthSummary> {
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01 00:00:00`;
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const [activity, usage, [phrases]] = await Promise.all([
     loadActivity(workspaceId, monthStart),
     loadUsageRows(workspaceId, monthStart),

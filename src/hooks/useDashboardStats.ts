@@ -11,7 +11,7 @@ import {
   loadWordTotals,
 } from '../services/statsService';
 import { loadWorkProgress } from '../services/workProgressService';
-import { activityStart, localDay } from '../utils/dashboardActivity';
+import { activityStart } from '../utils/dashboardActivity';
 import { periodStart, type StatsPeriod } from '../utils/dashboardStats';
 import type { Pricing } from '../utils/operationLogStats';
 import { useDashboardResource } from './useDashboardResource';
@@ -28,8 +28,9 @@ export function useDashboardStats(workspaceId: string | null, period: StatsPerio
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const since = useMemo(() => periodStart(period), [period, revision]);
   const usageLoader = useCallback((id: string | null) => loadUsageRows(id, null), []);
-  const activityLoader = useCallback((id: string | null) => loadActivity(id, `${localDay(activityStart())} 00:00:00`), []);
+  const activityLoader = useCallback((id: string | null) => loadActivity(id, activityStart().toISOString()), []);
   const qualityLoader = useCallback((id: string | null) => loadQualityRows(id, since), [since]);
+  const chunkWordsLoader = useCallback((id: string | null) => loadChunkWords(id, since), [since]);
   const ocrLoader = useCallback((id: string | null) => loadOcrCorrections(id, since), [since]);
   const progressLoader = useCallback((id: string | null) => loadWorkProgress(id, pricing), [pricing]);
   return {
@@ -43,7 +44,7 @@ export function useDashboardStats(workspaceId: string | null, period: StatsPerio
     languages: useDashboardResource(loadTranslationLanguages, workspaceId, revision),
     glossaries: useDashboardResource(loadGlossaryData, workspaceId, revision),
     progress: useDashboardResource(progressLoader, workspaceId, revision),
-    chunkWords: useDashboardResource(loadChunkWords, workspaceId, revision),
+    chunkWords: useDashboardResource(chunkWordsLoader, workspaceId, revision),
   };
 }
 

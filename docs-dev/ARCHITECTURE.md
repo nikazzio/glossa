@@ -1308,6 +1308,14 @@ lettura OCR, ricerca, verifica del deposito). Un tipo nuovo va aggiunto lì, in
 
 ### Panoramica e Statistiche: da dove vengono i numeri
 
+I confini locali del mese e del calendario sono passati a SQLite come istanti
+ISO con offset UTC. Le spese con prezzi mancanti non diventano zero né una
+proiezione completa. Gli errori di fase registrano provider e modello; per lo
+storico senza questi campi si usa l’avvio precedente della stessa fase,
+frammento e pipeline. I conflitti dei glossari rispettano la coppia di lingue;
+il confronto testuale usa lowercase Unicode indipendente dal locale.
+
+
 Nessun contatore nuovo e nessuna tabella nuova: tutto è letto da dati già
 registrati e calcolato nel frontend.
 
@@ -1317,7 +1325,7 @@ registrati e calcolato nel frontend.
   pipeline del progetto), aggiunge la previsione e, per le traduzioni, la stima
   a listino per finire; «Riprendi» unisce opere, trascrizioni
   (`recentTranscriptions`, ultima revisione scritta) e traduzioni; «Richiede
-  attenzione» aggiunge ai frammenti critici i job falliti della coda; la riga del
+  attenzione» aggiunge ai frammenti critici i job falliti di tutto lo storico (escluse le ricerche); la riga del
   mese viene da `statsService.loadMonthSummary`.
 - **Statistiche** (`StatsDashboard`, letture in `useDashboardStats`, una per
   sezione con il proprio stato di errore): `statsService` legge storico delle
@@ -1327,7 +1335,7 @@ registrati e calcolato nel frontend.
   parole per frammento, giudizi con il modello dell'ultima fase conclusa sul
   frammento, pagine OCR poi corrette a mano (ultima revisione `ocr` contro
   l'ultima `user` successiva, al massimo 200 pagine; il modello è quello
-  dell'esito OCR registrato sulla stessa pagina entro cinque minuti, perché la
+  del primo esito OCR riuscito dopo la revisione, sulla stessa pagina entro cinque minuti e prima di un’altra revisione OCR; errori e risultati invariati sono esclusi, perché la
   riga di log non porta l'identificativo della revisione), memoria delle frasi,
   lingue dei progetti, glossari (`loadGlossaryData`: glossari, voci, legami ai
   progetti, correzioni per workspace, testi della prima pipeline dei progetti
@@ -1340,9 +1348,12 @@ registrati e calcolato nel frontend.
     Niente data di calendario: non si sa quando si lavorerà.
   - *Costo per finire una traduzione*: `estimatePipelineCost` (la stessa stima
     dello Studio) sui frammenti non completati della prima pipeline, con la sua
-    configurazione e il listino; non dipende dallo storico.
+    configurazione e il listino; non dipende dallo storico. Frammenti mancanti e
+    configurazioni delle sei voci si leggono in due query complessive, senza
+    caricare glossari e note.
   - *Costo per 1.000 parole*: stimatore a rapporto Σcosti/Σparole sui soli
-    frammenti con costo registrato (i frammenti tradotti prima che lo storico
+    frammenti completati nel periodo con costo registrato, includendo tutte le
+    loro chiamate (i frammenti tradotti prima che lo storico
     registrasse i costi restano fuori da numeratore e denominatore), intervallo
     bootstrap al 95% sui frammenti, almeno 3.
   - *Qualità*: quota di buoni o ottimi con intervallo di Wilson al 95%; costo per

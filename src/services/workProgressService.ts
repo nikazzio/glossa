@@ -1,6 +1,6 @@
 import { listTranscriptionCatalog } from './transcriptionCatalogService';
 import { listTranslationCatalog } from './translationCatalogService';
-import { getPipelineConfig } from './pipelineService';
+import { loadPipelineEstimateConfigs } from './pipelineService';
 import { loadDailyOutput, loadRemainingChunks, type DailyOutputRow } from './statsService';
 import { totalPagesOf } from '../utils/transcriptionCatalogFilters';
 import { parseStoredDate } from '../utils/dashboardStats';
@@ -31,20 +31,6 @@ export interface WorkProgress {
 
 function outputOf(rows: DailyOutputRow[], id: string): number[] {
   return rows.filter((row) => row.id === id).map((row) => Number(row.count));
-}
-
-/**
- * La stessa stima di costo che lo Studio mostra prima di avviare la pipeline,
- * sui frammenti ancora da tradurre: parole del testo → token stimati, fasi
- * attive, prezzi del listino. Non dipende dallo storico dei costi.
- */
-async function estimateToFinish(projectId: string, pricing: Pricing): Promise<WorkProgress['costToFinish']> {
-  const remaining = await loadRemainingChunks(projectId);
-  if (remaining.length === 0) return null;
-  const loaded = await getPipelineConfig(remaining[0].pipeline_id);
-  if (!loaded) return null;
-  const estimate = estimatePipelineCost(remaining.map((row) => ({ sourceText: row.source_text })), loaded.config, pricing);
-  return { usd: estimate.totalUsd, free: estimate.isFree };
 }
 
 /**
@@ -103,7 +89,14 @@ export async function loadWorkProgress(workspaceId: string | null, pricing: Pric
   const items = [...transcriptionItems, ...translationItems]
     .sort((a, b) => parseStoredDate(b.lastEditedAt).getTime() - parseStoredDate(a.lastEditedAt).getTime())
     .slice(0, PROGRESS_LIMIT);
-  return Promise.all(items.map(async (item) => item.kind === 'translation'
-    ? { ...item, costToFinish: await estimateToFinish(item.id, pricing) }
-    : item));
+  const remaining = await loadRemainingChunks(items.filter((item) => item.kind === 'translation').map((item) => item.id));
+  const configs = await loadPipelineEstimateConfigs([...new Set(remaining.map((row) => row.pipeline_id))]);
+  return items.map((item) => {
+    if (item.kind !== 'translation') return item;
+    const chunks = remaining.filter((row) => row.project_id === item.id);
+    const config = chunks.length ? configs.get(chunks[0].pipeline_id) : null;
+    if (!config) return item;
+    const estimate = estimatePipelineCost(chunks.map((row) => ({ sourceText: row.source_text })), config, pricing);
+    return { ...item, costToFinish: { usd: estimate.totalUsd, free: estimate.isFree } };
+  });
 }

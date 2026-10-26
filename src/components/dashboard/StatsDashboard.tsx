@@ -49,6 +49,7 @@ export function StatsDashboard() {
   const allUsage = useMemo(() => data.usage.data ?? [], [data.usage.data]);
   const usage = useMemo(() => allUsage.filter((row) => inPeriod(row.at, data.since)), [allUsage, data.since]);
   const spend = useMemo(() => summarizeSpend(usage, pricing), [usage, pricing]);
+  // Full costs per fragment; the ratio only includes fragments completed in the selected period.
   const costs = useMemo(() => chunkCosts(allUsage, pricing), [allUsage, pricing]);
   const month = useMemo(() => monthProjection(allUsage, pricing), [allUsage, pricing]);
   const models = useMemo(() => summarizeModels(usage, pricing), [usage, pricing]);
@@ -96,7 +97,7 @@ export function StatsDashboard() {
           label={t('dashboardStats.wordsTranscribed')} />
         <Figure value={data.words.data ? formatCompact(data.words.data.translated_words, i18n.language) : '—'}
           label={t('dashboardStats.wordsTranslated')} />
-        <Figure value={data.usage.data ? formatUsd(spend.total) : '—'} label={t(`dashboardStats.spentIn.${period}`)} />
+        <Figure value={data.usage.data && spend.unpricedCalls === 0 ? formatUsd(spend.total) : '—'} label={t(`dashboardStats.spentIn.${period}`)} />
         <Figure value={data.memory.data ? formatCount(data.memory.data.total, i18n.language) : '—'}
           label={t('dashboardStats.memory.phrases')} />
       </section>

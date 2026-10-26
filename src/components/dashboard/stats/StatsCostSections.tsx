@@ -14,7 +14,7 @@ const SPEND_MONTHS = 12;
 export function SpendSection({ state, spend, month, perThousand }: {
   state: ResourceState;
   spend: SpendSummary;
-  month: { spent: number; projected: number | null };
+  month: { spent: number | null; projected: number | null };
   /** Spesa di traduzione per mille parole, sui frammenti con costo registrato. */
   perThousand: RatioEstimate | null;
 }) {
@@ -26,11 +26,11 @@ export function SpendSection({ state, spend, month, perThousand }: {
   const months = spend.months.slice(-SPEND_MONTHS);
   return (
     <DashboardSection id="stats-spend" icon={Coins} label={t('dashboardStats.spend.title')} hint={t('dashboardStats.spend.hint')}>
-      <SectionGate states={[state]} insufficient={spend.months.length === 0}>
+      <SectionGate states={[state]} insufficient={spend.months.length === 0 && spend.unpricedCalls === 0}>
         <div className="grid grid-cols-3 gap-3">
-          <Figure value={formatUsd(spend.total)} label={t('dashboardStats.spend.period')} />
-          <Figure value={formatUsd(month.spent)} label={t('dashboardStats.spend.month')}
-            note={month.projected === null
+          <Figure value={spend.unpricedCalls ? '—' : formatUsd(spend.total)} label={t('dashboardStats.spend.period')} />
+          <Figure value={month.spent === null ? '—' : formatUsd(month.spent)} label={t('dashboardStats.spend.month')}
+            note={month.spent === null ? t('overview.costUnavailable') : month.projected === null
               ? t('dashboardStats.spend.projectedLater')
               : t('dashboardStats.spend.projected', { cost: formatUsd(month.projected) })} />
           <Figure value={perThousand === null ? '—' : formatUsd(perThousand.value)} label={t('dashboardStats.spend.perThousand')}

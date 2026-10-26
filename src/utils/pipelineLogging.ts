@@ -254,7 +254,7 @@ export const pipelineLog = {
     }, bump);
   },
 
-  stageRetry(chunkId: string, stageId: string, attempt: number, total: number, error: string, delayMs: number): void {
+  stageRetry(chunkId: string, stageId: string, attempt: number, total: number, error: string, delayMs: number, ref: ProviderRef): void {
     logOperation({
       level: 'warn',
       scope: 'stage',
@@ -262,13 +262,15 @@ export const pipelineLog = {
       message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
       chunkId,
       stageId,
+      provider: ref.provider,
+      model: ref.model,
       meta: { error, attempt, total, delayMs },
       attemptNumber: attempt,
       maxAttempts: total,
     });
   },
 
-  stageError(chunkId: string, stageId: string, stageName: string, error: string, durationMs?: number): void {
+  stageError(chunkId: string, stageId: string, stageName: string, error: string, durationMs: number | undefined, ref: ProviderRef): void {
     logOperation({
       level: 'error',
       scope: 'stage',
@@ -276,6 +278,8 @@ export const pipelineLog = {
       message: `Stage "${stageName}" failed`,
       chunkId,
       stageId,
+      provider: ref.provider,
+      model: ref.model,
       ...(durationMs !== undefined ? { durationMs } : {}),
       meta: { error },
       detail: error,

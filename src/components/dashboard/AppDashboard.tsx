@@ -4,10 +4,10 @@ import { Activity, AlertTriangle, ArrowRight, BookOpenText, History, RefreshCw, 
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { dashboardCounts, recentSources, recentTranscriptions } from '../../services/dashboardService';
-import { loadMonthSummary } from '../../services/statsService';
+import { loadFailedJobCount, loadMonthSummary } from '../../services/statsService';
 import { loadWorkProgress } from '../../services/workProgressService';
 import { usePricingStore } from '../../stores/pricingStore';
-import { rowCost } from '../../utils/dashboardStats';
+import { summarizeSpend } from '../../utils/dashboardStats';
 import { formatUsd } from '../../utils/operationLogStats';
 import { listProjectsNeedingAttention, listRecentProjectsAllWorkspaces } from '../../services/projectService';
 import { useDashboardResource } from '../../hooks/useDashboardResource';
@@ -56,7 +56,14 @@ export function AppDashboard() {
   const workProgress = useCallback((id: string | null) => loadWorkProgress(id, pricing), [pricing]);
   const progress = useDashboardResource(workProgress, scope, revision);
   const month = useDashboardResource(monthSummary, scope, revision);
-  const failedJobs = jobs.filter((job) => job.status === 'error').length;
+  // Job events refresh the historical count, including failures older than 24 hours.
+  const failedJobsLoader = useCallback(() => {
+    void allJobs;
+    return loadFailedJobCount();
+  }, [allJobs]);
+  const failures = useDashboardResource(failedJobsLoader, null, revision);
+  const failedJobs = failures.data ?? 0;
+  const monthSpend = month.data ? summarizeSpend(month.data.usage, pricing) : null;
   // Il riquadro ne mostra cinque: chiederne cinquanta a ogni evento dei lavori
   // sarebbe dieci volte il lavoro per lo stesso schermo.
   const searches = useFederatedSearch(undefined, RECENT_SEARCHES);
@@ -135,7 +142,7 @@ export function AppDashboard() {
           pages: month.data.pages,
           fragments: month.data.fragments,
           phrases: month.data.phrases,
-          cost: formatUsd(month.data.usage.reduce((sum, row) => sum + (rowCost(row, pricing) ?? 0), 0)),
+          cost: monthSpend?.unpricedCalls ? t('overview.costUnavailable') : formatUsd(monthSpend?.total ?? 0),
         })}
       </p>
       <IconButton size="sm" title={t('overview.openStats')} onClick={() => navigate(dashboardLocation({ view: 'stats' }))}><TrendingUp size={16} /></IconButton>
@@ -167,7 +174,7 @@ export function AppDashboard() {
               onOpen={() => navigate(transcriptionsLocation({ documentId: document.id }))} />)}
           </> : null)}
           {(sources.data?.length ?? 0) === 0 && (projects.data?.length ?? 0) === 0 && (transcriptions.data?.length ?? 0) === 0 &&
-            !sources.loading && !projects.loading && !sources.error && !projects.error &&
+            !sources.loading && !projects.loading && !transcriptions.loading && !sources.error && !projects.error && !transcriptions.error &&
             <EmptyState icon={<BookOpenText size={18} />} message={t('dashboard.resumeEmpty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection> },
       { id: 'searches', node: <DashboardSection id="searches" icon={Search} label={t('federation.history')} hint={t('overview.searchGlobal')}>
@@ -187,13 +194,14 @@ export function AppDashboard() {
                 : <EmptyState icon={<Search size={18} />} message={t('federation.empty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection> },
       { id: 'attention', node: <DashboardSection id="attention" icon={AlertTriangle} label={t('dashboard.attentionTitle')} hint={t('overview.attentionHint')}>
+          {sectionState(failures)}
           {failedJobs > 0 && <DashboardRow title={t('overview.failedJobs', { count: failedJobs })}
             detail={t('overview.failedJobsDetail')} label={t('overview.openJobs')} onOpen={openJobs} />}
           {sectionState(attention)}
           {attention.data?.map((project) => <DashboardRow key={project.project_id} title={project.project_name}
             detail={`${project.workspace_name} · ${t('dashboard.attentionCount', { count: project.issue_count })}`}
             label={t('overview.openProject')} onOpen={() => void openProject(project.project_id, project.workspace_id)} />)}
-          {attention.data?.length === 0 && failedJobs === 0 && <EmptyState icon={<AlertTriangle size={18} />} message={t('dashboard.attentionEmpty')} className={EMPTY_CLASSNAME} />}
+          {attention.data?.length === 0 && !attention.loading && !attention.error && !failures.loading && !failures.error && failedJobs === 0 && <EmptyState icon={<AlertTriangle size={18} />} message={t('dashboard.attentionEmpty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection> },
       { id: 'jobs', node: <DashboardSection id="jobs" icon={Activity} label={t('overview.runningTitle')} hint={t('overview.jobsHint')}>
           <JobsOverviewChart jobs={jobs} />

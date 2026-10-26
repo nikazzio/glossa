@@ -152,12 +152,12 @@ Choose the period (30 days, 6 months, all) and the workspace at the top.
 **How the figures are computed**
 
 - *What is left*: the app looks at what you did on the days you worked on that
-  text and simulates the rest of the work many times. It shows the most likely
+  text and simulates the rest of the work many times. It shows the central (median)
   number of working days and a range. At least 3 working days are needed.
 - *Cost to finish*: the same estimate the Studio shows before running the
   pipeline, on the remaining fragments.
-- *Costs*: computed with the prices set in the app, not read from the
-  provider's invoice.
+- *Costs*: recorded call prices, falling back to the app's price list.
+  They do not replace the provider's invoice.
 - *Percentages*: they come with a range, where the true value most likely
   lies. With few cases the range is wide.
 - *OCR accuracy*: how many characters you had to change by hand, out of the
@@ -166,6 +166,15 @@ Choose the period (30 days, 6 months, all) and the workspace at the top.
   the glossary. A plural or another form counts as not followed.
 
 With too little data a card shows "Not enough data" instead of a number.
+
+Failed jobs remain in Needs attention beyond 24 hours. Month and calendar
+boundaries follow the computer's time zone. Chart columns also reveal their
+breakdown on keyboard focus.
+
+Costs use the recorded call price, falling back to the price list. Missing
+prices make total spend and projections unavailable; charts show known costs
+only. Cost per 1,000 words includes fragments completed in the selected period
+and all their recorded calls. Glossary conflicts compare the same language pair.
 
 ## Moving and archiving
 

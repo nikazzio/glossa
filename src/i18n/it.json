@@ -127,6 +127,7 @@
     "jobsHint": "Conta i lavori per stato, non il completamento delle opere. Lavori e ricerche restano globali, fuori dal filtro workspace.",
     "title": "Panoramica",
     "thisMonth": "Questo mese",
+    "costUnavailable": "Spesa non disponibile: prezzi mancanti",
     "monthSummary": "{{pages}} pagine · {{fragments}} frammenti · {{phrases}} frasi · {{cost}}",
     "openStats": "Apri le statistiche",
     "progressTitle": "A che punto sei",
@@ -2893,8 +2894,8 @@
           {
             "title": "Orientarsi nell’applicazione",
             "paragraphs": [
-              "La Dashboard mostra i lavori a metà con quanto manca, cosa riprendere, elementi da controllare, lavori in corso e il lavoro del mese. La scheda Ricerca cerca fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
-              "Le Statistiche mostrano come procede il lavoro: previsioni, giorni di lavoro, spesa, modelli, qualità, precisione dell'OCR, glossari. In alto scegli il periodo e il workspace. Passa sul titolo di un riquadro per sapere cosa misura. Se i dati sono pochi, il riquadro lo dice invece di mostrare un numero.",
+              "La Dashboard mostra i lavori a metà con quanto manca, cosa riprendere, elementi da controllare, lavori in corso e il lavoro del mese. I lavori falliti restano visibili anche dopo 24 ore. Lo storico dei lavori si filtra per stato e tipo, inclusi download PDF e OCR, e si cerca per testo. La scheda Ricerca cerca fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
+              "Le Statistiche mostrano come procede il lavoro: previsioni, giorni di lavoro, spesa, modelli, qualità, precisione dell'OCR, glossari. In alto scegli il periodo e il workspace. Passa sul titolo di un riquadro per sapere cosa misura. Se i dati sono pochi, il riquadro lo dice invece di mostrare un numero. Le previsioni mostrano la stima centrale (mediana). Il costo per mille parole considera i frammenti completati nel periodo e tutte le loro chiamate. Con prezzi mancanti la spesa totale non è disponibile. I conflitti fra glossari riguardano la stessa coppia di lingue.",
               "La Biblioteca contiene le opere che hai aggiunto al catalogo. Traduzioni mostra i progetti di tutti i workspace. Aprendo un workspace trovi i progetti e le risorse che gli appartengono.",
               "La barra di sinistra porta Dashboard, aree nell’ordine del lavoro e workspace; in fondo il menu generale: salva tutto, risorse linguistiche, impostazioni, guida e lingua. Chiusa, restano le icone e un clic porta alla pagina senza riaprirla.",
               "Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio: petrolio, seppia e indaco. Lo vedi nell'icona dell'area nella barra di sinistra, nel filetto sotto il titolo grande. I cataloghi e Analisi condividono lo stesso fondo; le pagine di testo e le anteprime mantengono una superficie dedicata alla lettura. I colori di stato non cambiano: il verde segna sempre ciò che è scelto o attivo.",

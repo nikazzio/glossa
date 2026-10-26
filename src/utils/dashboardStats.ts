@@ -104,11 +104,11 @@ export function summarizeSpend(rows: UsageRow[], pricing: Pricing): SpendSummary
 export function monthProjection(rows: UsageRow[], pricing: Pricing, now: Date = new Date()) {
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const spent = rows.filter((row) => isCall(row) && parseStoredDate(row.at) >= start && parseStoredDate(row.at) < end)
-    .reduce((sum, row) => sum + (rowCost(row, pricing) ?? 0), 0);
+  const summary = summarizeSpend(rows.filter((row) => parseStoredDate(row.at) >= start && parseStoredDate(row.at) < end), pricing);
+  const spent = summary.unpricedCalls > 0 ? null : summary.total;
   const elapsedMs = now.getTime() - start.getTime();
   const fraction = elapsedMs / (end.getTime() - start.getTime());
-  return { spent, projected: elapsedMs >= MIN_PROJECTION_DAYS * DAY_MS ? spent / fraction : null };
+  return { spent, projected: spent !== null && elapsedMs >= MIN_PROJECTION_DAYS * DAY_MS ? spent / fraction : null };
 }
 
 export interface ModelSummary {
@@ -174,7 +174,7 @@ export function summarizeModels(rows: UsageRow[], pricing: Pricing): ModelSummar
       failureInterval: wilsonInterval(failures, attempts),
       ocrCalls: calls.filter(isOcr).length,
     };
-  }).filter((model) => model.calls > 0).sort((a, b) => b.calls - a.calls);
+  }).filter((model) => model.attempts > 0).sort((a, b) => b.calls - a.calls);
 }
 
 export interface TokenSummary {

@@ -127,6 +127,7 @@
     "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
     "title": "Overview",
     "thisMonth": "This month",
+    "costUnavailable": "Spend unavailable: missing prices",
     "monthSummary": "{{pages}} pages · {{fragments}} fragments · {{phrases}} phrases · {{cost}}",
     "openStats": "Open statistics",
     "progressTitle": "Where you are",
@@ -2893,8 +2894,8 @@
           {
             "title": "Finding your way around",
             "paragraphs": [
-              "The Dashboard shows work in progress with what is left, what to resume, items requiring attention, current jobs and this month's work. Its Search tab searches across multiple sources or within one source, including by identifier.",
-              "Statistics show how your work is going: forecasts, working days, spend, models, quality, OCR accuracy, glossaries. Choose the period and workspace at the top. Hover a card title to see what it measures. With too little data, a card says so instead of showing a number.",
+              "The Dashboard shows work in progress with what is left, what to resume, items requiring attention, current jobs and this month's work. Failed jobs remain visible beyond 24 hours. Job history can be filtered by state and type, including PDF downloads and OCR, and searched by text. Its Search tab searches across multiple sources or within one source, including by identifier.",
+              "Statistics show how your work is going: forecasts, working days, spend, models, quality, OCR accuracy, glossaries. Choose the period and workspace at the top. Hover a card title to see what it measures. With too little data, a card says so instead of showing a number. Forecasts show the central estimate (median). Cost per 1,000 words covers fragments completed in the period and all their calls. Missing prices make total spend unavailable. Glossary conflicts compare the same language pair.",
               "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
               "The left bar holds the Dashboard, the areas in working order and the workspaces; at the bottom the general menu: save all, language resources, settings, help and language. Collapsed, the icons remain and a click opens the page without expanding it.",
               "Library, Transcriptions and Translations each have their own ink: petrol, sepia and indigo. You see it in the area icon in the left sidebar, in the short rule under the large title. Catalogues and Analysis share the same background; text pages and previews keep a dedicated reading surface. State colours do not change: green always marks what is selected or active.",

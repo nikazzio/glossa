@@ -6,13 +6,16 @@ Aggiornata: 26 ottobre 2026.
 
 - Studio di traduzione accettabile per il maintainer; affinamenti UI/UX rimandati.
 - OCR: scelta dell’immagine in sezione autonoma dopo il prompt, con opzione
-  attiva leggibile; modifica locale da provare.
+  attiva leggibile; pubblicata, da provare dal vivo.
 - Colori delle superfici (#485 D): uniformati finestre/menu, pannelli, intestazioni,
   campi e hover; resta la prova visiva nei due temi.
-- Dashboard (#491): valutare e risolvere i 17 thread di review aperti, poi
-  provare Panoramica e Statistiche dal vivo. CI precedente verde.
+- Dashboard (#491): corretti i rilievi su costi, periodi, errori, OCR, glossari,
+  letture delle previsioni, accessibilità e documentazione; verifica dal vivo
+  di Panoramica e Statistiche prima del merge in #488.
 - Unione di #488 su `main` con l'accorpamento delle migrazioni 0004-0008; poi
   chiusura di #489.
+- Dopo i merge di #491 e #488: nuova PR da `main` per Home con ricerca in
+  primo piano, Ricerca autonoma e Statistiche dentro Analisi.
 - Futuro, senza data: sblocco del prompt delle fasi quando esistono frammenti
   tradotti; traduzione eseguita come job della coda (#469).
 

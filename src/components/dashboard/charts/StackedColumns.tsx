@@ -48,10 +48,10 @@ export function StackedColumns({ data, series, format, ariaLabel }: {
         return (
           <div key={datum.key} className="flex min-w-0 flex-1 flex-col items-center gap-1" role="listitem">
             <Tooltip label={detail} variant="panel" className="flex w-full justify-center">
-              <span
-                aria-label={`${datum.label}: ${format(total)}`}
-                role="img"
-                className="flex w-full max-w-6 flex-col-reverse justify-start gap-[2px]"
+              <button
+                type="button"
+                aria-label={`${datum.label}: ${format(total)}; ${series.map((item) => `${item.label}: ${format(datum.values[item.key] ?? 0)}`).join('; ')}`}
+                className="flex w-full max-w-6 flex-col-reverse justify-start gap-[2px] rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 style={{ height: PLOT_HEIGHT }}
               >
                 {/* Fasce dal basso: la prima serie poggia sulla base. */}
@@ -67,7 +67,7 @@ export function StackedColumns({ data, series, format, ariaLabel }: {
                     />
                   );
                 }) : <span className="block h-[2px] w-full bg-rule" />}
-              </span>
+              </button>
             </Tooltip>
             <span className="max-w-full truncate text-caption text-editorial-muted" aria-hidden="true">{datum.label}</span>
           </div>

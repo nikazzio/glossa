@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { GlossaryData } from '../services/statsService';
 import { summarizeGlossaries } from './glossaryStats';
 
@@ -60,4 +60,26 @@ describe('glossary statistics', () => {
   it('marks a glossary without translated texts as unused', () => {
     expect(summarizeGlossaries(base()).reports[1]).toMatchObject({ name: 'Orafo copia', hasTexts: false, rate: null });
   });
+  it('does not report conflicts across different language pairs', () => {
+    const data = base();
+    data.glossaries[1].target_language = 'French';
+    expect(summarizeGlossaries(data).conflicts).toEqual([]);
+    data.glossaries[1].target_language = 'English';
+    data.glossaries[1].source_language = 'French';
+    expect(summarizeGlossaries(data).conflicts).toEqual([]);
+  });
+
+  it('matches Unicode case independently of the machine locale', () => {
+    const localeLower = vi.spyOn(String.prototype, 'toLocaleLowerCase').mockImplementation(function (this: string) {
+      return String(this).toLowerCase().replaceAll('i', 'ı');
+    });
+    try {
+      const data = base();
+      data.entries = [{ ...data.entries[0], term: 'ITALIA', translation: 'Italy' }];
+      data.chunks = [{ project_id: 'p', completed: 1, source_text: 'Italia', translation_text: 'Italy' }];
+      expect(summarizeGlossaries(data).reports[0]).toMatchObject({ cases: 1, respected: 1 });
+      expect(localeLower).not.toHaveBeenCalled();
+    } finally { localeLower.mockRestore(); }
+  });
+
 });

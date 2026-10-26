@@ -350,7 +350,7 @@ export async function executePipelineForChunk(
             if (is429Error(error)) {
               updateChunkStage(chunk.id, stage.id, { content: '', status: 'retrying', retryInfo: { attempt, total, delayMs } });
             }
-            pipelineLog.stageRetry(chunk.id, stage.id, attempt, total, error, delayMs);
+            pipelineLog.stageRetry(chunk.id, stage.id, attempt, total, error, delayMs, stageRef);
           },
         },
       );
@@ -426,7 +426,7 @@ export async function executePipelineForChunk(
       const msg = friendlyError(rawError);
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'error', error: msg });
       updateChunkStatus(chunk.id, 'error');
-      pipelineLog.stageError(chunk.id, stage.id, stage.name, rawError, stageDurationMs);
+      pipelineLog.stageError(chunk.id, stage.id, stage.name, rawError, stageDurationMs, stageRef);
       // Una chiamata fallita vale quanto una riuscita, e spesso di più: è
       // quella che spiega perché un documento è rimasto indietro.
       void recordFailedModelCall(

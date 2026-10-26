@@ -106,7 +106,7 @@ async function runRefineLoopForChunk(
       // Prima usciva in silenzio: il ciclo finiva e non lo sapeva nessuno, né
       // a schermo né nel registro tecnico né in quello dei fatti.
       const message = error instanceof Error ? error.message : String(error);
-      pipelineLog.stageError(chunkId, lastRefineStage.id, lastRefineStage.name, message);
+      pipelineLog.stageError(chunkId, lastRefineStage.id, lastRefineStage.name, message, Date.now() - startedAt, lastRefineStage);
       void recordFailedModelCall(
         {
           chunkId,

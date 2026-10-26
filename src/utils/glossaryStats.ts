@@ -7,7 +7,7 @@ export const TOP_TERMS = 5;
 
 /** Confronto senza maiuscole e con le lettere accentate in una sola forma. */
 function normalize(text: string): string {
-  return text.normalize('NFC').toLocaleLowerCase();
+  return text.normalize('NFC').toLowerCase();
 }
 
 function escapeRegExp(text: string): string {
@@ -131,14 +131,16 @@ export function summarizeGlossaries(data: GlossaryData): GlossaryStats {
 
 /** Stesso termine in più glossari con traduzioni diverse (confronto senza maiuscole). */
 function findConflicts(data: GlossaryData): GlossaryConflict[] {
-  const names = new Map(data.glossaries.map((glossary) => [glossary.id, glossary.name]));
+  const glossaries = new Map(data.glossaries.map((glossary) => [glossary.id, glossary]));
   const byTerm = new Map<string, { term: string; translations: Map<string, { translation: string; glossaries: string[] }> }>();
   for (const entry of data.entries) {
-    const key = normalize(entry.term.trim());
+    const glossary = glossaries.get(entry.glossary_id);
+    if (!glossary) continue;
+    const key = JSON.stringify([glossary.source_language, glossary.target_language, normalize(entry.term.trim())]);
     const group = byTerm.get(key) ?? { term: entry.term.trim(), translations: new Map() };
     const translationKey = normalize(entry.translation.trim());
     const current = group.translations.get(translationKey) ?? { translation: entry.translation.trim(), glossaries: [] };
-    group.translations.set(translationKey, { ...current, glossaries: [...current.glossaries, names.get(entry.glossary_id) ?? ''] });
+    group.translations.set(translationKey, { ...current, glossaries: [...current.glossaries, glossary.name] });
     byTerm.set(key, group);
   }
   return [...byTerm.values()]

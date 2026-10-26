@@ -159,17 +159,24 @@ In alto scegli il periodo (30 giorni, 6 mesi, tutto) e il workspace.
 
 - *Quanto manca*: il programma guarda quanto hai fatto nei giorni in cui hai
   lavorato su quel testo e simula molte volte il resto del lavoro. Mostra il
-  numero di giornate più probabile e un intervallo. Servono almeno 3 giorni di
+  numero centrale di giornate (mediana) e un intervallo. Servono almeno 3 giorni di
   lavoro.
 - *Costo per finire*: è la stessa stima che lo Studio mostra prima di avviare
   la pipeline, sui frammenti che mancano.
-- *Costi*: calcolati con i prezzi impostati nell'app, non letti dalla fattura
-  del fornitore.
+- *Costi*: si usa il costo registrato della chiamata, oppure il listino se manca.
+  Con prezzi mancanti la spesa totale e la proiezione sono indicate come non
+  disponibili; il grafico mostra solo i costi noti. Il costo per mille parole
+  riguarda i frammenti completati nel periodo, includendo tutte le loro chiamate.
+  Questi importi non sostituiscono la fattura del fornitore.
 - *Percentuali*: accanto c'è un intervallo, cioè dove sta il valore vero con
   buona probabilità. Con pochi casi l'intervallo è largo.
 - *Precisione OCR*: quanti caratteri hai dovuto cambiare a mano, sul totale.
 - *Glossari*: un termine è rispettato se la traduzione usa la forma scritta nel
-  glossario. Un plurale o un'altra forma conta come non rispettato.
+  glossario. I conflitti confrontano solo glossari con la stessa coppia di lingue. Un plurale o un'altra forma conta come non rispettato.
+
+I job falliti restano in «Richiede attenzione» anche dopo 24 ore. Il mese e
+il calendario rispettano il fuso del computer. Le colonne dei grafici mostrano
+i dettagli anche quando ricevono il focus da tastiera.
 
 Con pochi dati un riquadro scrive «Dati insufficienti» invece di un numero.
 

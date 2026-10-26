@@ -95,4 +95,16 @@ describe('dashboard statistics', () => {
     expect(precision.map((entry) => entry.model)).toEqual(['good', 'bad']);
     expect(precision[1].cer).toBeCloseTo(0.5);
   });
+  it('does not project a complete monthly cost when any price is missing', () => {
+    const now = new Date(2026, 9, 10, 12);
+    const unknown = row({ at: now.toISOString(), cost_usd: null, model: 'unknown', provider: 'unknown' });
+    expect(monthProjection([unknown], {}, now)).toEqual({ spent: null, projected: null });
+    expect(monthProjection([unknown, row({ cost_usd: 1, at: now.toISOString() })], {}, now).spent).toBeNull();
+  });
+
+  it('keeps a model visible when every attempt failed', () => {
+    const result = summarizeModels([row({ input_tokens: null, output_tokens: null, level: 'error', cost_usd: null })], {});
+    expect(result[0]).toMatchObject({ calls: 0, attempts: 1, failures: 1, failureRate: 1 });
+  });
+
 });
