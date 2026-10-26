@@ -58,6 +58,7 @@ function buildStage(template: StageTemplate, existing?: PipelineStageConfig): Pi
     prompt: existing?.prompt ?? template.defaultPrompt,
     model: existing?.model ?? (template.defaultProvider === 'deepl' ? '' : 'gpt-5.4-nano'),
     provider: existing?.provider ?? (template.defaultProvider ?? 'openai'),
+    customProviderId: existing?.customProviderId,
     enabled: true,
     providerOptions,
   };
@@ -76,5 +77,8 @@ export function buildStagesForMode(
     const role = s.role ?? 'translation';
     if (!byRole.has(role)) byRole.set(role, s);
   }
-  return MODE_SEQUENCES[mode].map((role) => buildStage(STAGE_TEMPLATES[role], byRole.get(role)));
+  return (['translation', 'deepl-translation', 'refine', 'format'] as const).map((role) => ({
+    ...buildStage(STAGE_TEMPLATES[role], byRole.get(role)),
+    enabled: MODE_SEQUENCES[mode].includes(role),
+  }));
 }

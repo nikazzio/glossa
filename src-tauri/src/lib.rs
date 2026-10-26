@@ -10,6 +10,7 @@ mod iiif;
 mod images;
 mod jobs;
 mod keystore;
+mod languages;
 mod llm;
 mod ocr;
 mod optimize;
@@ -172,10 +173,16 @@ pub fn run() {
             db::execute_transaction,
             storage_config::get_data_dir,
             storage_config::choose_data_dir_folder,
+            languages::languages_fetch_sources,
+            languages::languages_read_saved,
+            languages::languages_save,
             llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,
             llm::pipeline::preview_stage_prompt,
+            llm::pipeline::preview_judge_prompt,
+            llm::pipeline::preview_coherence_prompt,
+            llm::prompt_texts::prompt_system_texts,
             llm::pipeline::cancel_stream,
             llm::pipeline::judge_translation,
             llm::pipeline::refine_prompt,
@@ -227,13 +234,19 @@ pub fn run() {
             documents::export_markdown_docx,
             vector::vec_ping,
             vector::embedding::get_embeddings,
-            vector::embedding::vec_list_phrase_memory,
-            vector::embedding::vec_delete_phrase_memory,
-            vector::embedding::vec_update_phrase_memory,
-            vector::embedding::vec_search_phrase_memory,
-            vector::embedding::vec_save_locked_phrases,
-            vector::embedding::vec_regenerate_all_embeddings,
+            vector::memory_commands::vec_list_phrase_memory,
+            vector::memory_commands::vec_get_phrase_memory,
+            vector::memory_commands::vec_add_phrase_embedding,
+            vector::memory_commands::vec_set_phrase_tags,
+            vector::memory_commands::vec_delete_phrase_memory,
+            vector::memory_commands::vec_update_phrase_memory,
+            vector::memory_commands::vec_search_phrase_memory,
+            vector::memory_commands::vec_save_locked_phrases,
+            vector::memory_commands::vec_count_project_phrase_relabels,
+            vector::memory_commands::vec_relabel_project_phrases,
+            vector::memory_commands::vec_regenerate_all_embeddings,
             deepl::commands::run_deepl_stage,
+            deepl::commands::preview_deepl_stage,
             deepl::commands::get_deepl_languages,
             deepl::commands::list_deepl_glossaries,
             deepl::commands::create_deepl_glossary,

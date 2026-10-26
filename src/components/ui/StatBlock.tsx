@@ -20,7 +20,7 @@ interface StatBlockProps {
 export function StatBlock({ label, value, href, highlight }: StatBlockProps) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</p>
+      <p className="caption-label">{label}</p>
       {href ? (
         <span className="mt-0.5 flex items-start gap-1">
           <a

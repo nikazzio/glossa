@@ -24,7 +24,7 @@ costruisce il contesto dalle traduzioni, anziché dal testo originale.
 
 Per traduzione e revisione, il messaggio di sistema mantiene questo ordine:
 
-1. Istruzioni statiche: persona, regole strutturali, glossario ed esempi.
+1. Istruzioni statiche: ruolo e Contesto di traduzione, regole strutturali, glossario ed esempi.
 2. Contesto documentale condiviso.
 3. Istruzioni specifiche della fase, con gli eventuali riferimenti di memoria selezionati.
 
@@ -60,7 +60,8 @@ riutilizzabile.
 
 ## Configurazione e verifica
 
-La cache Anthropic è disattivata per impostazione predefinita. Attivala quando
+La cache Anthropic è disattivata per impostazione predefinita; l’interruttore sta
+sotto il modello di ogni fase Anthropic, nella linguetta Fasi. Attivala quando
 prevedi di riutilizzare un prefisso e valuta l’opzione di durata estesa in
 base agli intervalli tra richieste. La scrittura in cache può avere un costo,
 quindi un prefisso mai riutilizzato non produce necessariamente un risparmio.

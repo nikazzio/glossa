@@ -11,7 +11,7 @@ interface FieldLabelProps {
   hint?: string;
 }
 
-const TEXT_CLASSNAME = 'text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted';
+const TEXT_CLASSNAME = 'text-caption font-sans font-bold uppercase tracking-section text-editorial-muted';
 
 export function FieldLabel({ children, icon, htmlFor, block, hint }: FieldLabelProps) {
   const className = block ? `block ${TEXT_CLASSNAME}` : TEXT_CLASSNAME;

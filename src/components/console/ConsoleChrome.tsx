@@ -24,7 +24,7 @@ export function ConsoleChrome({
     <div className="flex shrink-0 items-center gap-3 border-b border-terminal-border bg-terminal-chrome px-4 py-2.5">
       <div className="flex items-center gap-1.5 text-terminal-ink">
         <TerminalSquare size={13} className="shrink-0 text-terminal-accent" />
-        <span className="text-xs font-bold uppercase tracking-[0.1em]">{title}</span>
+        <span className="text-xs font-bold uppercase tracking-caption">{title}</span>
         <span className="text-xs text-terminal-secondary">
           · {t('document.operationsRowCount', { count: rowCount })}
         </span>

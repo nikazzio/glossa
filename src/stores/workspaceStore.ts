@@ -25,7 +25,8 @@ type WorkspaceStore = {
     'name' | 'description' | 'embeddingModel' |
     'iconKey' |
     'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt' |
-    'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'
+    'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt' |
+    'memorySearchAllWorkspaces'
   >>) => Promise<void>;
   /** Eliminare un workspace richiede di dire cosa farne del contenuto (#213). */
   removeWorkspace: (workspaceId: string, disposal: WorkspaceDisposal) => Promise<void>;

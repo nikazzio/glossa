@@ -319,7 +319,7 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
               type="button"
               disabled={loading}
               onClick={() => void load(lines.length)}
-              className="text-xs uppercase tracking-[0.14em] text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent disabled:text-terminal-dim"
+              className="text-xs uppercase tracking-section text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent disabled:text-terminal-dim"
             >
               {loading ? t('systemLog.loading') : t('systemLog.loadMore')}
             </button>

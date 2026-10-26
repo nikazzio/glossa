@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { HardDrive, ImageIcon, Shrink } from 'lucide-react';
-import { SectionLabel, SegmentedControl, Select, SettingRow } from '../ui';
+import { Select, SettingRow, PanelSection, SECTION_SETTING_LIST_CLASSNAME } from '../ui';
+import { errorMessage, logger } from '../../utils/logger';
+import { SettingChoiceRow } from './SettingChoiceRow';
 import { OCR_IMAGE_EDGES } from '../../constants';
 import {
   DEFAULT_OCR_IMAGE_PREFERENCES,
@@ -21,9 +23,8 @@ export function TranscriptionsSettingsTab() {
 
   useEffect(() => {
     getOcrImagePreferences().then(setImage).catch((error: unknown) => {
-      toast.error(t('settings.transcriptions.loadFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn('settings.transcriptions.loadFailed', { message: errorMessage(error) });
+      toast.error(t('settings.transcriptions.loadFailed'));
     });
   }, [t]);
 
@@ -34,9 +35,8 @@ export function TranscriptionsSettingsTab() {
       await write();
     } catch (error: unknown) {
       setImage(previous);
-      toast.error(t('settings.transcriptions.saveFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn('settings.transcriptions.saveFailed', { message: errorMessage(error) });
+      toast.error(t('settings.transcriptions.saveFailed'));
     }
   };
 
@@ -56,28 +56,24 @@ export function TranscriptionsSettingsTab() {
       aria-labelledby="settings-tab-transcriptions"
       className="space-y-10"
     >
-      <section className="space-y-4">
-        <SectionLabel icon={ImageIcon} label={t('settings.transcriptions.ocrImage')} />
-        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
-          <SettingRow
+      <PanelSection icon={ImageIcon} label={t('settings.transcriptions.ocrImage')}>
+        <div className={SECTION_SETTING_LIST_CLASSNAME}>
+          <SettingChoiceRow<OcrImageMode>
             label={t('settings.transcriptions.imageMode')}
             hint={t('settings.transcriptions.imageModeHint')}
-          >
-            <SegmentedControl
-              ariaLabel={t('settings.transcriptions.imageMode')}
-              value={image.mode}
-              onChange={changeMode}
-              options={[
-                { value: 'optimized', label: t('settings.transcriptions.optimized'), icon: <Shrink size={14} /> },
-                { value: 'local', label: t('settings.transcriptions.local'), icon: <HardDrive size={14} /> },
-              ]}
-            />
-          </SettingRow>
+            value={image.mode}
+            onChange={changeMode}
+            options={[
+              { value: 'optimized', label: t('settings.transcriptions.optimized'), content: <Shrink size={11} /> },
+              { value: 'local', label: t('settings.transcriptions.local'), content: <HardDrive size={11} /> },
+            ]}
+          />
           <SettingRow
             label={t('settings.transcriptions.imageEdge')}
             hint={t('settings.transcriptions.imageEdgeHint')}
           >
             <Select
+              size="md"
               value={String(image.edge)}
               onChange={changeEdge}
               ariaLabel={t('settings.transcriptions.imageEdge')}
@@ -85,7 +81,7 @@ export function TranscriptionsSettingsTab() {
             />
           </SettingRow>
         </div>
-      </section>
+      </PanelSection>
     </div>
   );
 }

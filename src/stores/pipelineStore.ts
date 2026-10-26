@@ -5,8 +5,9 @@ import type {
   PipelineRunStatus,
   PipelineStageConfig,
   ModelProvider,
+  WorkLanguages,
 } from '../types';
-import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
+import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT, DEFAULT_WORK_BRIEF, DEFAULT_WORK_LANGUAGES } from '../constants';
 import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { getGlossaryEntries } from '../services/glossaryService';
 import { useWorkspaceStore } from './workspaceStore';
@@ -20,6 +21,8 @@ interface PipelineState {
   inputText: string;
   inputProcessingText: string;
   sourceFootnotes: FootnoteDefinition[];
+  /** Lingue dell'opera aperta: stanno sull'opera, valgono per tutte le sue pipeline. */
+  workLanguages: WorkLanguages;
   config: PipelineConfig;
 
   setInputText: (text: string) => void;
@@ -29,6 +32,7 @@ interface PipelineState {
     sourceFootnotes?: FootnoteDefinition[];
     renderProfile?: PipelineConfig['renderProfile'];
   }) => void;
+  setWorkLanguages: (languages: WorkLanguages) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
   setMode: (mode: PipelineMode) => void;
   assignGlossary: (glossaryId: string | null) => Promise<void>;
@@ -41,10 +45,8 @@ interface PipelineState {
 
 const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   pipelineId: '',
-  sourceLanguage: 'English',
-  targetLanguage: 'Italian',
   mode: 'standard',
-  stages: DEFAULT_STAGES,
+  stages: buildStagesForMode('standard', DEFAULT_STAGES),
   judgePrompt: DEFAULT_JUDGE_PROMPT,
   judgeModel: 'gpt-5.6-terra',
   judgeProvider: 'openai',
@@ -61,6 +63,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   markdownAware: false,
   experimentalImport: null,
   coherencePrompt: DEFAULT_COHERENCE_PROMPT,
+  workBrief: DEFAULT_WORK_BRIEF,
   reviewProviderOptions: undefined,
   usePhraseMemory: false,
   autoSearchPhraseMemory: true,
@@ -75,7 +78,8 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   inputText: '',
   inputProcessingText: '',
   sourceFootnotes: [],
-  config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
+  workLanguages: DEFAULT_WORK_LANGUAGES,
+  config: { ...DEFAULT_PIPELINE_CONFIG, stages: buildStagesForMode('standard', DEFAULT_STAGES) },
 
   setInputText: (text) =>
     set((state) => {
@@ -98,6 +102,8 @@ export const usePipelineStore = create<PipelineState>((set) => ({
         renderProfile: renderProfile ?? state.config.renderProfile,
       },
     })),
+
+  setWorkLanguages: (languages) => set({ workLanguages: languages }),
 
   setConfig: (updater) =>
     set((state) => {
@@ -131,7 +137,8 @@ export const usePipelineStore = create<PipelineState>((set) => ({
       inputText: '',
       inputProcessingText: '',
       sourceFootnotes: [],
-      config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
+      workLanguages: DEFAULT_WORK_LANGUAGES,
+      config: { ...DEFAULT_PIPELINE_CONFIG, stages: buildStagesForMode('standard', DEFAULT_STAGES) },
     }),
 
   assignGlossary: async (glossaryId) => {

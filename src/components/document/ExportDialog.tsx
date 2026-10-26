@@ -79,7 +79,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
           )}
 
           {/* Formato */}
-          <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
+          <div className="border-y border-rule bg-surface-panel px-4 py-4">
             <div className="mb-2">
               <SectionLabel icon={FileText} label={t('files.exportFormat')} />
             </div>
@@ -92,7 +92,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
                   className={`flex w-full items-center justify-between border-l-4 px-3 py-2.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                     format === key
                       ? 'border-l-editorial-accent bg-editorial-accent/8 text-editorial-accent'
-                      : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:bg-editorial-textbox/25 hover:text-editorial-accent'
+                      : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:bg-surface-hover/50 hover:text-editorial-accent'
                   }`}
                 >
                   <span>{label}</span>
@@ -104,7 +104,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
 
           {/* Separatore */}
           {showSeparator && (
-            <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
+            <div className="border-y border-rule bg-surface-panel px-4 py-4">
               <div className="mb-2">
                 <SectionLabel icon={Rows3} label={t('files.exportSeparator')} />
               </div>
@@ -117,7 +117,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
                     className={`flex w-full items-center justify-between gap-3 border-l-4 px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                       separatorKey === opt.key
                         ? 'border-l-editorial-accent bg-editorial-accent/8 text-editorial-accent'
-                        : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:bg-editorial-textbox/25 hover:text-editorial-accent'
+                        : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:bg-surface-hover/50 hover:text-editorial-accent'
                     }`}
                   >
                     <span className="flex items-center gap-3">

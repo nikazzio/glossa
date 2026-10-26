@@ -1,16 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import i18n from 'i18next';
-import type {
-  PipelineConfig,
-  PipelineStageConfig,
-  JudgeResult,
-  Issue,
-  TokenUsage,
-  PromptInfo,
-  ResponseInfo,
-  PromptTemplateContext,
-} from '../types';
+import type { Issue, JudgeResult, PipelineConfig, PipelineStageConfig, PromptInfo, PromptTemplateContext, ResponseInfo, SystemTextInfo, TokenUsage } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { useConfigStore } from '../stores/configStore';
 import { logOperation } from '../stores/operationLogStore';
@@ -156,14 +147,14 @@ export const llmService = {
     previousResult: string | undefined,
     auditContext?: string,
   ): Promise<PromptInfo> {
-    const result = await invoke<{ systemPrompt: string; userPrompt: string }>('preview_stage_prompt', {
+    const result = await invoke<PromptInfo>('preview_stage_prompt', {
       text,
       stage,
       config,
       previousResult: previousResult || null,
       auditContext: auditContext || null,
     });
-    return { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt };
+    return { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt, parts: result.parts };
   },
 
   /**
@@ -272,6 +263,22 @@ export const llmService = {
       unlistenResponse();
       useChunksStore.getState().setActiveStreamId(null);
     }
+  },
+
+  /** Default wording and required placeholders of every prompt system text. */
+  async systemTexts(): Promise<SystemTextInfo[]> {
+    return invoke<SystemTextInfo[]>('prompt_system_texts');
+  },
+
+  async previewJudgePrompt(sourceText: string, translation: string, config: PipelineConfig): Promise<PromptInfo> {
+    return invoke<PromptInfo>('preview_judge_prompt', { sourceText, translation, config: withUiLanguage(config) });
+  },
+
+  async previewCoherencePrompt(
+    input: { original: string; translation: string; blobContext?: string; currentChunkId?: string },
+    config: PipelineConfig,
+  ): Promise<PromptInfo> {
+    return invoke<PromptInfo>('preview_coherence_prompt', { input, config: withUiLanguage(config) });
   },
 
   async runCoherenceForChunk(

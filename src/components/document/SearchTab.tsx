@@ -1,4 +1,4 @@
-import { Search, X, FileText, BookOpen, ScanLine } from 'lucide-react';
+import { Search, FileText, BookOpen, ScanLine } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -6,7 +6,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { indexPad } from '../../utils';
 import type { TranslationChunk } from '../../types';
-import { Tooltip } from '../ui';
+import { CatalogSearchField } from '../ui';
 
 interface SearchTabProps {
   panelId: string;
@@ -14,6 +14,8 @@ interface SearchTabProps {
   chunks: TranslationChunk[];
   currentChunkId: string | null;
   onSelectChunk: (id: string) => void;
+  /** Esc nel campo chiude la ricerca. */
+  onClose?: () => void;
 }
 
 type MatchScope = 'source' | 'translation' | 'audit';
@@ -90,12 +92,11 @@ const SCOPE_ICON: Record<MatchScope, React.ReactNode> = {
   audit: <ScanLine size={9} />,
 };
 
-export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelectChunk }: SearchTabProps) {
+export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelectChunk, onClose }: SearchTabProps) {
   const { t } = useTranslation();
   const searchQuery = useUiStore((s) => s.searchQuery);
   const setSearchQuery = useUiStore((s) => s.setSearchQuery);
   const debouncedQuery = useDebounce(searchQuery, 250);
-  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const matches = useMemo<ChunkMatch[]>(() => {
@@ -114,38 +115,24 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
   });
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col flex-1 min-h-0">
-      {/* Input ricerca */}
-      <div className="px-4 pt-4 pb-2 shrink-0">
-        <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border bg-editorial-textbox/40 px-3 py-2">
-          <Search size={13} className="shrink-0 text-editorial-muted" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('document.searchPlaceholder')}
-            className="flex-1 bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/60 outline-none"
-            aria-label={t('document.searchPlaceholder')}
-          />
-          {searchQuery && (
-            <Tooltip label={t('common.clear')}>
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
-                aria-label={t('common.clear')}
-                className="shrink-0 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-full"
-              >
-                <X size={12} />
-              </button>
-            </Tooltip>
-          )}
-        </div>
+    <div id={panelId} role="region" aria-labelledby={labelledBy} className="flex flex-col flex-1 min-h-0">
+      <div className="shrink-0 px-4 pt-4 pb-2">
+        <CatalogSearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onClose?.();
+          }}
+          placeholder={t('document.searchPlaceholder')}
+          label={t('document.searchPlaceholder')}
+          // Si apre dalla lente: si scrive subito.
+          focusOnMount
+        />
       </div>
 
       {/* Contatore risultati */}
       {debouncedQuery.trim() && (
-        <div className="px-5 pb-2 shrink-0 text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted">
+        <div className="shrink-0 px-5 pb-2 caption-label">
           {matches.length > 0
             ? t('document.searchResults', { count: matches.length })
             : t('document.searchNoResults')}
@@ -157,7 +144,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
           <Search size={24} className="text-editorial-border" />
           <p className="text-sm font-medium text-editorial-muted">{t('document.searchEmptyTitle')}</p>
-          <p className="text-xs leading-relaxed text-editorial-muted/70">{t('document.searchEmptyBody')}</p>
+          <p className="text-xs leading-relaxed text-editorial-muted">{t('document.searchEmptyBody')}</p>
         </div>
       ) : matches.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
@@ -177,25 +164,25 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
                   style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
-                  className="border-b border-editorial-border/55"
+                  className="border-b border-rule"
                 >
                   <button
                     type="button"
                     onClick={() => onSelectChunk(chunk.id)}
                     className={`relative block w-full px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                      isActive ? 'bg-editorial-charcoal/10' : 'hover:bg-editorial-textbox/40'
+                      isActive ? 'bg-editorial-accent/5' : 'hover:bg-surface-hover/50'
                     }`}
                   >
-                    {isActive && <span className="absolute left-0 top-0 h-full w-[3px] bg-editorial-charcoal" aria-hidden="true" />}
+                    {isActive && <span className="absolute inset-y-0 left-0 w-0.5 bg-editorial-accent" aria-hidden="true" />}
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`font-display text-sm italic shrink-0 ${isActive ? 'text-editorial-charcoal' : 'text-editorial-accent'}`}>
+                      <span className={`font-display text-sm italic shrink-0 ${isActive ? 'text-editorial-accent' : 'text-editorial-ink'}`}>
                         {indexPad(index + 1)}
                       </span>
                       <div className="flex items-center gap-1 ml-auto">
                         {scopes.map((scope) => (
                           <span
                             key={scope}
-                            className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.15em] bg-editorial-textbox text-editorial-muted"
+                            className="flex items-center gap-0.5 rounded-full bg-editorial-textbox px-1.5 py-0.5 text-caption font-bold uppercase tracking-caption text-editorial-muted"
                           >
                             {SCOPE_ICON[scope]}
                             {t(`document.searchScope_${scope}`)}

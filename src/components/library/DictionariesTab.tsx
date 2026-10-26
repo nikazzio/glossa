@@ -1,437 +1,193 @@
-import { useState } from 'react';
-import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
+import { reportUiError } from '../../utils/reportUiError';
+import { useEffect, useState } from 'react';
+import { Check, ChevronDown, ChevronUp, Copy, Download, Folder, Loader2, Pencil, Plus, Save, Share2, Shield, Trash2, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
-import {
-  getGlossaryEntries,
-  assignGlossaryToProject,
-  exportGlossaryToCsv,
-  exportGlossaryToXlsx,
-} from '../../services/glossaryService';
+import { assignGlossaryToProject, getGlossaryEntries, isGlossaryHome } from '../../services/glossaryService';
 import { confirm } from '../../stores/confirmStore';
-import type { GlossaryEntry } from '../../types';
+import type { Glossary } from '../../types';
+import { CatalogSearchField, Hint, IconButton, RenameField, Select, Spinner } from '../ui';
+import { FIELD_INLINE_CLASSNAME } from '../ui/fieldStyles';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
 import { CopyGlossaryDialog } from './CopyGlossaryDialog';
-import { Dialog, DialogCancelButton, IconButton, Tooltip } from '../ui';
-import { WorkspaceIdentity } from '../workspace/WorkspaceIdentity';
+import { DictionaryExportDialog } from './DictionaryExportDialog';
+import { ResourceWorkspaceFilter } from './ResourceWorkspaceFilter';
 
-export function DictionariesTab() {
+export function DictionariesTab({ onEditingChange, onBusyChange }: { onEditingChange?: (value: boolean) => void; onBusyChange?: (value: boolean) => void } = {}) {
   const { t } = useTranslation();
-  const {
-    glossaries,
-    createGlossary,
-    renameGlossary,
-    deleteGlossary,
-    forkGlossary,
-    entriesMap,
-    dirtyIds,
-    expandedGlossaryId,
-    setGlossaryEntries,
-    loadGlossaryEntries,
-    markDirty,
-    setExpandedGlossaryId,
-    saveGlossaryEntries,
-  } = useLibraryStore();
-  const { libraryScope } = useLibraryStore();
-  const { config, assignGlossary } = usePipelineStore();
-  const { currentProjectId } = useProjectStore();
+  const store = useLibraryStore();
+  const { loadGlossaries, loadGlossaryEntries, expandedGlossaryId } = store;
   const { activeWorkspace, workspaces } = useWorkspaceStore();
-  const isGlobalScope = libraryScope === 'global';
-
-  const [newName, setNewName] = useState('');
+  const { config, assignGlossary } = usePipelineStore();
+  const currentProjectId = useProjectStore((state) => state.currentProjectId);
+  const global = store.libraryScope === 'global';
+  const scope = global ? null : activeWorkspace?.id ?? null;
+  const [workspaceFilter, setWorkspaceFilter] = useState('all');
+  const destination = global ? workspaces.find((workspace) => workspace.id === workspaceFilter)?.id : activeWorkspace?.id;
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [loadingEntries, setLoadingEntries] = useState(false);
+  const [entryError, setEntryError] = useState(false);
+  const [localOverride, setLocalOverride] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  const [showImport, setShowImport] = useState(false);
-  const [showCopyExisting, setShowCopyExisting] = useState(false);
-  const [exportTarget, setExportTarget] = useState<{ id: string; name: string } | null>(null);
+  const [name, setName] = useState('');
+  const [createWorkspace, setCreateWorkspace] = useState('');
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [exporting, setExporting] = useState<Glossary | null>(null);
+  useEffect(() => { onEditingChange?.(creating || renaming !== null); return () => onEditingChange?.(false); }, [creating, renaming, onEditingChange]);
+  useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false); }, [busy, onBusyChange]);
 
-  const handleToggle = async (id: string) => {
-    if (expandedGlossaryId === id) {
-      setExpandedGlossaryId(null);
-      return;
-    }
-    setExpandedGlossaryId(id);
-    // Le voci arrivano **come le vede questo workspace**: se una è stata
-    // corretta qui, si legge la correzione. Salvando, chi ospita il dizionario
-    // scrive una correzione e chi ce l'ha in casa modifica il dizionario.
-    await loadGlossaryEntries(id, activeWorkspace?.id ?? null);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadFailed(false);
+    const filter = global && workspaceFilter !== 'all' && workspaceFilter !== 'none' ? workspaceFilter : scope;
+    void loadGlossaries(filter).catch((error: unknown) => {
+      if (!cancelled) { setLoadFailed(true); reportUiError(t('library.dictionaryLoadError'), error); }
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [global, scope, workspaceFilter, loadGlossaries, t]);
+
+  // Una nuova apertura rilegge anche la vista delle voci: la precedente può
+  // provenire dal workspace e contenere correzioni, oppure dagli originali.
+  useEffect(() => {
+    const id = expandedGlossaryId;
+    if (!id) return;
+    let cancelled = false;
+    setLoadingEntries(true);
+    setEntryError(false);
+    Promise.all([loadGlossaryEntries(id, scope), scope ? isGlossaryHome(id, scope) : Promise.resolve(true)])
+      .then(([, home]) => { if (!cancelled) setLocalOverride(!home); })
+      .catch((error: unknown) => { if (!cancelled) { setEntryError(true); reportUiError(t('library.dictionaryLoadError'), error); } })
+      .finally(() => { if (!cancelled) setLoadingEntries(false); });
+    return () => { cancelled = true; };
+  }, [expandedGlossaryId, loadGlossaryEntries, scope, t]);
+
+  const run = async (operation: () => Promise<void>, errorKey: string) => {
+    if (busy) return;
+    setBusy(true);
+    try { await operation(); }
+    catch (error: unknown) { reportUiError(t(errorKey), error); }
+    finally { setBusy(false); }
   };
-
-  const handleEntriesChange = (id: string, entries: GlossaryEntry[]) => {
-    setGlossaryEntries(id, entries);
-    markDirty(id);
+  const handleCreate = () => run(async () => {
+    const workspaceId = global ? createWorkspace : destination;
+    if (!name.trim() || !workspaceId) return;
+    const id = await store.createGlossary(name.trim(), undefined, undefined, undefined, workspaceId);
+    if (global && workspaceFilter !== 'all' && workspaceFilter !== workspaceId) setWorkspaceFilter(workspaceId);
+    setCreating(false); setName(''); store.setExpandedGlossaryId(id);
+  }, 'library.dictionaryCreateError');
+  const handleSave = (id: string) => run(async () => {
+    await store.saveGlossaryEntries(id, scope);
+    if (currentProjectId && config.assignedGlossaryId === id) await assignGlossary(id);
+    toast.success(t('library.dictionarySaved'));
+  }, 'library.dictionarySaveError');
+  const handleDelete = async (glossary: Glossary) => {
+    if (!await confirm({ title: t('library.dictionaryDeleteTitle'), message: t('library.dictionaryDeleteMessage', { name: glossary.name }), confirmLabel: t('common.delete'), danger: true })) return;
+    await run(() => store.deleteGlossary(glossary.id), 'library.dictionaryDeleteError');
   };
-
-  const handleSaveEntries = async (id: string) => {
+  const handleCopy = (glossary: Glossary) => run(async () => {
+    if (!destination) return;
+    const id = await store.forkGlossary(glossary.id, `${glossary.name} (${t('library.copySuffix')})`, destination);
+    store.setExpandedGlossaryId(id);
+    toast.success(t('library.dictionaryCopied'));
+  }, 'library.dictionaryForkError');
+  const handleCopyExisting = async (source: Glossary, copyName: string) => {
+    if (!destination) return;
     try {
-      await saveGlossaryEntries(id, activeWorkspace?.id ?? null);
-      if (config.assignedGlossaryId === id) {
-        await assignGlossary(id);
-      }
-      toast.success(t('library.dictionarySaved'));
-    } catch (err: unknown) {
-      toast.error(t('library.dictionarySaveError'), { description: err instanceof Error ? err.message : String(err) });
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!newName.trim() || !activeWorkspace) return;
-    try {
-      await createGlossary(newName.trim(), undefined, undefined, undefined, activeWorkspace.id);
-      setNewName('');
-      setCreating(false);
-    } catch (err: unknown) {
-      toast.error(t('library.dictionaryCreateError'), { description: err instanceof Error ? err.message : String(err) });
-    }
-  };
-
-  const handleDelete = async (id: string, name: string) => {
-    const ok = await confirm({
-      title: t('library.dictionaryDeleteTitle'),
-      message: t('library.dictionaryDeleteMessage', { name }),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await deleteGlossary(id);
-    } catch (err: unknown) {
-      toast.error(t('library.dictionaryDeleteError'), { description: err instanceof Error ? err.message : String(err) });
-    }
-  };
-
-  const handleFork = async (id: string, name: string, destinationWorkspaceId?: string) => {
-    const workspaceId = destinationWorkspaceId ?? activeWorkspace?.id;
-    if (!workspaceId) return;
-    try {
-      const newId = await forkGlossary(id, `${name} (${t('library.copySuffix')})`, workspaceId);
-      const forkedEntries = await getGlossaryEntries(newId);
-      setGlossaryEntries(newId, forkedEntries);
-    } catch (err: unknown) {
-      toast.error(t('library.dictionaryForkError'), { description: err instanceof Error ? err.message : String(err) });
-    }
-  };
-
-  const handleCopyExisting = async (source: { id: string }, name: string) => {
-    if (!activeWorkspace) return;
-    try {
-      const newId = await forkGlossary(source.id, name, activeWorkspace.id);
-      const forkedEntries = await getGlossaryEntries(newId);
-      setGlossaryEntries(newId, forkedEntries);
-      setExpandedGlossaryId(newId);
-      if (currentProjectId) {
-        await assignGlossaryToProject(currentProjectId, newId);
-        await assignGlossary(newId);
-      }
+      const id = await store.forkGlossary(source.id, copyName, destination);
+      store.setExpandedGlossaryId(id);
+      if (!global && currentProjectId) { await assignGlossaryToProject(currentProjectId, id); await assignGlossary(id); }
       toast.success(t('library.dictionaryCopied'));
-    } catch (err: unknown) {
-      toast.error(t('library.dictionaryForkError'), { description: err instanceof Error ? err.message : String(err) });
-      throw err;
-    }
+    } catch (error: unknown) { reportUiError(t('library.dictionaryForkError'), error); throw error; }
   };
+  const handleAssign = (id: string) => run(async () => {
+    if (!currentProjectId) return;
+    await assignGlossaryToProject(currentProjectId, id);
+    await assignGlossary(id);
+    toast.success(t('library.dictionaryAssigned'));
+  }, 'library.dictionaryAssignError');
+  const visible = store.glossaries.filter((glossary) => (workspaceFilter !== 'none' || !global || !glossary.workspaceId)
+    && glossary.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const chooseWorkspaceReason = !destination ? ` — ${t('library.chooseWorkspace')}` : '';
 
-  const handleRenameSubmit = async (id: string) => {
-    if (!renameValue.trim()) { setRenamingId(null); return; }
-    try {
-      await renameGlossary(id, renameValue.trim());
-    } catch (err: unknown) {
-      toast.error(t('library.dictionaryRenameError'), { description: err instanceof Error ? err.message : String(err) });
-    }
-    setRenamingId(null);
-  };
-
-  const handleAssign = async (glossaryId: string) => {
-    try {
-      if (currentProjectId) {
-        await assignGlossaryToProject(currentProjectId, glossaryId);
-      }
-      await assignGlossary(glossaryId);
-      toast.success(t('library.dictionaryAssigned'));
-    } catch (err: unknown) {
-      toast.error(t('library.dictionaryAssignError'), { description: err instanceof Error ? err.message : String(err) });
-    }
-  };
-
-  const handleImported = async (glossaryId: string, count: number) => {
-    const entries = await getGlossaryEntries(glossaryId);
-    setGlossaryEntries(glossaryId, entries);
-    setExpandedGlossaryId(glossaryId);
-    toast.success(t('library.csvImportSuccess', { count }));
-  };
-
-  const handleExport = async (glossaryId: string, glossaryName: string, format: 'csv' | 'xlsx') => {
-    setExportTarget(null);
-    try {
-      const entries = entriesMap[glossaryId] ?? await getGlossaryEntries(glossaryId);
-      const safeName = glossaryName.replace(/[/\\:*?"<>|]/g, '_') || 'glossary';
-      if (format === 'csv') {
-        const csvText = exportGlossaryToCsv(entries);
-        const path = await save({
-          title: t('library.exportSaveTitle'),
-          defaultPath: `${safeName}.csv`,
-          filters: [{ name: 'CSV', extensions: ['csv'] }],
-        });
-        if (!path) return;
-        await writeTextFile(path, csvText);
-      } else {
-        const data = await exportGlossaryToXlsx(glossaryName, entries);
-        const path = await save({
-          title: t('library.exportSaveTitle'),
-          defaultPath: `${safeName}.xlsx`,
-          filters: [{ name: 'Excel', extensions: ['xlsx'] }],
-        });
-        if (!path) return;
-        await writeFile(path, data);
-      }
-      toast.success(t('library.exportSuccess'));
-    } catch (err: unknown) {
-      toast.error(t('library.exportError'), { description: err instanceof Error ? err.message : undefined });
-    }
-  };
-
-  return (
-    <div className="space-y-5">
-      {!isGlobalScope && activeWorkspace && (
-        <div className="flex justify-end">
-          <div className="flex shrink-0 items-center gap-1.5">
-            <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
-              <Upload size={13} />
-            </IconButton>
-            <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
-              <Plus size={13} />
-            </IconButton>
-            <IconButton onClick={() => setShowCopyExisting(true)} title={t('library.copyExistingDictionary')}>
-              <Copy size={13} />
-            </IconButton>
-          </div>
-        </div>
-      )}
-
-      {!isGlobalScope && creating && (
-        <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
-          <input
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
-            autoFocus
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
-            placeholder={t('library.dictionaryNamePlaceholder')}
-            className="flex-1 rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          />
-          <div className="flex items-center justify-end gap-2">
-            <IconButton onClick={() => setCreating(false)} title={t('common.cancel')}>
-              <X size={14} />
-            </IconButton>
-            <IconButton
-              onClick={handleCreate}
-              disabled={!newName.trim()}
-              title={t('common.save')}
-              tone="accent"
-            >
-              <Check size={14} />
-            </IconButton>
-          </div>
-        </div>
-      )}
-
-      {glossaries.length === 0 && !creating ? (
-        <p className="border-y border-dashed border-editorial-border/70 py-8 text-center text-sm italic text-editorial-muted/70">
-          {t('library.noDictionaries')}
-        </p>
-      ) : null}
-
-      <div className="space-y-3">
-        {glossaries.map((g) => {
-          const isExpanded = expandedGlossaryId === g.id;
-          // Fuori da un progetto aperto config.assignedGlossaryId puo' essere
-          // lo stato residuo dell'ultimo progetto visitato: senza un progetto
-          // aperto ora, "assegnato" non ha un soggetto reale da mostrare.
-          const isAssigned = Boolean(currentProjectId) && config.assignedGlossaryId === g.id;
-          const isDirty = dirtyIds.includes(g.id);
-
-          return (
-            <div
-              key={g.id}
-              className={`border-b border-editorial-border/70 transition-colors ${
-                isAssigned
-                  ? 'bg-editorial-accent/5'
-                  : 'hover:bg-editorial-textbox/15'
-              }`}
-            >
-              <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <button
-                  onClick={() => handleToggle(g.id)}
-                  className="flex flex-1 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  {isExpanded
-                    ? <ChevronUp size={14} className="shrink-0 text-editorial-muted" />
-                    : <ChevronDown size={14} className="shrink-0 text-editorial-muted" />}
-                  {renamingId === g.id ? (
-                    <input
-                      // eslint-disable-next-line jsx-a11y/no-autofocus -- campo rinomina che compare da un click esplicito
-                      autoFocus
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(g.id); if (e.key === 'Escape') setRenamingId(null); }}
-                      onBlur={() => handleRenameSubmit(g.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 border-b border-editorial-accent/60 bg-transparent text-sm font-display italic outline-none"
-                    />
-                  ) : isGlobalScope ? (
-                    <span className="truncate font-display text-base italic text-editorial-ink">{g.name}</span>
-                  ) : (
-                    <Tooltip label={t('library.doubleClickRename')}>
-                      <span
-                        className="truncate font-display text-base italic text-editorial-ink"
-                        onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
-                      >
-                        {g.name}
-                      </span>
-                    </Tooltip>
-                  )}
-                  {isAssigned && (
-                    <Tooltip label={t('library.assignedBadge')} side="top">
-                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-accent/15 text-editorial-accent">
-                        <Check size={11} />
-                      </span>
-                    </Tooltip>
-                  )}
-                  {isGlobalScope && (
-                    (() => {
-                      const owner = g.workspaceId ? workspaces.find((workspace) => workspace.id === g.workspaceId) : null;
-                      if (owner) return (
-                        <WorkspaceIdentity workspace={owner} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
-                      );
-                      if (g.workspaceId) return (
-                        <Tooltip label={g.workspaceId} side="top"><span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" aria-label={g.workspaceId}>?</span></Tooltip>
-                      );
-                      return <Tooltip label={t('library.globalDictionaryBadge')} side="top"><span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted"><X size={11} /></span></Tooltip>;
-                    })()
-                  )}
-                </button>
-
-                {!isGlobalScope && (
-                <div className="flex shrink-0 items-center gap-1.5">
-                  {!isAssigned && currentProjectId && (
-                    <IconButton
-                      onClick={() => handleAssign(g.id)}
-                      title={t('library.assignToProject')}
-                    >
-                      <Check size={13} />
-                    </IconButton>
-                  )}
-                  <IconButton
-                    onClick={() => setExportTarget({ id: g.id, name: g.name })}
-                    title={t('library.exportGlossary')}
-                    className="hover:bg-editorial-textbox/30"
-                  >
-                    <Download size={13} />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => void handleFork(g.id, g.name)}
-                    title={t('library.forkDictionary')}
-                    className="hover:bg-editorial-textbox/30"
-                  >
-                    <Copy size={13} />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => handleDelete(g.id, g.name)}
-                    title={t('common.delete')}
-                    ariaLabel={`${t('common.delete')}: ${g.name}`}
-                    className="hover:bg-editorial-textbox/30"
-                  >
-                    <Trash2 size={13} />
-                  </IconButton>
-                </div>
-                )}
-              </div>
-
-              {isExpanded && (
-                <div className="border-t border-editorial-border/40 px-4 pb-4 pt-4">
-                  <DictionaryEntryEditor
-                    entries={entriesMap[g.id] ?? []}
-                    onChange={(entries) => handleEntriesChange(g.id, entries)}
-                    readOnly={isGlobalScope}
-                  />
-                  {!isGlobalScope && isDirty && (
-                    <div className="mt-4 flex justify-end">
-                      <button
-                        onClick={() => handleSaveEntries(g.id)}
-                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      >
-                        <Check size={13} />
-                        {t('common.save')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+  return <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      {global ? <ResourceWorkspaceFilter value={workspaceFilter} disabled={busy || store.dirtyIds.length > 0 || creating} onChange={(value) => { store.setExpandedGlossaryId(null); setWorkspaceFilter(value); }} /> : <span />}
+      <div className="flex gap-1">
+        <Hint label={global ? t('library.editOriginalHint') : t('library.editWorkspaceHint')}>{global ? <Share2 size={14} /> : <Shield size={14} />}</Hint>
+        <IconButton onClick={() => setImporting(true)} disabled={busy || !destination} title={`${t('library.importCsv')}${chooseWorkspaceReason}`}><Upload size={14} /></IconButton>
+        <IconButton onClick={() => { setCreating(true); setName(''); setCreateWorkspace(destination ?? ''); }} disabled={busy || creating || workspaces.length === 0 && !destination} title={t('library.newDictionary')}><Plus size={14} /></IconButton>
+        <IconButton onClick={() => setCopying(true)} disabled={busy || !destination} title={`${t('library.copyExistingDictionary')}${chooseWorkspaceReason}`}><Copy size={14} /></IconButton>
       </div>
-
-      {showImport && activeWorkspace && (
-        <CsvImportDialog
-          workspaceId={activeWorkspace.id}
-          onImported={handleImported}
-          onClose={() => setShowImport(false)}
-        />
-      )}
-
-      {activeWorkspace && (
-        <CopyGlossaryDialog
-          open={showCopyExisting}
-          destinationWorkspaceId={activeWorkspace.id}
-          onClose={() => setShowCopyExisting(false)}
-          onCopy={handleCopyExisting}
-        />
-      )}
-
-      <Dialog
-        open={exportTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setExportTarget(null);
-        }}
-        title={t('library.exportGlossary')}
-        closeLabel={t('common.close')}
-        widthClassName="max-w-sm"
-        bodyClassName="px-5 py-4"
-        footer={
-          <div className="flex justify-end">
-            <DialogCancelButton onClick={() => setExportTarget(null)}>
-              {t('common.cancel')}
-            </DialogCancelButton>
-          </div>
-        }
-      >
-        <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">
-          <button
-            type="button"
-            onClick={() => exportTarget && handleExport(exportTarget.id, exportTarget.name, 'csv')}
-            className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            <span className="font-display text-lg italic text-editorial-ink">CSV</span>
-            <span className="text-xs text-editorial-muted">.csv</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => exportTarget && handleExport(exportTarget.id, exportTarget.name, 'xlsx')}
-            className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            <span className="font-display text-lg italic text-editorial-ink">Excel</span>
-            <span className="text-xs text-editorial-muted">.xlsx</span>
-          </button>
-        </div>
-      </Dialog>
     </div>
-  );
+    <CatalogSearchField value={search} onChange={setSearch} label={t('library.dictionarySearch')} placeholder={t('library.dictionarySearch')} />
+    {creating && <div className="flex flex-wrap items-center gap-2 border-y border-rule py-3">
+      <input value={name} onChange={(event) => setName(event.target.value)} aria-label={t('library.dictionaryNamePlaceholder')} className={FIELD_INLINE_CLASSNAME} disabled={busy} />
+      {global && <Select value={createWorkspace} onChange={setCreateWorkspace} disabled={busy} ariaLabel={t('library.destinationWorkspace')}
+        options={[{ value: '', label: t('library.chooseWorkspace') }, ...workspaces.map((workspace) => ({ value: workspace.id, label: workspace.name }))]} />}
+      <IconButton onClick={() => setCreating(false)} disabled={busy} title={t('common.cancel')}><X size={14} /></IconButton>
+      <IconButton onClick={() => void handleCreate()} disabled={busy || !name.trim() || !(global ? createWorkspace : destination)} title={`${t('common.save')}${!name.trim() ? ` — ${t('library.dictionaryNameRequired')}` : !(global ? createWorkspace : destination) ? ` — ${t('library.chooseWorkspace')}` : ''}`}><Save size={14} /></IconButton>
+    </div>}
+    {loading ? <Spinner label={t('common.loading')} /> : loadFailed ? <p role="alert">{t('library.dictionaryLoadError')}</p> : <div className="space-y-3">
+      {visible.length === 0 && <p className="py-8 text-center text-sm italic text-editorial-muted">{t('library.noDictionaries')}</p>}
+      {visible.map((glossary) => {
+        const expanded = store.expandedGlossaryId === glossary.id;
+        const assigned = !!currentProjectId && config.assignedGlossaryId === glossary.id;
+        const dirty = store.dirtyIds.includes(glossary.id);
+        const home = workspaces.find((workspace) => workspace.id === glossary.workspaceId);
+        return <article key={glossary.id} className="linguistic-resource rounded-md bg-surface-resource p-4">
+          <div className="flex min-w-0 items-center gap-2">
+            {renaming === glossary.id ? <RenameField initial={glossary.name} className="min-w-0 flex-1" label={t('library.renameDictionary')} onCancel={() => setRenaming(null)}
+              onSave={(value) => void run(async () => { await store.renameGlossary(glossary.id, value); setRenaming(null); }, 'library.dictionaryRenameError')} /> : <button type="button" aria-expanded={expanded} aria-controls={`dictionary-entries-${glossary.id}`} disabled={busy}
+              onClick={() => store.setExpandedGlossaryId(expanded ? null : glossary.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left focus-visible:ring-2 focus-visible:ring-editorial-accent">
+              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              <span className="break-words font-display text-base italic text-editorial-ink">{glossary.name}</span>
+            </button>}
+            <Hint label={home?.name ?? t(glossary.workspaceId ? 'memory.provenance.unknownWorkspace' : 'memory.provenance.noWorkspace')}><Folder size={13} className="text-editorial-muted" /></Hint>
+            {assigned && <Hint label={t('library.assignedBadge')}><Check size={14} className="text-editorial-accent" /></Hint>}
+            <div className="flex shrink-0 gap-1">
+              {!global && currentProjectId && <IconButton onClick={() => void handleAssign(glossary.id)} disabled={busy || assigned} title={t('library.assignToProject')}><Check size={14} /></IconButton>}
+              <IconButton onClick={() => setRenaming(glossary.id)} disabled={busy} title={t('library.renameDictionary')}><Pencil size={14} /></IconButton>
+              <IconButton onClick={() => setExporting(glossary)} disabled={busy || dirty} title={`${t('library.exportGlossary')}${dirty ? ` — ${t('library.saveDictionaryFirst')}` : ''}`}><Download size={14} /></IconButton>
+              <IconButton onClick={() => void handleCopy(glossary)} disabled={busy || !destination || dirty} title={`${t('library.forkDictionary')}${dirty ? ` — ${t('library.saveDictionaryFirst')}` : chooseWorkspaceReason}`}><Copy size={14} /></IconButton>
+              <IconButton onClick={() => void handleDelete(glossary)} disabled={busy} title={`${t('common.delete')}: ${glossary.name}`}><Trash2 size={14} /></IconButton>
+            </div>
+          </div>
+          {expanded && <div id={`dictionary-entries-${glossary.id}`} className="mt-4 space-y-4">
+            {loadingEntries ? <Spinner label={t('common.loading')} /> : entryError ? <p role="alert">{t('library.dictionaryLoadError')}</p> : <>
+              <div className="flex items-center gap-2 text-xs text-editorial-muted">
+                <Hint label={`${t(localOverride ? 'library.localCorrections' : 'library.sharedOriginal')} — ${localOverride ? t('library.localScopeHint', { workspace: activeWorkspace?.name }) : t('library.sharedScopeHint')}`}>
+                  {localOverride ? <Shield size={13} /> : <Share2 size={13} />}
+                </Hint>
+                {localOverride && <Hint label={t('library.newEntriesSharedHint')}><Plus size={13} /></Hint>}
+              </div>
+              <fieldset disabled={busy}>
+                <DictionaryEntryEditor key={glossary.id} entries={store.entriesMap[glossary.id] ?? []} sourceReadOnly={localOverride}
+                  actions={<IconButton size="sm" onClick={() => void handleSave(glossary.id)} disabled={busy || !dirty} title={`${t('common.save')}${!dirty ? ` — ${t('library.noChanges')}` : ''}`}>
+                    {busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  </IconButton>}
+                  onChange={(entries) => { store.setGlossaryEntries(glossary.id, entries); store.markDirty(glossary.id); }} />
+              </fieldset>
+
+            </>}
+          </div>}
+        </article>;
+      })}
+    </div>}
+    {importing && destination && <CsvImportDialog workspaceId={destination} onClose={() => setImporting(false)} onImported={async (id, count) => {
+      store.setGlossaryEntries(id, await getGlossaryEntries(id)); store.setExpandedGlossaryId(id); toast.success(t('library.csvImportSuccess', { count }));
+    }} />}
+    {destination && <CopyGlossaryDialog open={copying} destinationWorkspaceId={destination} onClose={() => setCopying(false)} onCopy={handleCopyExisting} />}
+    <DictionaryExportDialog glossary={exporting} onClose={() => setExporting(null)} />
+  </div>;
 }

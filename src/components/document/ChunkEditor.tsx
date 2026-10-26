@@ -57,7 +57,7 @@ export function ChunkCard({
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="text-xs font-bold uppercase tracking-caption text-editorial-muted">
             {index + 1}
             <span className="font-normal opacity-50"> / {total}</span>
           </span>
@@ -220,7 +220,7 @@ export function SegmentEditor({
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <Tooltip label={anomaly ? anomalyTitle : undefined}>
                   <div
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-section ${accentBadge} ${accentText}`}
                   >
                     {anomaly && <AlertTriangle size={10} />}
                     {t('pipeline.unit')} {chunkIdx + 1}
@@ -245,7 +245,7 @@ export function SegmentEditor({
               <div className="mb-2 flex items-center gap-3">
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <Tooltip label={anomaly ? anomalyTitle : undefined}>
-                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}>
+                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-section ${accentBadge} ${accentText}`}>
                     {anomaly && <AlertTriangle size={10} />}
                     {t('pipeline.unit')} 1
                     {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
@@ -292,11 +292,11 @@ export function SegmentEditor({
                           onClick={() => onAddBoundary(gapIdx)}
                           aria-label={t('files.boundaryAddHere')}
                         >
-                          <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
+                          <div className="h-px flex-1 bg-rule transition-colors group-hover:bg-editorial-border" />
                           <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed text-xs font-bold transition-all ${hoveredGap === gapIdx ? 'border-editorial-ink text-editorial-ink' : 'border-editorial-border text-editorial-muted'}`}>
                             +
                           </div>
-                          <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
+                          <div className="h-px flex-1 bg-rule transition-colors group-hover:bg-editorial-border" />
                         </button>
                       </Tooltip>
                     )}

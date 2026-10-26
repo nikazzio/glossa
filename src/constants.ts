@@ -57,65 +57,22 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
     .map((e) => [`${e.provider}/${e.id}`, e.pricing!]),
 );
 
-export function defaultPersonaText(source: string, target: string): string {
-  return `You are an expert translator and linguist specialized in ${source} to ${target} translation.`;
-}
+/** Contesto di traduzione di partenza: sostituisce la vecchia coppia predefinita
+ *  inglese → italiano, così il campo non è mai vuoto. */
+export const DEFAULT_WORK_BRIEF = 'Translate the text from English into Italian, faithfully and fluently, preserving meaning, tone and register.';
+
 
 export const DEFAULT_DEEPL_STAGE_OPTIONS = {
+  sourceLang: '',
+  targetLang: '',
   modelType: 'prefer_quality_optimized' as const,
   preserveFormatting: true,
   showBilledCharacters: true,
 } satisfies import('./types').DeeplConfig;
 
-export const LANGUAGES = [
-  'English',
-  'Italian',
-  'Spanish',
-  'French',
-  'German',
-  'Portuguese',
-  'Japanese',
-  'Chinese',
-  'Korean',
-  'Russian',
-];
-
-const LANGUAGE_TO_DEEPL_CODE: Record<string, string> = {
-  'Italian': 'IT',
-  'English': 'EN',
-  'French': 'FR',
-  'German': 'DE',
-  'Spanish': 'ES',
-  'Portuguese': 'PT',
-  'Dutch': 'NL',
-  'Polish': 'PL',
-  'Russian': 'RU',
-  'Japanese': 'JA',
-  'Chinese': 'ZH',
-  'Chinese (Simplified)': 'ZH',
-  'Chinese (Traditional)': 'ZH',
-  'Korean': 'KO',
-  'Arabic': 'AR',
-  'Turkish': 'TR',
-  'Swedish': 'SV',
-  'Danish': 'DA',
-  'Norwegian': 'NB',
-  'Finnish': 'FI',
-  'Czech': 'CS',
-  'Slovak': 'SK',
-  'Hungarian': 'HU',
-  'Romanian': 'RO',
-  'Bulgarian': 'BG',
-  'Croatian': 'HR',
-  'Slovenian': 'SL',
-  'Greek': 'EL',
-  'Ukrainian': 'UK',
-  'Indonesian': 'ID',
-  'Latvian': 'LV',
-  'Lithuanian': 'LT',
-  'Estonian': 'ET',
+/** Lingue di un'opera nuova: partenza non indicata, arrivo italiano (codici ISO 639-3). */
+export const DEFAULT_WORK_LANGUAGES: import('./types').WorkLanguages = {
+  source: { code: null, variety: null, note: '' },
+  target: { code: 'ita', variety: null, note: '' },
 };
 
-export function toDeeplCode(languageName: string): string {
-  return LANGUAGE_TO_DEEPL_CODE[languageName] ?? languageName.slice(0, 2).toUpperCase();
-}

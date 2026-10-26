@@ -167,11 +167,19 @@ pub struct StageConfig {
     pub custom_provider_id: Option<String>,
 }
 
+/// Pipeline-level overrides of the system texts (by id) and parts switched off.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PromptComposition {
+    #[serde(default)]
+    pub texts: std::collections::HashMap<String, String>,
+    #[serde(default)]
+    pub disabled: Vec<String>,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
-    pub source_language: String,
-    pub target_language: String,
     pub stages: Vec<StageConfig>,
     pub judge_prompt: String,
     pub judge_model: String,
@@ -186,10 +194,13 @@ pub struct PipelineConfig {
     pub markdown_aware: Option<bool>,
     pub coherence_prompt: Option<String>,
     pub review_provider_options: Option<ProviderRuntimeConfig>,
-    pub persona: Option<String>,
+    /// Shared task context for translation, refinement and quality checks.
+    #[serde(default)]
+    pub work_brief: Option<String>,
+    /// Custom system texts and disabled parts of the prompts.
+    #[serde(default)]
+    pub prompt_composition: PromptComposition,
     pub ui_language: Option<String>,
-    pub custom_source_language: Option<String>,
-    pub custom_target_language: Option<String>,
     /// Original text of all chunks in the same blob, injected at call time for context.
     /// Not persisted — computed from blob assignments before each LLM invocation.
     pub blob_context: Option<String>,

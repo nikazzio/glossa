@@ -76,12 +76,12 @@ describe('uiStore drawer mutual exclusion', () => {
     expect(state.showChunkDrawer).toBe(false);
   });
 
-  it('can open settings directly on the provider tab', () => {
-    useUiStore.getState().setShowSettings(true, 'provider');
+  it('can open settings directly on the models tab', () => {
+    useUiStore.getState().setShowSettings(true, 'models');
 
     const state = useUiStore.getState();
     expect(state.showSettings).toBe(true);
-    expect(state.settingsTab).toBe('provider');
+    expect(state.settingsTab).toBe('models');
   });
 
   it('closing a drawer does not toggle other panels', () => {

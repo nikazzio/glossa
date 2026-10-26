@@ -18,14 +18,14 @@ export function recentSources(workspaceId: string | null): Promise<RecentSource[
       WHERE wi.item_type='source' AND wi.item_id=s.id AND wi.workspace_id=$1))
     ORDER BY s.updated_at DESC,s.id LIMIT 5`, [workspaceId]);
 }
-export interface RecentFact { id: string; event_type: string; entity_type: string; entity_id: string; occurred_at: string; outcome: string | null; title: string | null; workspace_id: string | null }
-export function recentFacts(workspaceId: string | null): Promise<RecentFact[]> {
-  return select<RecentFact>(`SELECT e.id,e.event_type,e.entity_type,e.entity_id,e.occurred_at,e.outcome,e.workspace_id,
-      COALESCE(s.title,p.name,j.message) AS title
-    FROM provenance_events e
-    LEFT JOIN sources s ON e.entity_type='source' AND s.id=e.entity_id
-    LEFT JOIN projects p ON e.entity_type='project' AND p.id=e.entity_id
-    LEFT JOIN jobs j ON e.entity_type='job' AND j.id=e.entity_id
-    WHERE $1 IS NULL OR e.workspace_id=$1
-    ORDER BY e.occurred_at DESC,e.id DESC LIMIT 8`, [workspaceId]);
+export interface RecentTranscription { id: string; title: string; workspace_id: string; edited_at: string }
+/** Trascrizioni toccate di recente: l'ultima versione scritta in una pagina
+ *  qualsiasi, o la creazione del documento se non ne ha ancora. */
+export function recentTranscriptions(workspaceId: string | null): Promise<RecentTranscription[]> {
+  return select<RecentTranscription>(`SELECT d.id, d.title, d.workspace_id,
+      COALESCE((SELECT MAX(r.created_at) FROM transcription_revisions r
+        JOIN transcription_segments s ON s.id = r.segment_id WHERE s.document_id = d.id), d.created_at) AS edited_at
+    FROM transcription_documents d
+    WHERE d.status = 'active' AND ($1 IS NULL OR d.workspace_id = $1)
+    ORDER BY edited_at DESC, d.id LIMIT 5`, [workspaceId]);
 }

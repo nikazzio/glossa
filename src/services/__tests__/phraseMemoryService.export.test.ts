@@ -1,9 +1,10 @@
+import { makeMemoryEntry } from '../../test/memoryEntryFactory';
 import { describe, it, expect } from 'vitest';
 import { exportPhraseMemoryToCsv } from '../phraseMemoryService';
 import type { PhraseMemoryEntry } from '../phraseMemoryService';
 
 const MOCK_ENTRIES: PhraseMemoryEntry[] = [
-  {
+  makeMemoryEntry({
     id: '1',
     workspaceId: 'ws1',
     sourcePhrase: 'Hello world',
@@ -14,13 +15,13 @@ const MOCK_ENTRIES: PhraseMemoryEntry[] = [
     author: null,
     work: null,
     domain: 'general',
-    tags: null,
+    tags: ["linguistica"],
     notes: null,
     chunkId: null,
     projectId: null,
-    embeddingModel: null,
+    provenance: { sourceTitle: "Libro" },
     createdAt: '2024-01-01T00:00:00Z',
-  },
+  }),
 ];
 
 describe('exportPhraseMemoryToCsv', () => {

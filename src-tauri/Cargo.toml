@@ -6,7 +6,7 @@ authors = ["Niki Corradetti"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/nikazzio/glossa"
 edition = "2021"
-rust-version = "1.80.0"
+rust-version = "1.88"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -48,7 +48,7 @@ tauri-plugin-fs = "2"
 # `rt` serve a `spawn_blocking`: ricavare una miniatura è lavoro del
 # processore, e dentro il filo del runtime terrebbe ferma tutta la coda.
 tokio = { version = "1", features = ["sync", "macros", "time", "rt"] }
-zip = { version = "4", default-features = false, features = ["deflate"] }
+zip = { version = "9.0.0", default-features = false, features = ["deflate"] }
 quick-xml = "0.41"
 pdf-extract = "0.12"
 # Stessa versione che `pdf-extract` usa già: serve a contare le pagine del

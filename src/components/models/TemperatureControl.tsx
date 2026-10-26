@@ -1,7 +1,7 @@
 import { Thermometer } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip } from '../ui';
+import { Hint } from '../ui';
 
 interface TemperatureControlProps {
   value: number | undefined;
@@ -30,9 +30,11 @@ export function TemperatureControl({ value, max, disabled, onChange }: Temperatu
 
   return (
     <div className="flex flex-1 items-center gap-1.5">
-      <Tooltip label={t('pipeline.temperature')} side="top">
-        <Thermometer size={11} className="shrink-0 text-editorial-warning" aria-hidden="true" />
-      </Tooltip>
+      {/* Icona di categoria neutra con la spiegazione, come quella dei
+          cerchietti del ragionamento accanto. */}
+      <Hint label={t('pipeline.temperature')}>
+        <Thermometer size={11} className="shrink-0 text-editorial-muted" aria-hidden="true" />
+      </Hint>
       <input
         type="range"
         min={MIN}

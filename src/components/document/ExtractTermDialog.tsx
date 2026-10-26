@@ -115,48 +115,48 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
     >
       <div className="space-y-4">
         <div>
-            <label className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            <label className="mb-1 block caption-label">
               {t('memory.sourcePhraseLabel')}
             </label>
-            <div className="border-y border-editorial-border/70 py-2 text-xs text-editorial-muted font-mono leading-relaxed">
+            <div className="border-y border-rule py-2 text-xs text-editorial-muted font-mono leading-relaxed">
               {sourcePhrase}
             </div>
           </div>
 
           <div>
             <label htmlFor="extract-term-input"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('memory.termLabel')}
             </label>
             <input id="extract-term-input" type="text" value={isLoading ? '…' : term}
               onChange={(e) => setTerm(e.target.value)} disabled={isLoading}
               aria-label={t('memory.termLabel')}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50" />
           </div>
 
           <div>
             <label htmlFor="extract-translation-input"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('glossary.translation')}
             </label>
             <input id="extract-translation-input" type="text" value={translation}
               onChange={(e) => setTranslation(e.target.value)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
           </div>
 
           <div>
             <label htmlFor="extract-notes-input"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('glossary.notes')} ({t('common.optional')})
             </label>
             <input id="extract-notes-input" type="text" value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
           </div>
 
           <div>
             <label htmlFor="extract-glossary-select"
-              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              className="mb-1 block caption-label">
               {t('glossary.selectGlossary')}
             </label>
             <Select id="extract-glossary-select" value={selectedGlossaryId ?? ''}
@@ -176,7 +176,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
                 aria-label={t('glossary.newGlossaryNamePlaceholder')}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
                 autoFocus
-                className="mt-2 w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+                className="mt-2 w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
             )}
           </div>
       </div>

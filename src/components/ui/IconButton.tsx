@@ -18,11 +18,11 @@ const iconButton = cva(
       },
       tone: {
         default:  'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent',
-        accent:   'border-editorial-accent bg-editorial-accent text-white hover:bg-editorial-accent/85',
+        accent:   'border-editorial-accent bg-editorial-accent text-on-accent hover:bg-editorial-accent/85',
         danger:   'border-editorial-danger/50 bg-editorial-danger/10 text-editorial-danger hover:border-editorial-danger/70 hover:bg-editorial-danger/15',
         success:  'border-editorial-success/50 bg-editorial-success/10 text-editorial-success',
         charcoal: 'border-editorial-border text-editorial-muted hover:border-editorial-charcoal/60 hover:text-editorial-charcoal',
-        muted:    'border-editorial-border/60 text-editorial-muted/50 hover:border-editorial-accent/40 hover:text-editorial-accent',
+        muted:    'border-rule text-editorial-muted/50 hover:border-editorial-accent/40 hover:text-editorial-accent',
         running:  'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
         warning:  'border-editorial-warning bg-editorial-warning/20 text-editorial-warning hover:bg-editorial-warning/30',
       },
@@ -62,6 +62,18 @@ type IconLinkProps = VariantProps<typeof iconButton> & {
   tooltipSide?: TooltipSide;
 };
 
+/** Apre un indirizzo nel browser di sistema; un fallimento si dice, non si tace.
+ *  Serve anche fuori da `IconLink`, dove lo stesso indirizzo è una voce di menu. */
+export function useOpenExternal(): (href: string) => void {
+  const { t } = useTranslation();
+  return (href: string) => {
+    openUrl(href).catch((error: unknown) => {
+      logger.error('externalLink.openFailed', { reason: errorMessage(error) });
+      toast.error(t('common.openLinkFailed'));
+    });
+  };
+}
+
 /** Stesso aspetto di `IconButton` per un indirizzo esterno: resta un
  *  collegamento vero, così vale il tasto centrale e il menu del browser. */
 /**
@@ -82,14 +94,11 @@ export function IconLink({
   className,
   tooltipSide,
 }: IconLinkProps) {
-  const { t } = useTranslation();
+  const openExternal = useOpenExternal();
 
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    openUrl(href).catch((error: unknown) => {
-      logger.error('externalLink.openFailed', { reason: errorMessage(error) });
-      toast.error(t('common.openLinkFailed'));
-    });
+    openExternal(href);
   };
 
   return (

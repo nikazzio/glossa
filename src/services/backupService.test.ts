@@ -40,6 +40,11 @@ const liveSchema = vi.hoisted<Record<string, string[]>>(() => ({
   app_settings: ['key', 'value'],
   glossaries: ['id', 'name', 'workspace_id', 'created_at'],
   translations: ['id', 'project_id', 'approved_revision_id', 'translation_locked'],
+  text_units: ['id', 'provenance', 'parent_unit_id'],
+  text_unit_revisions: ['id', 'unit_id', 'role', 'language', 'text', 'content_hash', 'revision_number'],
+  text_embeddings: ['revision_id', 'provider', 'model', 'profile', 'dimensions', 'embedding'],
+  text_unit_tags: ['unit_id', 'name'],
+  phrase_memory: ['id', 'unit_id', 'source_revision_id', 'target_revision_id'],
   provenance_events: [
     'id', 'occurred_at', 'event_type', 'entity_type', 'entity_id', 'workspace_id', 'actor', 'job_id',
   ],
@@ -84,6 +89,24 @@ function backupWith(appSettings: Array<{ key: string; value: string }>): string 
 }
 
 describe('cosa porta con sé un backup', () => {
+  it('preserves corpus revisions, tags and every embedding with strict inserts in dependency order', async () => {
+    runMock.mockClear();
+    const payload = JSON.parse(backupWith([]));
+    payload.tables.text_units = [{ id: 'unit', provenance: '{}', parent_unit_id: 'parent' }, { id: 'parent', provenance: '{}' }];
+    payload.tables.text_unit_revisions = [{ id: 'source', unit_id: 'unit', role: 'source', language: 'la', text: 'Salve', content_hash: 'hash', revision_number: 1 }];
+    payload.tables.text_embeddings = ['model-a', 'model-b'].map((model) => ({ revision_id: 'source', provider: 'openai', model,
+      profile: 'source-verbatim-v1', dimensions: 1, embedding: [0, 0, 128, 63] }));
+    payload.tables.text_unit_tags = [{ unit_id: 'unit', name: 'linguistica' }];
+    fsState.raw = JSON.stringify(payload);
+    await restoreBackup(t);
+    const calls = runMock.mock.calls;
+    const inserts = calls.filter(([query]) => query.startsWith('INSERT INTO text_'));
+    expect(inserts.map(([query]) => query.split(' ')[2])).toEqual([
+      'text_units', 'text_units', 'text_unit_revisions', 'text_embeddings', 'text_embeddings', 'text_unit_tags',
+    ]);
+    expect(inserts[3][1]).toContainEqual([0, 0, 128, 63]);
+    expect(calls.some(([query]) => query.startsWith('UPDATE text_units SET parent_unit_id'))).toBe(true);
+  });
   it('comprende lo storico del lavoro e le schede delle opere, mai le immagini', () => {
     // Si conserva quello che non si riscarica. Le righe delle immagini
     // restano fuori: dopo un ripristino quei file non esistono, e dichiararli

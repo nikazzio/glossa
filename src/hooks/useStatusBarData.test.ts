@@ -18,7 +18,7 @@ const workspace: Workspace = {
   memoryExtractorProvider: 'openai',
   memoryExtractorModel: 'model',
   memoryExtractorPrompt: 'prompt',
-  ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '',
+  ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', memorySearchAllWorkspaces: false,
   createdAt: '2026-08-22',
 };
 
@@ -38,8 +38,6 @@ const pipeline: Pipeline = {
   id: 'pipe1',
   projectId: 'p1',
   name: 'Pipeline A',
-  sourceLanguage: 'it',
-  targetLanguage: 'en',
   mode: 'standard',
   runStatus: 'idle',
   lastRunConfig: null,

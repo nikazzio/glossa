@@ -102,6 +102,7 @@ const DEFERRED_REFS: Partial<
   Record<BackupTable, ReadonlyArray<{ column: string; target: string }>>
 > = {
   search_runs: [{ column: 'derived_from_id', target: 'search_runs' }],
+  text_units: [{ column: 'parent_unit_id', target: 'text_units' }],
   // Il registro cita il frammento e l'artefatto cita il lavoro che l'ha
   // prodotto: righe che possono non esserci più, o non essere nel backup.
   operation_logs: [{ column: 'chunk_id', target: 'translations' }],
@@ -119,8 +120,11 @@ const DELETE_ORDER = [
   'search_executions',
   'search_runs',
   'jobs',
-  'source_phrase_embeddings',
   'phrase_memory',
+  'text_embeddings',
+  'text_unit_tags',
+  'text_unit_revisions',
+  'text_units',
   'derived_metrics',
   'provenance_events',
   'operation_logs',
@@ -306,7 +310,7 @@ export async function restoreBackup(
         const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
         // Testi e revisioni devono entrare tutti: ignorare una collisione
         // lascerebbe una pagina apparentemente presente ma con storia tronca.
-        const insert = table.startsWith('transcription_') ? 'INSERT' : 'INSERT OR IGNORE';
+        const insert = (table.startsWith('transcription_') || table.startsWith('text_') || table === 'phrase_memory') ? 'INSERT' : 'INSERT OR IGNORE';
         await run(
           `${insert} INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`,
           cols.map((c) => {

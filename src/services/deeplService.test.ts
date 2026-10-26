@@ -16,12 +16,10 @@ describe('deeplService.runDeeplStage', () => {
     mockInvoke.mockResolvedValue({ content: 'Hallo', billedCharacters: 5 });
     const result = await deeplService.runDeeplStage({
       text: 'Hello',
-      sourceLang: 'EN',
-      targetLang: 'DE',
-      deeplConfig: { modelType: 'prefer_quality_optimized' },
+      deeplConfig: { sourceLang: 'EN', targetLang: 'DE', modelType: 'prefer_quality_optimized' },
     });
     expect(mockInvoke).toHaveBeenCalledWith('run_deepl_stage', {
-      input: expect.objectContaining({ text: 'Hello', targetLang: 'DE' }),
+      input: { text: 'Hello', deeplConfig: { sourceLang: 'EN', targetLang: 'DE', modelType: 'prefer_quality_optimized' } },
     });
     expect(result.content).toBe('Hallo');
     expect(result.billedCharacters).toBe(5);
@@ -30,7 +28,7 @@ describe('deeplService.runDeeplStage', () => {
   it('propaga errori dal backend', async () => {
     mockInvoke.mockRejectedValue('API key DeepL non configurata.');
     await expect(
-      deeplService.runDeeplStage({ text: 'test', sourceLang: 'EN', targetLang: 'DE' }),
+      deeplService.runDeeplStage({ text: 'test', deeplConfig: { sourceLang: 'EN', targetLang: 'DE' } }),
     ).rejects.toMatch('API key');
   });
 });

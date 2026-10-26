@@ -23,7 +23,7 @@ add support for binary or structured formats such as ODT or RTF. Non-UTF-8
 text is rejected with an encoding error.
 
 The system dialog can select files from any accessible directory, including
-external drives. The preview lets you check extraction and segmentation
+external drives. The preview lets you check extraction and segmentation, and set languages and model,
 before confirming. A PDF containing only images does not provide text through
 this extraction path; import does not perform OCR.
 

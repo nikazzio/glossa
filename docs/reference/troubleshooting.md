@@ -10,7 +10,7 @@ verifichi una causa.
 
 ## Connessione o credenziali
 
-Se una fase non parte, controlla in **Impostazioni → Provider** la chiave,
+Se una fase non parte, controlla in **Impostazioni → Modelli** la chiave,
 il modello e, per Custom, il profilo selezionato. Un errore di autenticazione,
 un modello non disponibile e una quota esaurita richiedono interventi diversi.
 Per un endpoint remoto personalizzato è obbligatorio HTTPS; HTTP è ammesso

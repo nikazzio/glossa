@@ -179,9 +179,9 @@ describe('aggregateEntries', () => {
     expect(summary.translation.totalInput).toBe(100);
     expect(summary.audit.totalInput).toBe(50);
     expect(summary.coherence.totalInput).toBe(20);
-    expect(summary.translationRuns).toBe(1);
-    expect(summary.auditRuns).toBe(1);
-    expect(summary.coherenceRuns).toBe(1);
+    expect(summary.scopeBreakdown.map((row) => [row.scope, row.calls])).toEqual(
+      expect.arrayContaining([['audit', 1], ['coherence', 1]]),
+    );
     expect(summary.modelNames).toEqual([
       'openai / gpt-5.4',
       'openai / gpt-5.4-mini',
@@ -190,7 +190,7 @@ describe('aggregateEntries', () => {
     expect(summary.modelBreakdown[0]?.modelName).toBe('openai / gpt-5.4');
   });
 
-  it('builds chunk summaries with cumulative totals and last runs', () => {
+  it('builds chunk summaries with cumulative totals and one call per completed stage', () => {
     const summary = summarizeChunkUsage([
       entry({
         at: '2026-06-06T09:00:00.000Z',
@@ -256,12 +256,12 @@ describe('aggregateEntries', () => {
     ], 'a');
 
     expect(summary.total.totalInput).toBe(220);
-    expect(summary.translationRuns).toBe(2);
-    expect(summary.auditRuns).toBe(1);
-    expect(summary.lastTranslationRun?.stageName).toBe('Refine');
-    expect(summary.lastTranslationRun?.provider).toBe('openai');
-    expect(summary.lastTranslationRun?.stats.totalInput).toBe(80);
-    expect(summary.lastAuditRun?.stats.totalInput).toBe(40);
+    expect(summary.scopeBreakdown.map((row) => [row.stageId ?? row.scope, row.calls])).toEqual([
+      ['translate', 1],
+      ['refine', 1],
+      ['audit', 1],
+    ]);
+    expect(summary.scopeBreakdown.find((row) => row.stageId === 'refine')?.stats.totalInput).toBe(80);
   });
 });
 
@@ -306,5 +306,21 @@ describe('formatting helpers', () => {
     expect(formatUsd(0)).toBe('$0');
     expect(formatUsd(0.001)).toBe('<$0.01');
     expect(formatUsd(1.234)).toBe('$1.23');
+  });
+
+  it('counts every completed call of a stage, so a re-run stage shows two calls', () => {
+    const call = (at: string) => entry({
+      at,
+      scope: 'stage',
+      phase: 'end',
+      stageId: 'translate',
+      chunkId: 'a',
+      message: 'Stage "Translate" completed',
+      meta: { provider: 'openai', model: 'gpt-5.4', inputTokens: 10, outputTokens: 2 },
+    });
+    const summary = summarizeChunkUsage([call('2026-06-06T09:00:00.000Z'), call('2026-06-06T10:00:00.000Z')], 'a');
+    expect(summary.scopeBreakdown).toHaveLength(1);
+    expect(summary.scopeBreakdown[0]?.calls).toBe(2);
+    expect(summary.total.totalInput).toBe(20);
   });
 });

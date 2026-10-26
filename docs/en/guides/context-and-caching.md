@@ -23,7 +23,7 @@ rather than the original text.
 
 For translation and revision, the system message preserves this order:
 
-1. Static instructions: persona, structural rules, glossary and examples.
+1. Static instructions: role and Translation context, structural rules, glossary and examples.
 2. Shared document context.
 3. Stage-specific instructions, including any selected memory references.
 
@@ -57,7 +57,8 @@ same document, without the image ever breaking the reusable prefix.
 
 ## Configuration and inspection
 
-Anthropic caching is disabled by default. Enable it when you expect to reuse
+Anthropic caching is disabled by default; its switch sits under the model of
+each Anthropic stage, in the Stages tab. Enable it when you expect to reuse
 a prefix, and consider extended retention in light of the interval between
 requests. Cache writes may incur a charge, so a prefix that is never reused
 does not necessarily save money.

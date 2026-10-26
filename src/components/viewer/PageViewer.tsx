@@ -1,11 +1,11 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- La superficie deep-zoom è intenzionalmente un widget ARIA application: riceve focus e gestisce le frecce, mentre i controlli figli e la tela OSD conservano la propria tastiera. */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
 import { Images, RefreshCw } from 'lucide-react';
 import { EmptyState, IconButton, Spinner } from '../ui';
 import { ThumbnailRail } from './ThumbnailRail';
-import { ViewerToolbar } from './ViewerToolbar';
+import { ViewerToolbar, type ViewerCommand } from './ViewerToolbar';
 import { createControlledIiifTileSource } from './iiifTileBridge';
 import {
   fetchIiifBytes,
@@ -78,7 +78,7 @@ interface PageViewerProps {
   onRequestedIndexHandled?: () => void;
   /** Comandi propri di chi ospita il visore (es. cambio fonte), nella stessa
    *  barra del visore invece che in una riga a parte. */
-  extraControls?: ReactNode;
+  extraControls?: ViewerCommand[];
 }
 
 /** Cosa sta succedendo a una pagina diversa da quella confermata a schermo:
@@ -644,7 +644,7 @@ export function PageViewer({
         </div>
       )}
       <div className="flex min-h-0 flex-1 flex-col">
-        {((manifest && total > 0) || extraControls) && (
+        {((manifest && total > 0) || (extraControls?.length ?? 0) > 0) && (
           <ViewerToolbar
             fromDisk={localSize !== null}
             origin={pageOrigin}

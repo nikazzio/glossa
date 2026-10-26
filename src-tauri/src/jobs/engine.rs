@@ -48,6 +48,8 @@ use super::{
 const IDLE_TICK: Duration = Duration::from_millis(500);
 
 /// Un tipo di lavoro. La logica lunga sta qui dentro, non nell'interfaccia.
+// async_trait adds must_use to boxed futures; Clippy 1.99 flags that generated attribute.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait JobHandler: Send + Sync {
     /// Con quale limite compete.

@@ -1,15 +1,14 @@
-import { Fragment, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   Archive,
   ArchiveRestore,
   Eraser,
   Minimize2,
-  MoreVertical,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ClickPopover, IconButton, MenuActionRow, Tooltip } from '../ui';
+import { CommandBar, Tooltip, type RowCommand } from '../ui';
 import { downloadIconAndLabel } from './DownloadButton';
 import type { SourceActions } from './useSourceActions';
 import type { LibraryCatalogEntry } from '../../types';
@@ -27,15 +26,6 @@ interface SourceActionBarProps {
   leading?: ReactNode;
 }
 
-interface SourceCommand {
-  key: string;
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  tone?: 'danger';
-}
-
 /**
  * I comandi di un'opera nel catalogo: immagini (scarica, verifica, riduci,
  * libera spazio) e conservazione (archivia, elimina). Lo stato di uno
@@ -44,12 +34,10 @@ interface SourceCommand {
 export function SourceActionBar({ entry, actions, size = 'sm', variant = 'menu', leading }: SourceActionBarProps) {
   const { t } = useTranslation();
   const { busy, runningJob, archived, summary } = actions;
-  const icon = size === 'sm' ? 13 : 15;
-  const [menuOpen, setMenuOpen] = useState(false);
   const hasLocalPages = entry.localPages > 0;
   const { icon: downloadIcon, label: downloadLabel } = downloadIconAndLabel(actions, 14, t);
 
-  const imageCommands: SourceCommand[] = [
+  const imageCommands: RowCommand[] = [
     {
       key: 'download',
       icon: downloadIcon,
@@ -79,7 +67,7 @@ export function SourceActionBar({ entry, actions, size = 'sm', variant = 'menu',
       disabled: busy || !hasLocalPages,
     },
   ];
-  const keepingCommands: SourceCommand[] = [
+  const keepingCommands: RowCommand[] = [
     {
       key: 'archive',
       icon: archived ? <ArchiveRestore size={14} /> : <Archive size={14} />,
@@ -108,72 +96,13 @@ export function SourceActionBar({ entry, actions, size = 'sm', variant = 'menu',
     </span>
   );
 
-  if (variant === 'inline') {
-    const groups = [
-      ...(leading ? [leading] : []),
-      imageCommands.map((command) => <CommandButton key={command.key} command={command} size={size} />),
-      keepingCommands.map((command) => <CommandButton key={command.key} command={command} size={size} />),
-    ];
-    return (
-      <div className="flex shrink-0 items-center gap-1">
-        {progress}
-        {groups.map((group, index) => (
-          <Fragment key={index}>
-            {index > 0 && <span className="mx-1 h-4 w-px bg-editorial-border" aria-hidden="true" />}
-            {group}
-          </Fragment>
-        ))}
-      </div>
-    );
-  }
-
-  const menuRow = (command: SourceCommand) => (
-    <MenuActionRow
-      key={command.key}
-      icon={command.icon}
-      label={command.label}
-      onClick={() => {
-        setMenuOpen(false);
-        command.onClick();
-      }}
-      disabled={command.disabled}
-      tone={command.tone}
+  return (
+    <CommandBar
+      groups={[imageCommands, keepingCommands]}
+      variant={variant}
+      size={size}
+      leading={leading}
+      status={progress}
     />
-  );
-
-  return (
-    <div className="flex shrink-0 items-center gap-1">
-      {progress}
-      <ClickPopover
-        open={menuOpen}
-        onOpenChange={setMenuOpen}
-        trigger={
-          <IconButton size={size} title={t('areas.library.moreActions')} ariaPressed={menuOpen}>
-            <MoreVertical size={icon} />
-          </IconButton>
-        }
-      >
-        <div className="min-w-44 py-1">
-          {imageCommands.map(menuRow)}
-          <div className="my-1 border-t border-editorial-border/70" />
-          {keepingCommands.map(menuRow)}
-        </div>
-      </ClickPopover>
-    </div>
-  );
-}
-
-/** Neutro anche per eliminare: la conferma arriva dopo, e una fila di icone
- *  con una rossa in fondo attirerebbe l'occhio sul comando più raro. */
-function CommandButton({ command, size }: { command: SourceCommand; size: 'sm' | 'md' }) {
-  return (
-    <IconButton
-      size={size === 'sm' ? 'xs' : 'sm'}
-      title={command.label}
-      onClick={command.onClick}
-      disabled={command.disabled}
-    >
-      {command.icon}
-    </IconButton>
   );
 }

@@ -10,9 +10,12 @@ export interface PhraseCandidateDraft {
   confidence: number;
   origin: PhraseCandidateOrigin;
   accepted: boolean;
+  /** La riga in memoria, per le coppie già salvate (`origin: 'saved'`). */
+  entryId?: string;
 }
 
 export interface SavedPhrasePair {
+  entryId: string;
   sourcePhrase: string;
   targetPhrase: string;
   confidence: number;
@@ -37,6 +40,7 @@ type PhraseMemoryDraftState = {
   toggleAccepted: (chunkId: string, candidateId: string) => void;
   addManualCandidate: (chunkId: string) => void;
   seedSavedCandidates: (chunkId: string, pairs: SavedPhrasePair[]) => void;
+  removeCandidate: (chunkId: string, candidateId: string) => void;
   clearDraft: (chunkId: string) => void;
   reset: () => void;
 };
@@ -114,10 +118,19 @@ export const usePhraseMemoryDraftStore = create<PhraseMemoryDraftState>((set) =>
           confidence: pair.confidence,
           origin: 'saved' as const,
           accepted: true,
+          entryId: pair.entryId,
         })),
       });
       return { draftsByChunk: next };
     }),
+
+  removeCandidate: (chunkId, candidateId) =>
+    set((state) => ({
+      draftsByChunk: updateEntry(state, chunkId, (entry) => ({
+        ...entry,
+        candidates: entry.candidates.filter((candidate) => candidate.id !== candidateId),
+      })),
+    })),
 
   clearDraft: (chunkId) =>
     set((state) => {

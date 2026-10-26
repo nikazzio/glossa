@@ -407,8 +407,6 @@ export interface Pipeline {
   id: string;
   projectId: string;
   name: string;
-  sourceLanguage: string;
-  targetLanguage: string;
   mode: PipelineMode;
   runStatus: PipelineRunStatus;
   lastRunConfig: string | null;
@@ -451,6 +449,9 @@ export interface GeminiCacheConfig {
 }
 
 export interface DeeplConfig {
+  /** DeepL API code; empty string selects automatic source detection. */
+  sourceLang?: string;
+  targetLang?: string;
   modelType?: 'latency_optimized' | 'quality_optimized' | 'prefer_quality_optimized';
   formality?: 'default' | 'more' | 'less' | 'prefer_more' | 'prefer_less';
   context?: string;
@@ -528,8 +529,6 @@ export interface PipelineStageConfig {
   model: string;
   provider: ModelProvider;
   enabled: boolean;
-  sourceLanguage?: string;
-  targetLanguage?: string;
   providerOptions?: ProviderRuntimeConfig;
   customProviderId?: string;
 }
@@ -578,9 +577,34 @@ export interface TokenUsage {
   cacheMissInputTokens?: number;
 }
 
+/** Pipeline overrides of the prompts' system texts (by id) and disabled parts. */
+export interface PromptComposition {
+  texts?: Record<string, string>;
+  disabled?: string[];
+}
+
+/** Default wording of a system text and the placeholders it must keep. */
+export interface SystemTextInfo {
+  id: string;
+  defaultText: string;
+  required: string[];
+}
+
+/** One named piece of a request, as composed by the backend. */
+export interface PromptPart {
+  id: string;
+  /** The editable system text the part is made from, if any. */
+  textId?: string | null;
+  message: 'system' | 'user';
+  cacheable: boolean;
+  text: string;
+}
+
 export interface PromptInfo {
   systemPrompt: string;
   userPrompt: string;
+  /** The same request split into named parts, in sending order (previews only). */
+  parts?: PromptPart[];
 }
 
 export interface ResponseInfo {
@@ -588,7 +612,7 @@ export interface ResponseInfo {
   rawJson: string;
 }
 
-export type PromptTemplateContext = 'stage' | 'audit' | 'persona' | 'memory' | 'ocr';
+export type PromptTemplateContext = 'stage' | 'audit' | 'brief' | 'memory' | 'ocr' | 'system';
 export type PromptTemplateWorkflow = 'translation' | 'transcription';
 
 export interface PromptTemplate {
@@ -639,10 +663,24 @@ export interface CoherenceResult {
   promptInfo?: PromptInfo;
 }
 
+/**
+ * One side of a work's languages: ISO 639-3 code, Glottolog variety of that
+ * language and a free note (period, area, hand). Every field may be empty.
+ */
+export interface LanguageChoice {
+  code: string | null;
+  variety: string | null;
+  note: string;
+}
+
+/** The languages of a translated work, owned by the work, not by its pipelines. */
+export interface WorkLanguages {
+  source: LanguageChoice;
+  target: LanguageChoice;
+}
+
 export interface PipelineConfig {
   pipelineId: string;
-  sourceLanguage: string;
-  targetLanguage: string;
   mode?: PipelineMode;
   stages: PipelineStageConfig[];
   judgePrompt: string;
@@ -663,10 +701,11 @@ export interface PipelineConfig {
   experimentalImport?: ExperimentalImportMode | null;
   coherencePrompt?: string;
   reviewProviderOptions?: ProviderRuntimeConfig;
-  persona?: string;
+  /** Shared task context for LLM stages and quality checks. */
+  workBrief?: string;
+  /** Custom system texts of the prompts and parts switched off; absent = all defaults. */
+  promptComposition?: PromptComposition;
   uiLanguage?: string;
-  customSourceLanguage?: string;
-  customTargetLanguage?: string;
   blobBudgetTokens?: number;
   blobOverlap?: number;
   chunkedWithContextWindow?: number;
@@ -699,10 +738,30 @@ export type Workspace = {
   ocrDefaultProvider: ModelProvider | '';
   ocrDefaultModel: string;
   ocrDefaultPrompt: string;
+  /** La ricerca dei riferimenti guarda anche le frasi degli altri workspace e
+   *  delle traduzioni senza workspace (sempre della stessa coppia di lingue). */
+  memorySearchAllWorkspaces: boolean;
   createdAt: string;
   /** Messo da parte: resta com'è, ma non compare fra quelli in cui si lavora. */
   archivedAt?: string;
 };
+
+export interface TextProvenance {
+  projectId?: string;
+  projectName?: string | null;
+  chunkId?: string;
+  chunkPosition?: number | null;
+  workspaceId?: string | null;
+  workspaceName?: string | null;
+  sourceTitle?: string | null;
+  sourceId?: string | null;
+  sourceVersionId?: string | null;
+  sourceVersionLabel?: string | null;
+  approvedTranslationRevisionId?: string | null;
+  sourceHash?: string;
+  targetHash?: string;
+  selection?: { exact: string; start: number | null; end: number | null };
+}
 
 export type PhraseMatch = {
   phraseMemoryId: string;
@@ -710,6 +769,20 @@ export type PhraseMatch = {
   targetPhrase: string;
   distance: number;
   confidence: number;
+  /** Provenienza: workspace di casa (`null` = traduzione senza workspace),
+   *  traduzione e frammento (`null` = frase importata). */
+  workspaceId: string | null;
+  projectId: string | null;
+  chunkId: string | null;
+  /** Codici ISO 639-3 delle due revisioni («und» = non indicata). */
+  sourceLanguage: string;
+  targetLanguage: string;
+  /** Varietà Glottolog delle due revisioni, se indicata. */
+  sourceLanguageVariety: string | null;
+  targetLanguageVariety: string | null;
+  provenance?: TextProvenance;
+  embeddingModel?: string;
+  dimensions?: number;
 };
 
 export type EmbeddingJobStatus =

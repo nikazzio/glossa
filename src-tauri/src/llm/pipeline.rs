@@ -3,11 +3,13 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
 use crate::llm::blobs::{compute_blob_assignments, BlobAssignment, ChunkForBlob};
+use crate::llm::composition::{ComposedPrompt, PreviewPart};
 use crate::llm::custom_profiles;
 use crate::llm::prompts::{
-    build_coherence_prompts, build_judge_prompts, build_stage_prompts, escape_prompt_markers,
-    minimal_pipeline_config, parse_judge_rating, sanitize_llm_json_output,
-    REFINE_AUDIT_SYSTEM_PROMPT, REFINE_STAGE_SYSTEM_PROMPT,
+    build_coherence_prompts, build_judge_prompts, build_stage_prompts, compose_coherence_prompts,
+    compose_judge_prompts, compose_stage_prompts, escape_prompt_markers, minimal_pipeline_config,
+    parse_judge_rating, sanitize_llm_json_output, REFINE_AUDIT_SYSTEM_PROMPT,
+    REFINE_STAGE_SYSTEM_PROMPT,
 };
 use crate::llm::provider::{LlmProvider, LlmRequest};
 use crate::llm::providers::{get_provider, with_retry_after};
@@ -253,6 +255,20 @@ pub async fn run_stage(
 pub struct StagePromptPreview {
     pub system_prompt: String,
     pub user_prompt: String,
+    /// The same request as named parts, in sending order.
+    pub parts: Vec<PreviewPart>,
+}
+
+impl From<ComposedPrompt> for StagePromptPreview {
+    fn from(composed: ComposedPrompt) -> Self {
+        let parts = composed.preview_parts();
+        let structured = composed.into_structured();
+        Self {
+            system_prompt: structured.flatten_system(),
+            user_prompt: structured.user,
+            parts,
+        }
+    }
 }
 
 /// Builds the exact prompt a stage would send, without contacting any provider.
@@ -265,18 +281,32 @@ pub fn preview_stage_prompt(
     previous_result: Option<String>,
     audit_context: Option<String>,
 ) -> StagePromptPreview {
-    let structured = build_stage_prompts(
+    compose_stage_prompts(
         &text,
         &stage,
         &config,
         previous_result.as_deref(),
         audit_context.as_deref(),
-    );
-    let system_prompt = structured.flatten_system();
-    StagePromptPreview {
-        system_prompt,
-        user_prompt: structured.user,
-    }
+    )
+    .into()
+}
+
+/// Review previews share prompt builders with execution and never contact a provider.
+#[tauri::command]
+pub fn preview_judge_prompt(
+    source_text: String,
+    translation: String,
+    config: PipelineConfig,
+) -> StagePromptPreview {
+    compose_judge_prompts(&source_text, &translation, &config).into()
+}
+
+#[tauri::command]
+pub fn preview_coherence_prompt(
+    input: CoherenceChunkInput,
+    config: PipelineConfig,
+) -> StagePromptPreview {
+    compose_coherence_prompts(&input, &config).into()
 }
 
 #[tauri::command]
@@ -493,8 +523,12 @@ pub async fn refine_prompt(
     prov.preflight(&model).await?;
     let api_key = get_api_key(&app, &provider)?;
     let client = prov.http_client()?;
-    let system_text = if context == "audit" {
+    let system_text = if context == "brief" {
+        "Rewrite the shared translation context clearly and concisely. Preserve all stated languages, historical varieties, goals, audience and register. Do not invent requirements or add stage-specific commands, evaluation criteria or output formats. Return only the rewritten work brief."
+    } else if context == "audit" {
         REFINE_AUDIT_SYSTEM_PROMPT
+    } else if context == "system" {
+        "Rewrite this system instruction of a translation pipeline to be clearer and more effective for modern LLMs. Preserve its purpose and every placeholder written as {{NAME}} exactly, in place. Do not add new requirements. Return only the rewritten text."
     } else {
         REFINE_STAGE_SYSTEM_PROMPT
     };

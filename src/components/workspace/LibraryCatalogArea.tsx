@@ -1,10 +1,11 @@
 import { useEffect, useState, type DragEvent } from 'react';
 import { motion } from 'motion/react';
-import { AlertCircle, BookOpenText, LayoutGrid, List, RefreshCw, Table2 } from 'lucide-react';
+import { AlertCircle, BookOpenText, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from '../layout/motion';
-import { EmptyState, IconButton, ListReveal, Spinner } from '../ui';
+import { AREA_PAPER_CLASSNAME, AreaHeading, CatalogViewSwitch, EmptyState, IconButton, ListReveal, Spinner } from '../ui';
+import { CATALOG_GRID_CLASSNAME, CATALOG_GROUP_HEADER_CLASSNAME, CATALOG_LIST_CLASSNAME } from '../ui/catalogStyles';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -371,27 +372,11 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           {...enter}
           className="flex h-full min-h-0 w-full min-w-0 flex-1"
         >
-          <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-panel">
-            <div className="flex items-end justify-between gap-3 px-5 pt-5 md:px-6">
-              <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-                {t('areas.library.title')}
-              </h1>
-              {catalog.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <IconButton size="sm" tone={view === 'list' ? 'accent' : 'default'} onClick={() => setView('list')}
-                    title={t('areas.library.viewList')} ariaPressed={view === 'list'}>
-                    <List size={13} />
-                  </IconButton>
-                  <IconButton size="sm" tone={view === 'grid' ? 'accent' : 'default'} onClick={() => setView('grid')}
-                    title={t('areas.library.viewGrid')} ariaPressed={view === 'grid'}>
-                    <LayoutGrid size={13} />
-                  </IconButton>
-                  <IconButton size="sm" tone={view === 'table' ? 'accent' : 'default'} onClick={() => setView('table')}
-                    title={t('areas.library.viewTable')} ariaPressed={view === 'table'}>
-                    <Table2 size={13} />
-                  </IconButton>
-                </div>
-              )}
+          <main className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${AREA_PAPER_CLASSNAME.library}`}>
+            <div className="px-5 pt-5 md:px-6">
+              <AreaHeading area="library" title={t('areas.library.title')}>
+                {catalog.length > 0 && <CatalogViewSwitch view={view} onChange={setView} />}
+              </AreaHeading>
             </div>
             {catalog.length > 0 && (
               <LibraryQuickFilters filters={filters} onChange={changeFilters} counts={counts}
@@ -440,7 +425,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                   {groups.map((group) => (
                     <section key={group.key} aria-label={groupLabel(group.key)}>
                       {grouping !== 'none' && (
-                        <h2 className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-editorial-border bg-surface-panel py-2 font-display text-lg italic text-editorial-ink">
+                        <h2 className={`${CATALOG_GROUP_HEADER_CLASSNAME} ${AREA_PAPER_CLASSNAME.library}`}>
                           {groupLabel(group.key)}
                           <span className="font-sans text-xs not-italic tabular-nums text-editorial-muted">{group.entries.length}</span>
                         </h2>
@@ -456,9 +441,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                           handlersFor={rowHandlers}
                         />
                       ) : (
-                        <div className={view === 'grid'
-                          ? 'grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 py-4'
-                          : 'flex flex-col divide-y divide-editorial-border/60 py-2'}>
+                        <div className={view === 'grid' ? CATALOG_GRID_CLASSNAME : CATALOG_LIST_CLASSNAME}>
                           {group.entries.map((entry, index) => (
                             <ListReveal key={entry.source.id} index={index} stagger={firstReveal}
                               className={view === 'grid' ? 'h-full' : undefined}>

@@ -3,9 +3,7 @@ import type { DeeplConfig, DeeplLanguageInfo } from '../types';
 
 interface DeeplStageParams {
   text: string;
-  sourceLang?: string;
-  targetLang: string;
-  deeplConfig?: DeeplConfig;
+  deeplConfig: DeeplConfig;
 }
 
 interface DeeplStageResult {
@@ -18,11 +16,15 @@ async function runDeeplStage(params: DeeplStageParams): Promise<DeeplStageResult
   return invoke<DeeplStageResult>('run_deepl_stage', {
     input: {
       text: params.text,
-      sourceLang: params.sourceLang,
-      targetLang: params.targetLang,
       deeplConfig: params.deeplConfig,
     },
   });
+}
+
+/** Exact API body, assembled by the same backend function used for execution. */
+async function previewDeeplStage(params: DeeplStageParams): Promise<string> {
+  const body = await invoke<Record<string, unknown>>('preview_deepl_stage', { input: params });
+  return JSON.stringify(body, null, 2);
 }
 
 async function getLanguages(langType: 'source' | 'target'): Promise<DeeplLanguageInfo[]> {
@@ -58,4 +60,4 @@ async function deleteGlossary(glossaryId: string): Promise<void> {
   return invoke<void>('delete_deepl_glossary', { glossaryId });
 }
 
-export const deeplService = { runDeeplStage, getLanguages, listGlossaries, createGlossary, deleteGlossary };
+export const deeplService = { runDeeplStage, previewDeeplStage, getLanguages, listGlossaries, createGlossary, deleteGlossary };

@@ -59,7 +59,7 @@ function JobsSection({ title, jobs, onDismiss }: {
   return (
     <section className="mb-3 last:mb-0">
       <h3 className="mb-1 text-xs uppercase tracking-wide text-editorial-muted">{title}</h3>
-      <ul className="flex flex-col gap-1">
+      <ul className="flex flex-col">
         {jobs.map((job) => (
           <li key={job.id}>
             <JobRow job={job} onRemove={() => onDismiss([job.id])} removeLabel={t('jobs.dismiss')} />

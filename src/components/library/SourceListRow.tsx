@@ -245,7 +245,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
       className={
         expanded
           ? 'my-1 overflow-hidden rounded-xl border border-editorial-accent/50 bg-surface-elevated shadow-sm'
-          : 'overflow-hidden border-b border-editorial-border/70 transition-colors hover:bg-surface-hover/50'
+          : 'overflow-hidden border-b border-rule transition-colors hover:bg-surface-hover/50'
       }
     >
       <div className={`flex gap-3 px-3 py-2.5 ${expanded ? 'items-start' : 'items-center'}`}>

@@ -6,6 +6,7 @@ import { useLibraryStore } from '../stores/libraryStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { useUiStore } from '../stores/uiStore';
 import { useConfigStore } from '../stores/configStore';
+import { saveVersionWithFeedback } from '../components/document/manualSave';
 
 function isInputActive(): boolean {
   const el = document.activeElement;
@@ -28,6 +29,40 @@ export function useKeyboardShortcuts({ onRunPipeline, onRunSingleChunk }: Option
   const { t } = useTranslation();
 
   useEffect(() => {
+    /** Traduzione aperta: l'esito lo dice l'indicatore nella barra di stato,
+     *  quindi niente avviso se va bene; un errore della traduzione resta lì,
+     *  con il dischetto che diventa «Riprova». */
+    const saveOpenProject = () => {
+      const { dirtyIds, saveAllDirty } = useLibraryStore.getState();
+      if (useChunksStore.getState().isProcessing) {
+        toast.warning(t('header.projectSaveDeferred'));
+      } else {
+        saveVersionWithFeedback(t);
+      }
+      if (dirtyIds.length > 0) {
+        saveAllDirty().catch((err: unknown) =>
+          toast.error(t('header.globalSaveFailed'), {
+            description: err instanceof Error ? err.message : String(err),
+          }),
+        );
+      }
+    };
+
+    const saveLibraryOnly = () => {
+      const { dirtyIds, saveAllDirty } = useLibraryStore.getState();
+      if (dirtyIds.length === 0) {
+        toast.success(t('header.nothingToSave'));
+        return;
+      }
+      saveAllDirty()
+        .then(() => toast.success(t('header.savedAll')))
+        .catch((err: unknown) =>
+          toast.error(t('header.globalSaveFailed'), {
+            description: err instanceof Error ? err.message : String(err),
+          }),
+        );
+    };
+
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
@@ -45,42 +80,21 @@ export function useKeyboardShortcuts({ onRunPipeline, onRunSingleChunk }: Option
         return;
       }
 
+      // Ctrl/⌘+S a traduzione aperta vale anche mentre si scrive nei fogli,
+      // come nello Studio di trascrizione: è lì che serve.
+      if (e.key.toLowerCase() === 's' && !e.altKey && useProjectStore.getState().currentProjectId) {
+        e.preventDefault();
+        saveOpenProject();
+        return;
+      }
+
       if (isInputActive()) return;
 
       switch (e.key) {
         case 's':
         case 'S': {
           e.preventDefault();
-          const { currentProjectId, saveCurrentProject } = useProjectStore.getState();
-          const { dirtyIds, saveAllDirty } = useLibraryStore.getState();
-          const isProcessing = useChunksStore.getState().isProcessing;
-
-          const shouldSaveProject = Boolean(currentProjectId) && !isProcessing;
-          const shouldSaveLibrary = dirtyIds.length > 0;
-          const projectDeferred = Boolean(currentProjectId) && isProcessing;
-
-          if (!shouldSaveProject && !shouldSaveLibrary) {
-            toast[projectDeferred ? 'warning' : 'success'](
-              t(projectDeferred ? 'header.projectSaveDeferred' : 'header.nothingToSave'),
-            );
-            return;
-          }
-
-          const saves: Promise<void>[] = [];
-          if (shouldSaveProject) saves.push(saveCurrentProject());
-          if (shouldSaveLibrary) saves.push(saveAllDirty());
-
-          Promise.all(saves)
-            .then(() =>
-              toast[projectDeferred ? 'warning' : 'success'](
-                t(projectDeferred ? 'header.savedLibraryProjectDeferred' : 'header.savedAll'),
-              ),
-            )
-            .catch((err: unknown) =>
-              toast.error(t('header.globalSaveFailed'), {
-                description: err instanceof Error ? err.message : String(err),
-              }),
-            );
+          saveLibraryOnly();
           break;
         }
 

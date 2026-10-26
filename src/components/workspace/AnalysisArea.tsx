@@ -11,7 +11,7 @@ export function AnalysisArea() {
   const { t } = useTranslation();
 
   return (
-    <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
+    <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
       <div className="px-5 py-5 md:px-6">
         <h1 className="mb-5 font-display text-4xl italic text-editorial-ink md:text-5xl">
           {t('areas.analysis.title')}

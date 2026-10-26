@@ -222,7 +222,7 @@ export function WorkspaceOverview() {
   };
 
   return (
-    <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
+    <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
       <div className="min-w-0 max-w-5xl px-5 py-5 md:px-6">
         {/* Identità e azioni del workspace */}
         <section>
@@ -297,7 +297,7 @@ export function WorkspaceOverview() {
                 // comando non è una cosa che si può cliccare in modo prevedibile.
                 <div
                   key={project.id}
-                  className="flex w-full items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper"
+                  className="flex w-full items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-surface-elevated px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-surface-hover/50"
                 >
                   <button
                     type="button"
@@ -308,7 +308,7 @@ export function WorkspaceOverview() {
                     <span className="truncate font-display text-base italic text-editorial-ink">
                       {project.name}
                     </span>
-                    <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                    <span className="shrink-0 text-caption font-bold uppercase tracking-caption text-editorial-muted">
                       {t('workspace.pipelineBadge', { count: project.pipeline_count })}
                     </span>
                   </button>
@@ -383,7 +383,7 @@ export function WorkspaceOverview() {
               {sortedTranscriptions.map((document) => (
                 <div
                   key={document.id}
-                  className="flex w-full items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper"
+                  className="flex w-full items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-surface-elevated px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-surface-hover/50"
                 >
                   <button
                     type="button"
@@ -458,7 +458,7 @@ export function WorkspaceOverview() {
                 {group.items.map((item) => (
                   <li
                     key={item.id}
-                    className="flex items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-2.5"
+                    className="flex items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-surface-elevated px-4 py-2.5"
                   >
                     <span className="min-w-0 truncate text-sm text-editorial-ink">{item.label}</span>
                     <IconButton

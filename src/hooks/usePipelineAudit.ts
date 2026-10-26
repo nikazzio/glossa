@@ -106,7 +106,7 @@ async function runRefineLoopForChunk(
       // Prima usciva in silenzio: il ciclo finiva e non lo sapeva nessuno, né
       // a schermo né nel registro tecnico né in quello dei fatti.
       const message = error instanceof Error ? error.message : String(error);
-      pipelineLog.stageError(chunkId, lastRefineStage.id, lastRefineStage.name, message);
+      pipelineLog.stageError(chunkId, lastRefineStage.id, lastRefineStage.name, message, Date.now() - startedAt, lastRefineStage);
       void recordFailedModelCall(
         {
           chunkId,
@@ -115,8 +115,8 @@ async function runRefineLoopForChunk(
           provider: lastRefineStage.provider,
           model: lastRefineStage.model,
           durationMs: Date.now() - startedAt,
-          sourceLanguage: config.sourceLanguage,
-          targetLanguage: config.targetLanguage,
+          sourceLanguage: usePipelineStore.getState().workLanguages.source.code,
+          targetLanguage: usePipelineStore.getState().workLanguages.target.code,
           input: chunk.translationProcessingText,
           workspaceId,
         },
@@ -135,8 +135,8 @@ async function runRefineLoopForChunk(
       model: lastRefineStage.model,
       usage: tokenUsageOf(refineResult),
       durationMs: Date.now() - startedAt,
-      sourceLanguage: config.sourceLanguage,
-      targetLanguage: config.targetLanguage,
+      sourceLanguage: usePipelineStore.getState().workLanguages.source.code,
+      targetLanguage: usePipelineStore.getState().workLanguages.target.code,
       input: chunk.translationProcessingText,
       output: refineResult.content,
       workspaceId,
@@ -354,8 +354,8 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
           model: coherenceRef.model,
           usage: tokenUsage,
           durationMs: Date.now() - coherenceStartedAt,
-          sourceLanguage: config.sourceLanguage,
-          targetLanguage: config.targetLanguage,
+          sourceLanguage: usePipelineStore.getState().workLanguages.source.code,
+          targetLanguage: usePipelineStore.getState().workLanguages.target.code,
           input: chunk.translationProcessingText,
           workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
         }).catch(() => undefined);
@@ -371,8 +371,8 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
             provider: coherenceRef.provider,
             model: coherenceRef.model,
             durationMs: Date.now() - coherenceStartedAt,
-            sourceLanguage: config.sourceLanguage,
-            targetLanguage: config.targetLanguage,
+            sourceLanguage: usePipelineStore.getState().workLanguages.source.code,
+            targetLanguage: usePipelineStore.getState().workLanguages.target.code,
             input: chunk.translationProcessingText,
             workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
           },

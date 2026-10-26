@@ -30,8 +30,9 @@ describe('promptTemplateService', () => {
         { id: 'tpl-2', name: 'Beta', prompt: 'Do beta', context: 'audit', default_model: '', default_provider: '', created_at: '2024-01-02' },
       ]);
 
-      const templates = await getPromptTemplates();
+      const { templates, skipped } = await getPromptTemplates();
 
+      expect(skipped).toEqual([]);
       expect(dbMocks.select).toHaveBeenCalledWith(
         expect.stringContaining('FROM prompt_templates'),
       );
@@ -52,8 +53,20 @@ describe('promptTemplateService', () => {
 
     it('returns empty array when no templates exist', async () => {
       dbMocks.select.mockResolvedValueOnce([]);
-      const templates = await getPromptTemplates();
+      const { templates } = await getPromptTemplates();
       expect(templates).toEqual([]);
+    });
+
+    it('skips rows with an unknown context and reports their names', async () => {
+      dbMocks.select.mockResolvedValueOnce([
+        { id: 'tpl-1', name: 'Alpha', prompt: 'Do alpha', context: 'brief', default_model: '', default_provider: '', created_at: '2024-01-01' },
+        { id: 'tpl-2', name: 'Old', prompt: 'Legacy', context: 'persona', default_model: '', default_provider: '', created_at: '2024-01-02' },
+      ]);
+
+      const { templates, skipped } = await getPromptTemplates();
+
+      expect(templates.map((t) => t.id)).toEqual(['tpl-1']);
+      expect(skipped).toEqual(['Old']);
     });
   });
 

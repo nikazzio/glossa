@@ -53,6 +53,14 @@ export async function importTextFile(): Promise<ImportedTextFile | null> {
   };
 }
 
+/** La chiave del messaggio da mostrare quando un file non si può importare:
+ *  i due casi che l'utente può correggere hanno un messaggio proprio. */
+export function importErrorMessageKey(message: string): string {
+  if (message === 'pdf_no_text_layer') return 'files.pdfScannedError';
+  if (message === 'text_not_utf8') return 'files.textEncodingError';
+  return 'files.importError';
+}
+
 // ── Export ────────────────────────────────────────────────────────────
 
 export async function exportTranslation(

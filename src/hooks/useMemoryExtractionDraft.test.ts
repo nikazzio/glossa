@@ -1,3 +1,4 @@
+import { makeMemoryEntry } from '../test/memoryEntryFactory';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePhraseMemoryDraftStore } from '../stores/phraseMemoryDraftStore';
@@ -27,7 +28,7 @@ const workspace = {
   memoryExtractorProvider: 'openai' as const,
   memoryExtractorModel: 'gpt-5-nano',
   memoryExtractorPrompt: 'Extract',
-  ocrDefaultProvider: '' as const, ocrDefaultModel: '', ocrDefaultPrompt: '',
+  ocrDefaultProvider: '' as const, ocrDefaultModel: '', ocrDefaultPrompt: '', memorySearchAllWorkspaces: false,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -39,7 +40,7 @@ const lockedChunk = makeTranslationChunk({
 });
 
 function makeSavedEntry(overrides: Partial<PhraseMemoryEntry>): PhraseMemoryEntry {
-  return {
+  return makeMemoryEntry({
     id: 'pm-1',
     workspaceId: 'ws-1',
     sourcePhrase: 'Buongiorno',
@@ -47,17 +48,18 @@ function makeSavedEntry(overrides: Partial<PhraseMemoryEntry>): PhraseMemoryEntr
     confidence: 1,
     sourceLanguage: 'it',
     targetLanguage: 'en',
+    sourceLanguageVariety: null,
+    targetLanguageVariety: null,
     author: null,
     work: null,
     domain: null,
-    tags: null,
+    tags: [],
     notes: null,
     chunkId: 'c1',
     projectId: 'proj-1',
-    embeddingModel: 'text-embedding-3-small',
     createdAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
-  };
+  });
 }
 
 describe('useMemoryExtractionDraft', () => {
@@ -69,7 +71,10 @@ describe('useMemoryExtractionDraft', () => {
     useProjectStore.setState({ currentProjectId: 'proj-1' });
     usePipelineStore.setState((state) => ({
       ...state,
-      config: { ...state.config, sourceLanguage: 'it', targetLanguage: 'en' },
+      workLanguages: {
+        source: { code: null, variety: null, note: '' },
+        target: { code: 'ita', variety: null, note: '' },
+      },
     }));
   });
 
@@ -97,6 +102,8 @@ describe('useMemoryExtractionDraft', () => {
       model: 'gpt-5-nano',
       sourceText: 'Ciao mondo.',
       targetText: 'Hello world.',
+      sourceLanguage: 'not specified',
+      targetLanguage: 'Italian',
     }));
     await waitFor(() => {
       expect(result.current.candidates).toHaveLength(1);
@@ -136,6 +143,8 @@ describe('useMemoryExtractionDraft', () => {
       chunkId: 'c1',
       pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }],
     }));
+    expect(mockSaveApproved.mock.calls[0][0]).not.toHaveProperty('sourceLanguage');
+    expect(mockSaveApproved.mock.calls[0][0]).not.toHaveProperty('targetLanguage');
     expect(savedCount).toBe(1);
     await waitFor(() => expect(result.current.candidates).toHaveLength(0));
   });
@@ -154,17 +163,18 @@ describe('useMemoryExtractionDraft', () => {
     expect(savedCount).toBe(0);
   });
 
-  it('carica in automatico le frasi già salvate per il frammento', async () => {
+  it('carica in automatico le frasi già salvate per il frammento, solo le sue', async () => {
     mockListEntries.mockResolvedValueOnce([
       makeSavedEntry({ id: 'pm-1', sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning' }),
-      makeSavedEntry({ id: 'pm-2', sourcePhrase: 'Buonasera', targetPhrase: 'Good evening', chunkId: 'other-chunk' }),
     ]);
     const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
 
     await waitFor(() => expect(result.current.candidates).toHaveLength(1));
+    expect(mockListEntries).toHaveBeenCalledWith(expect.any(String), lockedChunk.id);
     expect(result.current.candidates[0]).toMatchObject({
-      sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning', origin: 'saved', accepted: true,
+      sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning', origin: 'saved', accepted: true, entryId: 'pm-1',
     });
+    expect(result.current.savedCount).toBe(1);
   });
 
   it('non ricarica le frasi salvate se esiste già una bozza in corso per il frammento', async () => {
@@ -211,6 +221,7 @@ describe('useMemoryExtractionDraft', () => {
     act(() => { extractPromise = result.current.extract(); });
     act(() => { result.current.toggleAccepted(manualId); }); // modifica fatta mentre l'estrazione è in corso
 
+    await waitFor(() => expect(mockExtract).toHaveBeenCalled()); // la lingua si descrive prima, a catalogo caricato
     resolveExtract([{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }]);
     await act(async () => { await extractPromise; });
 

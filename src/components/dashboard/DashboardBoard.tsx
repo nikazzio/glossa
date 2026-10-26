@@ -22,10 +22,14 @@ import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useUiStore } from '../../stores/uiStore';
 import { SectionDragHandleProvider } from './sectionDragHandle';
 
 type ColumnId = 'left' | 'right';
+
+export interface BoardColumns {
+  left: string[];
+  right: string[];
+}
 
 export interface BoardSection {
   id: string;
@@ -37,17 +41,20 @@ export interface BoardSection {
 const DRAG_START_DISTANCE = 4;
 
 /**
- * Le sezioni della Panoramica su due colonne, spostabili a trascinamento.
+ * Le sezioni di una vista della Dashboard su due colonne, spostabili a
+ * trascinamento.
  *
- * L'ordine e la colonna di ognuna vivono in `uiStore`, quindi la disposizione
- * scelta resta anche dopo la chiusura. Una sezione si porta dove serve — anche
+ * L'ordine e la colonna di ognuna li tiene chi monta la tavola (in `uiStore`,
+ * una disposizione per vista), quindi la scelta resta anche dopo la chiusura. Una sezione si porta dove serve — anche
  * nell'altra colonna — perché a contare non è l'ordine con cui sono state
  * scritte ma quello con cui si lavora.
  */
-export function DashboardBoard({ sections }: { sections: BoardSection[] }) {
+export function DashboardBoard({ sections, columns, onColumnsChange: setColumns }: {
+  sections: BoardSection[];
+  columns: BoardColumns;
+  onColumnsChange: (columns: BoardColumns) => void;
+}) {
   const { t } = useTranslation();
-  const columns = useUiStore((state) => state.dashboardSectionColumns);
-  const setColumns = useUiStore((state) => state.setDashboardSectionColumns);
   const [dragging, setDragging] = useState<string | null>(null);
   // La colonna di partenza: durante il trascinamento quella corrente è già
   // cambiata, e riordinare di nuovo all'arrivo farebbe scavalcare la sezione

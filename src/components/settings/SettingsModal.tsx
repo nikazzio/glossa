@@ -1,187 +1,48 @@
-import type { KeyboardEvent, ReactNode } from 'react';
-import { useRef, useState } from 'react';
-import {
-  LibraryBig,
-  BookOpen,
-  FileText,
-  Type,
-  Server,
-  HardDrive,
-  DatabaseBackup,
-  ListChecks,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, Database, FileText, Languages, LibraryBig, ListChecks, Palette, Server, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { useUiStore } from '../../stores/uiStore';
-import type { SettingsTab } from '../../stores/uiStore';
-import { HL_COLORS_LIGHT, HL_COLORS_DARK } from '../../stores/uiStore';
-import { useConfigStore } from '../../stores/configStore';
-import { ollamaService } from '../../services/llmService';
-import { usePricingStore } from '../../stores/pricingStore';
-import { Dialog, IconButton, DialogCancelButton } from '../ui';
-import type { ModelProvider } from '../../types';
-import type { HLColorSet } from '../../stores/uiStore';
-import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { TranslationsSettingsTab } from './TranslationsSettingsTab';
-import { TypographySettingsTab } from './TypographySettingsTab';
-import { ProviderSettingsTab } from './ProviderSettingsTab';
-import { StorageSettingsTab } from './StorageSettingsTab';
-import { BackupSection } from './BackupSection';
-import { JobsSettingsTab } from './JobsSettingsTab';
-import { TranscriptionsSettingsTab } from './TranscriptionsSettingsTab';
-import { LibrarySettingsTab } from './LibrarySettingsTab';
+import { useUiStore, type SettingsTab } from '../../stores/uiStore';
+import { Dialog, DialogCancelButton, TabStrip, type TabStripItem } from '../ui';
 import type { NetworkProfileDraft } from '../../hooks/useLibraryNetworkSettings';
+import { AppearanceSettingsTab } from './AppearanceSettingsTab';
+import { DataSettingsTab } from './DataSettingsTab';
+import { JobsSettingsTab } from './JobsSettingsTab';
+import { LanguagesSettingsTab } from './LanguagesSettingsTab';
+import { LibrarySettingsTab } from './LibrarySettingsTab';
+import { ModelsSettingsTab } from './ModelsSettingsTab';
+import { TranscriptionsSettingsTab } from './TranscriptionsSettingsTab';
+import { TranslationsSettingsTab } from './TranslationsSettingsTab';
 
+/**
+ * Impostazioni generali, valide per tutta l'app (quelle di un workspace stanno
+ * nella sua finestra). Ordine: l'aspetto, le aree nell'ordine del lavoro, poi
+ * servizi e sistema.
+ */
 export function SettingsModal() {
-  const {
-    showSettings,
-    setShowSettings,
-    documentLayout,
-    setDocumentLayout,
-    highlightColors,
-    setHighlightColor,
-    editorialAccentColor,
-    setEditorialAccentColor,
-    uiFont,
-    setUiFont,
-    colorScheme,
-    setColorScheme,
-    documentFontSize,
-    setDocumentFontSize,
-    documentLineHeight,
-    setDocumentLineHeight,
-    settingsTab: activeTab,
-    setSettingsTab: setActiveTab,
-    showDeprecatedModels,
-    setShowDeprecatedModels,
-  } = useUiStore();
-  const {
-    ollamaStatus,
-    ollamaModels,
-    setOllamaModels,
-    setOllamaStatus,
-    chunkPresetShort,
-    chunkPresetMedium,
-    chunkPresetLong,
-    setChunkPresetShort,
-    setChunkPresetMedium,
-    setChunkPresetLong,
-    ollamaBaseUrl,
-    setOllamaBaseUrl,
-    ollamaAutoDiscover,
-    setOllamaAutoDiscover,
-    newPipelineInit,
-    setNewPipelineInit,
-  } = useConfigStore();
+  const { showSettings, setShowSettings, settingsTab: activeTab, setSettingsTab: setActiveTab } = useUiStore();
   const { t } = useTranslation();
-  const [refreshing, setRefreshing] = useState(false);
-  const [showPricingOverrides, setShowPricingOverrides] = useState(false);
-  const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
-  const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
-  const [urlError, setUrlError] = useState<string | null>(null);
   // Il ritmo che si sta scrivendo vive qui e non nella scheda: la scheda si
   // smonta cambiando linguetta, e un profilo digitato a metà spariva in silenzio.
   const [networkDraft, setNetworkDraft] = useState<NetworkProfileDraft | null>(null);
-  const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
-  const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
-  const hlMode: 'light' | 'dark' = (() => {
-    if (colorScheme === 'dark') return 'dark';
-    if (colorScheme === 'light') return 'light';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  })();
-  // Merge chiave per chiave: uno stato persistito incompleto (chiavi mancanti da
-  // una migrazione precedente) non deve far leggere `undefined` per un tipo di
-  // evidenziazione — altrimenti lo swatch colore risulta vuoto/nero.
-  const activeHlColors: HLColorSet = {
-    ...(hlMode === 'dark' ? HL_COLORS_DARK : HL_COLORS_LIGHT),
-    ...highlightColors[hlMode],
-  };
 
-  const refreshOllama = async () => {
-    setRefreshing(true);
-    try {
-      const models = await ollamaService.listModels();
-      setOllamaModels(models);
-      setOllamaStatus('connected');
-      toast.success(t('ollama.connected', { count: models.length }));
-    } catch (err: unknown) {
-      setOllamaModels([]);
-      setOllamaStatus('disconnected');
-      toast.error(t('ollama.disconnected'), {
-        description: err instanceof Error ? err.message : undefined,
-      });
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const activeTabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
-    { id: 'translations', icon: <FileText size={14} />,          label: t('areas.translations.title') },
-    { id: 'transcriptions', icon: <BookOpen size={14} />,        label: t('areas.transcriptions.title') },
-    { id: 'typography',   icon: <Type size={14} />,              label: t('settings.typographyTab') },
-    { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
-    { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
-    { id: 'backup',       icon: <DatabaseBackup size={14} />,    label: t('settings.backup') },
-    { id: 'jobs',         icon: <ListChecks size={14} />,        label: t('settings.jobsTab') },
-    { id: 'library',      icon: <LibraryBig size={14} />,        label: t('areas.library.title') },
+  const tabs: TabStripItem[] = [
+    { id: 'appearance', icon: <Palette size={14} />, label: t('settings.appearanceTab') },
+    { id: 'library', icon: <LibraryBig size={14} />, label: t('areas.library.title') },
+    { id: 'transcriptions', icon: <BookOpen size={14} />, label: t('areas.transcriptions.title') },
+    { id: 'translations', icon: <FileText size={14} />, label: t('areas.translations.title') },
+    { id: 'models', icon: <Server size={14} />, label: t('settings.modelsTab') },
+    { id: 'languages', icon: <Languages size={14} />, label: t('settings.languagesTab') },
+    { id: 'data', icon: <Database size={14} />, label: t('settings.storageTab') },
+    { id: 'jobs', icon: <ListChecks size={14} />, label: t('settings.jobsTab') },
   ];
 
-  // Le linguette inattive stanno fuori dal percorso di tabulazione, come vuole
-  // il modello ARIA: senza le frecce, però, con la tastiera si arrivava soltanto
-  // a quella aperta e non si potevano cambiare schede.
-  const tabRefs = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
-
-  const goToTab = (id: SettingsTab) => {
-    setActiveTab(id);
-    tabRefs.current[id]?.focus();
-  };
-
-  const handleTabKeys = (current: SettingsTab, event: KeyboardEvent<HTMLButtonElement>) => {
-    const index = activeTabConfig.findIndex((tab) => tab.id === current);
-    const last = activeTabConfig.length - 1;
-    let next: SettingsTab | null = null;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
-      next = activeTabConfig[(index - 1 + activeTabConfig.length) % activeTabConfig.length].id;
-    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
-      next = activeTabConfig[(index + 1) % activeTabConfig.length].id;
-    else if (event.key === 'Home') next = activeTabConfig[0].id;
-    else if (event.key === 'End') next = activeTabConfig[last].id;
-    if (next) {
-      event.preventDefault();
-      goToTab(next);
-    }
-  };
-
   const tabBar = (
-    <div role="tablist" aria-label={t('settings.panelTitle')} className="flex items-center gap-2">
-      {activeTabConfig.map((tab) => {
-        const isActive = activeTab === tab.id;
-        return (
-          <IconButton
-            key={tab.id}
-            ref={(element) => {
-              tabRefs.current[tab.id] = element;
-            }}
-            size="md"
-            tone={isActive ? 'accent' : 'default'}
-            onClick={() => setActiveTab(tab.id)}
-            onKeyDown={(event) => handleTabKeys(tab.id, event)}
-            title={tab.label}
-            id={`settings-tab-${tab.id}`}
-            role="tab"
-            aria-selected={isActive}
-            aria-controls={`settings-panel-${tab.id}`}
-            tabIndex={isActive ? 0 : -1}
-          >
-            {tab.icon}
-          </IconButton>
-        );
-      })}
-      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+    <div className="flex items-center gap-2">
+      <TabStrip tabs={tabs} activeId={activeTab} onChange={(id) => setActiveTab(id as SettingsTab)}
+        ariaLabel={t('settings.panelTitle')} idPrefix="settings" />
+      <span className="mx-1 h-4 w-px shrink-0 self-center bg-rule" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
-        {activeTabConfig.find((tb) => tb.id === activeTab)?.label}
+        {tabs.find((tab) => tab.id === activeTab)?.label}
       </span>
     </div>
   );
@@ -189,8 +50,8 @@ export function SettingsModal() {
   return (
     <Dialog
       open={showSettings}
-      onOpenChange={(o) => {
-        if (!o) setShowSettings(false);
+      onOpenChange={(open) => {
+        if (!open) setShowSettings(false);
       }}
       title={t('settings.panelTitle')}
       closeLabel={t('settings.close')}
@@ -206,83 +67,14 @@ export function SettingsModal() {
         </div>
       }
     >
-      {activeTab === 'translations' && (
-        <TranslationsSettingsTab
-          chunkPresetShort={chunkPresetShort}
-          chunkPresetMedium={chunkPresetMedium}
-          chunkPresetLong={chunkPresetLong}
-          setChunkPresetShort={setChunkPresetShort}
-          setChunkPresetMedium={setChunkPresetMedium}
-          setChunkPresetLong={setChunkPresetLong}
-          newPipelineInit={newPipelineInit}
-          setNewPipelineInit={setNewPipelineInit}
-          documentLayout={documentLayout}
-          setDocumentLayout={setDocumentLayout}
-          hlMode={hlMode}
-          activeHlColors={activeHlColors}
-          setHighlightColor={setHighlightColor}
-        />
-      )}
-
-      {activeTab === 'typography' && (
-        <TypographySettingsTab
-          uiFont={uiFont}
-          setUiFont={setUiFont}
-          colorScheme={colorScheme}
-          setColorScheme={setColorScheme}
-          editorialAccentColor={editorialAccentColor}
-          setEditorialAccentColor={setEditorialAccentColor}
-          documentFontSize={documentFontSize}
-          setDocumentFontSize={setDocumentFontSize}
-          documentLineHeight={documentLineHeight}
-          setDocumentLineHeight={setDocumentLineHeight}
-        />
-      )}
-
-      {activeTab === 'provider' && (
-        <ProviderSettingsTab
-          activeProviderTab={activeProviderTab}
-          setActiveProviderTab={setActiveProviderTab}
-          urlDraft={urlDraft}
-          setUrlDraft={setUrlDraft}
-          urlError={urlError}
-          setUrlError={setUrlError}
-          ollamaStatus={ollamaStatus}
-          ollamaModels={ollamaModels}
-          refreshing={refreshing}
-          refreshOllama={refreshOllama}
-          setOllamaBaseUrl={setOllamaBaseUrl}
-          ollamaAutoDiscover={ollamaAutoDiscover}
-          setOllamaAutoDiscover={setOllamaAutoDiscover}
-          keyStatuses={keyStatuses}
-          refreshKeyStatuses={refreshKeyStatuses}
-          showDeprecatedModels={showDeprecatedModels}
-          setShowDeprecatedModels={setShowDeprecatedModels}
-          showPricingOverrides={showPricingOverrides}
-          setShowPricingOverrides={setShowPricingOverrides}
-          overrides={overrides}
-          setOverride={setOverride}
-          resetOverride={resetOverride}
-          resetAll={resetAll}
-        />
-      )}
-
-      {activeTab === 'storage' && <StorageSettingsTab />}
-
-      {activeTab === 'backup' && (
-        <div id="settings-panel-backup" role="tabpanel" aria-labelledby="settings-tab-backup" className="space-y-10">
-          <BackupSection />
-        </div>
-      )}
-
-      {activeTab === 'jobs' && <JobsSettingsTab />}
-
+      {activeTab === 'appearance' && <AppearanceSettingsTab />}
+      {activeTab === 'library' && <LibrarySettingsTab draft={networkDraft} setDraft={setNetworkDraft} />}
       {activeTab === 'transcriptions' && <TranscriptionsSettingsTab />}
-
-      {activeTab === 'library' && (
-        <LibrarySettingsTab draft={networkDraft} setDraft={setNetworkDraft} />
-      )}
-
+      {activeTab === 'translations' && <TranslationsSettingsTab />}
+      {activeTab === 'models' && <ModelsSettingsTab />}
+      {activeTab === 'languages' && <LanguagesSettingsTab />}
+      {activeTab === 'data' && <DataSettingsTab />}
+      {activeTab === 'jobs' && <JobsSettingsTab />}
     </Dialog>
   );
 }

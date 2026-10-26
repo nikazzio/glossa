@@ -1,6 +1,7 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ban, Zap, BrainCircuit } from 'lucide-react';
-import { Tooltip } from '../ui';
+import { Ban, Zap, BrainCircuit, Wand2 } from 'lucide-react';
+import { ChoiceDots } from '../ui';
 import type { ReasoningEffortLevel } from '../../types';
 
 const ALL_EFFORTS: ReasoningEffortLevel[] = ['none', 'low', 'medium', 'high', 'xhigh'];
@@ -13,6 +14,14 @@ const EFFORT_I18N_KEY: Record<ReasoningEffortLevel, string> = {
   xhigh: 'pipeline.reasoningEffortXhigh',
 };
 
+const EFFORT_CONTENT: Record<ReasoningEffortLevel, ReactNode> = {
+  none: <Ban size={11} />,
+  low: 'L',
+  medium: 'M',
+  high: <Zap size={11} />,
+  xhigh: <BrainCircuit size={11} />,
+};
+
 interface ReasoningPickerProps {
   value: ReasoningEffortLevel;
   showNone: boolean;
@@ -22,36 +31,20 @@ interface ReasoningPickerProps {
 
 export function ReasoningPicker({ value, showNone, disabled, onChange }: ReasoningPickerProps) {
   const { t } = useTranslation();
-  const options = showNone ? ALL_EFFORTS : ALL_EFFORTS.filter((e) => e !== 'none');
+  const efforts = showNone ? ALL_EFFORTS : ALL_EFFORTS.filter((effort) => effort !== 'none');
 
   return (
-    <div className="flex gap-1" role="group" aria-label={t('pipeline.reasoningEffort')}>
-      {options.map((effort) => (
-        <Tooltip key={effort} label={t(EFFORT_I18N_KEY[effort])} side="top">
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(effort)}
-            aria-pressed={value === effort}
-            aria-label={t(EFFORT_I18N_KEY[effort])}
-            className={`h-6 w-6 rounded-full border text-[10px] font-bold uppercase transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center ${
-              value === effort
-                ? 'border-editorial-accent bg-editorial-accent text-white'
-                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-            }`}
-          >
-            {effort === 'none' ? (
-              <Ban size={11} />
-            ) : effort === 'high' ? (
-              <Zap size={11} />
-            ) : effort === 'xhigh' ? (
-              <BrainCircuit size={11} />
-            ) : (
-              effort[0].toUpperCase()
-            )}
-          </button>
-        </Tooltip>
-      ))}
-    </div>
+    <ChoiceDots
+      options={efforts.map((effort) => ({
+        value: effort,
+        label: t(EFFORT_I18N_KEY[effort]),
+        content: EFFORT_CONTENT[effort],
+      }))}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      ariaLabel={t('pipeline.reasoningEffort')}
+      categoryIcon={Wand2}
+    />
   );
 }

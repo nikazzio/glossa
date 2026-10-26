@@ -52,7 +52,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
   return <form onSubmit={(event) => { event.preventDefault(); onSubmit(); }} className="space-y-5 p-4">
     {/* Il comando di avvio non sta in fondo a una colonna che scorre: resta in
         vista mentre si scrivono i criteri e si scelgono le fonti. */}
-    <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-center justify-between gap-2 border-b border-editorial-border bg-surface-panel px-4 py-2.5">
+    <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-center justify-between gap-2 border-b border-editorial-border bg-surface-elevated px-4 py-2.5">
       {/* La spiegazione la porta il conteggio delle fonti, che è il testo a cui
           si riferisce: i criteri valgono per la prossima ricerca. */}
       <span className="min-w-0 truncate text-xs text-editorial-muted">
@@ -96,7 +96,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
           <SectionLabel icon={kind === 'library' ? BookOpen : Globe} label={t(`federation.${kind}`)}
             hint={kind === 'aggregator' ? t('federation.aggregatorHint') : undefined} />
         </div>
-        <div className="divide-y divide-editorial-border/50 border-y border-editorial-border/70">
+        <div className="divide-y divide-rule border-y border-rule">
           {group.map((provider) => <div key={provider.key} className="py-2">
             <ToggleRow icon={kind === 'library' ? <BookOpen size={14} /> : <Globe size={14} />}
               label={provider.label} checked={selected.includes(provider.key)} onChange={() => toggle(provider.key)} />

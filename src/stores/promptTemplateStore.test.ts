@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../services/promptTemplateService', () => ({
-  getPromptTemplates: vi.fn().mockResolvedValue([]),
+  getPromptTemplates: vi.fn().mockResolvedValue({ templates: [], skipped: [] }),
   savePromptTemplate: vi.fn().mockResolvedValue(undefined),
   deletePromptTemplate: vi.fn().mockResolvedValue(undefined),
 }));
@@ -18,7 +18,7 @@ beforeEach(() => {
 
 describe('promptTemplateStore', () => {
   it('saveTemplate passes workflow to service', async () => {
-    vi.mocked(getPromptTemplates).mockResolvedValue([]);
+    vi.mocked(getPromptTemplates).mockResolvedValue({ templates: [], skipped: [] });
     await usePromptTemplateStore.getState().saveTemplate(
       'TestTemplate', 'prompt text', 'stage', 'transcription', undefined, undefined,
     );
@@ -28,7 +28,7 @@ describe('promptTemplateStore', () => {
   });
 
   it("saveTemplate passes 'translation' workflow to service", async () => {
-    vi.mocked(getPromptTemplates).mockResolvedValue([]);
+    vi.mocked(getPromptTemplates).mockResolvedValue({ templates: [], skipped: [] });
     await usePromptTemplateStore.getState().saveTemplate(
       'T', 'p', 'stage', 'translation',
     );

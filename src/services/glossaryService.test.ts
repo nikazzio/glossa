@@ -29,6 +29,7 @@ describe('glossaryService — ambito del workspace (#213)', () => {
     const [query, params] = dbMocks.select.mock.calls[0];
     expect(query).toContain('JOIN workspace_items');
     expect(query).toContain("wi.item_type = 'glossary'");
+    expect(query).toContain('origin.is_origin = 1');
     expect(params).toEqual(['ws-1']);
   });
 

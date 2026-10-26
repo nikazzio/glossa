@@ -28,15 +28,27 @@ describe('storico della trascrizione', () => {
       formatDate={(value) => value} onRestore={onRestore} onDelete={vi.fn()}
       onName={vi.fn()} onClear={onClear} pending={false} pendingError={null} />);
 
-    const consolidated = screen.getByRole('region', { name: 'transcription.consolidatedVersions' });
+    const consolidated = screen.getByRole('list', { name: 'transcription.consolidatedVersions' });
     expect(within(consolidated).getByText('Versione scelta')).toBeInTheDocument();
     expect(within(consolidated).getByText('Scelta')).toBeInTheDocument();
-    const history = screen.getByRole('region', { name: 'transcription.tabs.history' });
+    const history = screen.getByRole('list', { name: 'transcription.tabs.history' });
     expect(within(history).getByText('Iniziale')).toBeInTheDocument();
     await userEvent.click(within(history).getAllByRole('button', { name: 'transcription.restore' })[0]);
     expect(onRestore).toHaveBeenCalledWith('r1');
-    await userEvent.click(within(history).getByRole('button', { name: 'transcription.clearHistory' }));
+    await userEvent.click(screen.getByRole('button', { name: 'transcription.clearHistory' }));
     expect(onClear).toHaveBeenCalledOnce();
     expect(within(history).getByRole('button', { name: 'transcription.alreadyCurrent' })).toBeDisabled();
+    expect(within(history).getByText(/transcription\.currentBadge/)).toBeInTheDocument();
+    expect(within(history).getAllByRole('button', { name: 'transcription.cannotDeleteCurrentOrVerified' })[0])
+      .toBeDisabled();
+  });
+
+  it('dice che non resta altro salvataggio quando ci sono solo versioni consolidate', () => {
+    render(<TranscriptionHistoryTab revisions={[revisions[1]]} segment={segment} draft="Scelta"
+      formatDate={(value) => value} onRestore={vi.fn()} onDelete={vi.fn()}
+      onName={vi.fn()} onClear={vi.fn()} pending={false} pendingError={null} />);
+
+    expect(screen.getByText('transcription.noOtherRevisions')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'transcription.clearHistoryNothing' })).toBeDisabled();
   });
 });

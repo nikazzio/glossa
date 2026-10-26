@@ -70,7 +70,7 @@ describe('phraseMemoryDraftStore', () => {
   it('seedSavedCandidates popola le candidate salvate solo se non esiste ancora una bozza per il frammento', () => {
     const store = usePhraseMemoryDraftStore.getState();
     store.seedSavedCandidates('c1', [
-      { sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1 },
+      { entryId: 'e1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1 },
     ]);
     const entry = usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1');
     expect(entry?.status).toBe('reviewing');
@@ -84,7 +84,7 @@ describe('phraseMemoryDraftStore', () => {
       { id: 'p1', sourcePhrase: 'notte', targetPhrase: 'night', confidence: 0.9, origin: 'ai', accepted: false },
     ]);
     store.seedSavedCandidates('c1', [
-      { sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1 },
+      { entryId: 'e1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1 },
     ]);
     const entry = usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1');
     expect(entry?.candidates).toHaveLength(1);

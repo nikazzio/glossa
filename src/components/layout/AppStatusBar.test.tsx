@@ -97,6 +97,7 @@ describe('AppStatusBar', () => {
       projectName: 'Progetto A',
       saveState: 'saved',
       lastSavedAt: null,
+      lastSaveError: null,
       totalChunks: 10,
     });
     render(<AppStatusBar />);
@@ -110,10 +111,45 @@ describe('AppStatusBar', () => {
       projectName: 'Progetto A',
       saveState: 'dirty',
       lastSavedAt: null,
+      lastSaveError: null,
       totalChunks: 0,
     });
     render(<AppStatusBar />);
     expect(screen.getByText(/unsaved/i)).toBeInTheDocument();
+  });
+
+  it('shows the transcription save state in the same place', () => {
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'transcription',
+      documentId: 'doc-1',
+      textSave: { state: 'pending', lastSavedAt: null, error: null },
+    });
+    render(<AppStatusBar />);
+    expect(screen.getByText(/unsaved/i)).toBeInTheDocument();
+  });
+
+  it('announces only a failed save, not every unsaved change', () => {
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'project',
+      projectName: 'Progetto A',
+      saveState: 'dirty',
+      lastSavedAt: null,
+      lastSaveError: null,
+      totalChunks: 0,
+    });
+    const { rerender } = render(<AppStatusBar />);
+    expect(screen.getByText(/unsaved/i)).toHaveAttribute('aria-hidden', 'true');
+
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'project',
+      projectName: 'Progetto A',
+      saveState: 'error',
+      lastSavedAt: null,
+      lastSaveError: 'disk full',
+      totalChunks: 0,
+    });
+    rerender(<AppStatusBar />);
+    expect(screen.getByText(/error/i)).toHaveAttribute('aria-hidden', 'false');
   });
 });
 

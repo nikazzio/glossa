@@ -21,7 +21,7 @@ dei modelli per marca.
 
 ## Configurazione delle credenziali
 
-Apri **Impostazioni → Provider**. Le chiavi sono conservate nel portachiavi
+Apri **Impostazioni → Modelli**. Le chiavi sono conservate nel portachiavi
 del sistema quando disponibile; se non è accessibile, Glossa usa un archivio
 locale cifrato. Non sono incluse nei backup dell’applicazione.
 

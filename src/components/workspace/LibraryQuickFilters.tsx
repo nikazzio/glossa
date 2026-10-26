@@ -1,7 +1,7 @@
-import { Eraser, Search } from 'lucide-react';
+import { Eraser } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, Select } from '../ui';
-import { FIELD_CLASSNAME } from '../ui/fieldStyles';
+import { CatalogSearchField, IconButton, Select } from '../ui';
+import { ACTIVE_FILTER_CLASSNAME, QUICK_FILTER_CLASSNAME } from '../ui/catalogStyles';
 import {
   EMPTY_LIBRARY_FILTERS,
   LIBRARY_FACETS,
@@ -61,17 +61,12 @@ export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, 
 
   return (
     <div className="flex flex-col gap-2 border-b border-editorial-border px-5 py-2.5 md:px-6">
-      <div className="relative">
-        <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-editorial-muted" aria-hidden="true" />
-        <input
-          type="search"
-          value={filters.query}
-          onChange={(event) => onChange({ ...filters, query: event.target.value })}
-          placeholder={t('areas.library.filters.searchPlaceholder')}
-          aria-label={t('areas.library.filters.searchLabel')}
-          className={`${FIELD_CLASSNAME} py-1.5 pl-8 text-xs`}
-        />
-      </div>
+      <CatalogSearchField
+        value={filters.query}
+        onChange={(query) => onChange({ ...filters, query })}
+        placeholder={t('areas.library.filters.searchPlaceholder')}
+        label={t('areas.library.filters.searchLabel')}
+      />
       <div className="flex flex-wrap items-center gap-2">
       {LIBRARY_FACETS.filter((facet) => counts[facet].size > 0 || filters[facet]).map((facet) => (
         <Select
@@ -80,7 +75,7 @@ export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, 
           onChange={(value) => onChange({ ...filters, [facet]: value })}
           options={facetOptions(facet)}
           ariaLabel={t(`areas.library.filters.facet.${facet}`)}
-          className={`max-w-[11rem] ${filters[facet] ? 'border-editorial-accent text-editorial-accent' : ''}`}
+          className={`${QUICK_FILTER_CLASSNAME} ${filters[facet] ? ACTIVE_FILTER_CLASSNAME : ''}`}
         />
       ))}
       <Select
@@ -88,14 +83,14 @@ export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, 
         onChange={(sort) => onChange({ ...filters, sort: sort as LibrarySort })}
         options={LIBRARY_SORTS.map((sort) => ({ value: sort, label: t(`areas.library.filters.sort.${sort}`) }))}
         ariaLabel={t('areas.library.filters.sortLabel')}
-        className="max-w-[11rem]"
+        className={QUICK_FILTER_CLASSNAME}
       />
       <Select
         value={grouping}
         onChange={(value) => onGrouping(value as LibraryGrouping)}
         options={LIBRARY_GROUPINGS.map((value) => ({ value, label: t(`areas.library.grouping.${value}`) }))}
         ariaLabel={t('areas.library.grouping.label')}
-        className="max-w-[11rem]"
+        className={QUICK_FILTER_CLASSNAME}
       />
       {hasActiveLibraryFilters(filters) && (
         <IconButton size="sm" title={t('areas.library.filters.clear')}

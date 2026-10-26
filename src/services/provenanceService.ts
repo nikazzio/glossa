@@ -27,6 +27,8 @@ export type FactEntity =
   | 'transcription_revision'
   | 'project'
   | 'translation_chunk'
+  | 'text_unit'
+  | 'text_revision'
   | 'artifact'
   | 'job'
   // Non tutto appartiene a un frammento o a un'opera: la memoria di frasi si

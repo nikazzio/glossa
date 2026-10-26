@@ -16,7 +16,7 @@ screens to remain open.
 | File repository | Manifests, images, thumbnails and local versions | Selectable directory, including an external drive |
 | Network cache | Reusable search responses and images | Temporary storage with a configurable limit |
 
-View and change locations under **Settings → Data**. Changing the data
+View and change locations under **Settings → Data → Folders**. Changing the data
 directory copies the database, checks the copy and records the new location
 for the next restart; the original is not deleted automatically. Changing
 the file repository selects an empty directory or reconnects an existing
@@ -108,7 +108,7 @@ the job reports an error and retains the pages produced successfully.
 The network cache reuses responses and images. Its default size limit is
 512 MB, and search responses are valid for 24 hours by default. Images are
 subject to the size limit without the same time-based expiry. Change these
-values or clear the cache under **Settings → Data**. Cached data does not
+values or clear the cache under **Settings → Data → Network cache**. Cached data does not
 increase downloaded-page counts and is excluded from
 [backups](../reference/backup-and-restore).
 

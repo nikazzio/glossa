@@ -47,7 +47,7 @@ export function RecognizedWorks({ recognitions, providers, opening, onOpen }: {
   const { t } = useTranslation();
   if (recognitions.length === 0) return null;
   return (
-    <ul className="shrink-0 divide-y divide-editorial-border/60 border-b border-editorial-border">
+    <ul className="shrink-0 divide-y divide-rule border-b border-editorial-border">
       {recognitions.map((recognition) => {
         const label = providers.find((provider) => provider.key === recognition.providerKey)?.label
           ?? recognition.providerKey;

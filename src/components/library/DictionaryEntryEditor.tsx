@@ -1,142 +1,101 @@
-import { useMemo } from 'react';
-import { Plus, X } from 'lucide-react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AlertTriangle, Check, NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { GlossaryEntry } from '../../types';
 import { generateId } from '../../utils';
-import { IconButton } from '../ui';
+import { Hint, IconButton } from '../ui';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface Props {
   entries: GlossaryEntry[];
   onChange: (entries: GlossaryEntry[]) => void;
   readOnly?: boolean;
+  sourceReadOnly?: boolean;
+  actions?: ReactNode;
 }
 
-export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: Props) {
+export function DictionaryEntryEditor({ entries, onChange, readOnly = false, sourceReadOnly = false, actions }: Props) {
   const { t } = useTranslation();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [notesId, setNotesId] = useState<string | null>(null);
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    if (!editingId) return;
+    fieldRef.current?.focus();
+    fieldRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [editingId]);
 
   const duplicateTermIds = useMemo(() => {
-    const termCounts = new Map<string, string[]>();
-    for (const e of entries) {
-      if (!e.term.trim() || !e.id) continue;
-      const key = e.term.trim().toLowerCase();
-      termCounts.set(key, [...(termCounts.get(key) ?? []), e.id]);
+    const counts = new Map<string, string[]>();
+    for (const entry of entries) {
+      if (!entry.term.trim() || !entry.id) continue;
+      const term = entry.term.trim().toLocaleLowerCase();
+      counts.set(term, [...(counts.get(term) ?? []), entry.id]);
     }
-    const dupes = new Set<string>();
-    for (const ids of termCounts.values()) {
-      if (ids.length > 1) ids.forEach((id) => dupes.add(id));
-    }
-    return dupes;
+    return new Set([...counts.values()].filter((ids) => ids.length > 1).flat());
   }, [entries]);
 
   const addEntry = () => {
-    onChange([{ id: generateId('gle'), term: '', translation: '' }, ...entries]);
+    const id = generateId('gle');
+    onChange([{ id, term: '', translation: '' }, ...entries]);
+    setEditingId(id);
+    setNotesId(null);
   };
-
   const updateEntry = (id: string, updates: Partial<GlossaryEntry>) => {
-    onChange(entries.map((e) => (e.id === id ? { ...e, ...updates } : e)));
+    onChange(entries.map((entry) => entry.id === id ? { ...entry, ...updates } : entry));
   };
 
-  const removeEntry = (id: string) => {
-    onChange(entries.filter((e) => e.id !== id));
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
-          {t('pipeline.keywordRegistry')}
-          {entries.length > 0 && (
-            <span className="ml-2 font-mono font-normal normal-case tracking-normal text-editorial-muted/60">
-              ({entries.length})
-            </span>
-          )}
-        </span>
-        {!readOnly && (
-          <IconButton onClick={addEntry} title={t('pipeline.addGlossaryEntry')} size="xs">
-            <Plus size={16} />
-          </IconButton>
-        )}
+  return <div className="space-y-2">
+    <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem] items-center gap-4 bg-surface-resource py-2">
+      <span className="caption-label">{t('pipeline.source')}</span>
+      <span className="caption-label">{t('pipeline.target')}</span>
+      <div className="flex items-center gap-1">
+        {actions}
+        {!readOnly && <IconButton onClick={addEntry} title={t('pipeline.addGlossaryEntry')} size="sm"><Plus size={14} /></IconButton>}
       </div>
-
-      {entries.length === 0 ? (
-        <p className="border-y border-dashed border-editorial-border/70 py-6 text-center text-xs italic text-editorial-muted/60">
-          {t('pipeline.glossaryEmpty')}
-        </p>
-      ) : (
-        <div className="overflow-y-auto custom-scrollbar max-h-[420px] pr-2">
-          {/* Intestazioni colonne (sticky) */}
-          <div className="sticky top-0 z-10 grid grid-cols-[1fr_1fr_auto] border-b border-editorial-border bg-editorial-textbox/80 px-3 py-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
-              {t('pipeline.source')}
-            </span>
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
-              {t('pipeline.target')}
-            </span>
-            <span className="w-7" />
-          </div>
-
-          {entries.map((g, i) => {
-            const rowKey = g.id ?? `gle-fallback-${i}`;
-            const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
-            const removeLabel = `${t('pipeline.removeGlossaryEntry')} ${i + 1}`;
-            return (
-              <div
-                key={rowKey}
-                className={`group border-b border-editorial-border/60 last:border-b-0 ${
-                  isDuplicate ? 'bg-editorial-warning/8' : 'hover:bg-editorial-textbox/30'
-                }`}
-              >
-                <div className="grid grid-cols-[1fr_1fr_auto] items-stretch">
-                  <input
-                    value={g.term}
-                    onChange={(e) => g.id && updateEntry(g.id, { term: e.target.value })}
-                    readOnly={readOnly}
-                    placeholder={t('pipeline.source')}
-                    aria-label={`${t('pipeline.source')} ${i + 1}`}
-                    className="border-r border-editorial-border/40 bg-transparent px-3 py-2 text-[12px] font-mono text-editorial-ink outline-none placeholder:text-editorial-muted/35 focus:bg-editorial-accent/5 read-only:opacity-60"
-                  />
-                  <input
-                    value={g.translation}
-                    onChange={(e) => g.id && updateEntry(g.id, { translation: e.target.value })}
-                    readOnly={readOnly}
-                    placeholder={t('pipeline.target')}
-                    aria-label={`${t('pipeline.target')} ${i + 1}`}
-                    className="bg-transparent px-3 py-2 text-[12px] font-mono text-editorial-ink outline-none placeholder:text-editorial-muted/35 focus:bg-editorial-accent/5 read-only:opacity-60"
-                  />
-                  {!readOnly ? (
-                    <IconButton
-                      onClick={() => g.id && removeEntry(g.id)}
-                      title={removeLabel}
-                      size="xs"
-                      className="border-transparent text-editorial-muted/25 hover:border-transparent hover:text-editorial-accent group-hover:text-editorial-muted/50"
-                    >
-                      <X size={16} />
-                    </IconButton>
-                  ) : (
-                    <span className="w-7" />
-                  )}
-                </div>
-                {/* Riga note — sempre presente ma minimale */}
-                <input
-                  value={g.notes ?? ''}
-                  onChange={(e) => g.id && updateEntry(g.id, { notes: e.target.value })}
-                  readOnly={readOnly}
-                  placeholder={t('pipeline.glossaryNotes')}
-                  aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
-                  className="w-full border-t border-editorial-border/25 bg-editorial-textbox/20 px-3 py-1.5 pl-5 text-xs font-mono text-editorial-muted/70 outline-none placeholder:text-editorial-muted/30 focus:bg-editorial-accent/5 read-only:opacity-60"
-                />
-                {isDuplicate && (
-                  <div className="border-t border-editorial-warning/30 bg-editorial-warning/8 px-3 py-1">
-                    <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-warning">
-                      {t('pipeline.duplicateTerm')}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
-  );
+    {entries.length === 0 ? <p className="py-6 text-center text-sm italic text-editorial-muted">{t('pipeline.glossaryEmpty')}</p>
+      : <div className="divide-y divide-rule-faint">
+        {entries.map((entry, index) => {
+          const id = entry.id;
+          const editing = id !== undefined && editingId === id && !readOnly;
+          const notesOpen = notesId === id;
+          const sourceLocked = readOnly || sourceReadOnly && entry.overridden !== undefined;
+          const duplicate = id !== undefined && duplicateTermIds.has(id);
+          return <div key={id ?? `entry-${index}`} className="space-y-2 py-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem] items-start gap-4">
+              {editing ? <>
+                <textarea ref={sourceLocked ? undefined : fieldRef} value={entry.term} rows={2}
+                  onChange={(event) => id && updateEntry(id, { term: event.target.value })} readOnly={sourceLocked}
+                  aria-label={`${t('pipeline.source')} ${index + 1}`} className={`${FIELD_CLASSNAME} resize-y`} />
+                <textarea ref={sourceLocked ? fieldRef : undefined} value={entry.translation} rows={2}
+                  onChange={(event) => id && updateEntry(id, { translation: event.target.value })}
+                  aria-label={`${t('pipeline.target')} ${index + 1}`} className={`${FIELD_CLASSNAME} resize-y`} />
+              </> : <>
+                <p className="break-words font-display text-sm italic text-editorial-ink">{entry.term || '—'}</p>
+                <p className="break-words text-sm text-editorial-ink">{entry.translation || '—'}</p>
+              </>}
+              <div className="flex flex-wrap justify-end gap-1">
+                {duplicate && <Hint label={t('pipeline.duplicateTerm')}><AlertTriangle size={14} className="text-editorial-warning" /></Hint>}
+                {(editing || entry.notes) && <IconButton size="xs" title={t('pipeline.glossaryNotes')} aria-expanded={notesOpen}
+                  aria-controls={`entry-notes-${id}`} onClick={() => setNotesId(notesOpen ? null : id ?? null)}><NotebookPen size={13} /></IconButton>}
+                {!readOnly && <>
+                  <IconButton size="xs" title={editing ? t('library.finishEntry') : `${t('common.edit')}: ${entry.term}`}
+                    onClick={() => setEditingId(editing ? null : id ?? null)}>{editing ? <Check size={13} /> : <Pencil size={13} />}</IconButton>
+                  <IconButton size="xs" title={`${t('pipeline.removeGlossaryEntry')} ${index + 1}`}
+                    onClick={() => { onChange(entries.filter((item) => item.id !== id)); if (editingId === id) setEditingId(null); }}><Trash2 size={13} /></IconButton>
+                </>}
+              </div>
+            </div>
+            {notesOpen && <div id={`entry-notes-${id}`} className="pl-1">
+              {editing ? <textarea value={entry.notes ?? ''} rows={2} placeholder={t('pipeline.glossaryNotes')}
+                aria-label={`${t('pipeline.glossaryNotes')} ${index + 1}`} className={`${FIELD_CLASSNAME} resize-y`}
+                onChange={(event) => id && updateEntry(id, { notes: event.target.value })} />
+                : <p className="break-words text-xs italic text-editorial-muted">{entry.notes}</p>}
+            </div>}
+          </div>;
+        })}
+      </div>}
+  </div>;
 }

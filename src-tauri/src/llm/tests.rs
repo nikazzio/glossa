@@ -160,8 +160,6 @@ impl StreamChunkSource for MockChunkSource {
 
 fn make_config() -> PipelineConfig {
     PipelineConfig {
-        source_language: "English".into(),
-        target_language: "Italian".into(),
         stages: vec![],
         judge_prompt: "Evaluate translation quality.".into(),
         judge_model: "gemini-3-flash-preview".into(),
@@ -176,10 +174,9 @@ fn make_config() -> PipelineConfig {
         markdown_aware: None,
         coherence_prompt: None,
         review_provider_options: None,
-        persona: None,
+        work_brief: Some("Literary translation from English to Italian.".into()),
+        prompt_composition: Default::default(),
         ui_language: None,
-        custom_source_language: None,
-        custom_target_language: None,
         blob_context: None,
         blob_current_chunk_id: None,
     }
@@ -290,7 +287,7 @@ fn stage_prompt_without_previous() {
     let prompt = build_stage_prompts("Hello world", &stage, &config, None, None);
     let system = prompt.flatten_system();
 
-    assert!(system.contains("English to Italian"));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(system.contains("Translate accurately."));
     assert!(system.contains("| API | API |"));
     assert!(prompt.user.contains("Hello world"));
@@ -308,7 +305,7 @@ fn stage_prompt_with_blob_context() {
     let prompt = build_stage_prompts("Hello world", &stage, &config, None, None);
     let system = prompt.flatten_system();
 
-    assert!(system.contains("English to Italian"));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(prompt.user.contains("Hello world"));
     assert!(prompt.user.contains("Current chunk id: chunk-1"));
     assert!(system.contains("Reference document block"));
@@ -317,7 +314,7 @@ fn stage_prompt_with_blob_context() {
     assert!(prompt.system[0].cacheable);
     assert!(prompt.system[1].cacheable);
     assert!(!prompt.system[2].cacheable);
-    assert!(prompt.system[0].text.contains("English to Italian"));
+    assert!(prompt.system[0].text.contains("Translation context:"));
     assert!(prompt.system[1].text.contains("Reference document block"));
     assert!(prompt.system[2].text.contains("Core Instructions"));
 }
@@ -333,7 +330,7 @@ fn stage_prompt_refine_includes_previous_iteration() {
     let prompt = build_stage_prompts("Hello world", &stage, &config, prev.as_deref(), None);
     let system = prompt.flatten_system();
 
-    assert!(system.contains("English to Italian"));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(prompt.user.contains("Hello world"));
     assert!(prompt.user.contains("Ciao mondo"));
     assert!(prompt.user.contains("Previous Iteration"));
@@ -373,8 +370,7 @@ fn stage_prompt_multiple_glossary_entries() {
     assert!(system.contains("| API | API | tech |"));
     assert!(system.contains("| bug | errore |"));
     assert!(system.contains("Treat every glossary entry as mandatory terminology"));
-    assert!(system.contains("Glossary Reminder"));
-    assert!(system.contains("Apply the glossary entries specified above"));
+    assert!(!system.contains("Glossary Reminder"));
 }
 
 #[test]
@@ -394,7 +390,7 @@ fn format_stage_prompt_omits_glossary_persona_and_source_context() {
     assert!(system.contains("Output only the formatted text"));
     assert!(!system.contains("Glossary Constraints"));
     assert!(!system.contains("| API | API |"));
-    assert!(!system.contains("English to Italian"));
+    assert!(!system.contains("Translation context"));
     assert!(!system.contains("Reference document block"));
     assert!(!system.contains("Output only the translated text"));
     assert!(prompt.user.contains("Text to format"));
@@ -418,17 +414,39 @@ fn markdown_aware_stage_prompt_preserves_syntax() {
     assert!(prompt.user.contains("Text with note[^1]."));
 }
 
+#[test]
+fn switched_off_parts_are_left_out_only_in_their_phase() {
+    let mut config = make_config();
+    config.prompt_composition.disabled = vec![
+        "refine:structural-rules".into(),
+        "audit:review-method".into(),
+    ];
+    let translation = make_stage("openai");
+    let mut refine = make_stage("openai");
+    refine.role = Some("refine".into());
+
+    let translation_system =
+        build_stage_prompts("Hello", &translation, &config, None, None).flatten_system();
+    let refine_system =
+        build_stage_prompts("Hello", &refine, &config, Some("Ciao"), None).flatten_system();
+    let judge_system = build_judge_prompts("Hello", "Ciao", &config).flatten_system();
+
+    assert!(translation_system.contains("Structural Preservation Rules"));
+    assert!(!refine_system.contains("Structural Preservation Rules"));
+    assert!(!judge_system.contains("Scanning protocol"));
+    assert!(judge_system.contains("You MUST respond"));
+}
+
 // ── build_judge_prompts ──────────────────────────────────────────
 
 #[test]
-fn judge_prompt_includes_source_and_target() {
+fn judge_prompt_includes_work_brief_and_texts() {
     let config = make_config();
     let prompt = build_judge_prompts("Hello", "Ciao", &config);
     let system = prompt.flatten_system();
 
     // Source/target text now live in the user turn for cacheability
-    assert!(system.contains("English"));
-    assert!(system.contains("Italian"));
+    assert!(system.contains("Translation context:\nLiterary translation from English to Italian."));
     assert!(!system.contains("Hello"));
     assert!(!system.contains("Ciao"));
     assert!(prompt.user.contains("Hello"));
@@ -725,7 +743,7 @@ fn pipeline_config_roundtrip() {
     let config = make_config();
     let json = serde_json::to_string(&config).unwrap();
     let parsed: PipelineConfig = serde_json::from_str(&json).unwrap();
-    assert_eq!(parsed.source_language, "English");
+    assert_eq!(parsed.judge_model, "gemini-3-flash-preview");
     assert_eq!(parsed.glossary.len(), 1);
 }
 

@@ -26,7 +26,7 @@ export function ClickPopover({ open, onOpenChange, trigger, children, side = 'bo
           align={align}
           sideOffset={6}
           collisionPadding={12}
-          className={`z-[210] min-w-40 overflow-hidden rounded-xl border border-editorial-border bg-editorial-page shadow-lg ${className}`.trim()}
+          className={`z-[210] min-w-40 overflow-hidden rounded-xl border border-editorial-border bg-surface-elevated shadow-lg ${className}`.trim()}
         >
           {children}
         </RadixPopover.Content>

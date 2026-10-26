@@ -68,7 +68,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
         >
           {HELP_GROUPS.map((group) => (
             <div key={group.id} className="mb-5 last:mb-0">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-editorial-muted">
+              <p className="mb-2 text-caption font-bold uppercase tracking-wider text-editorial-muted">
                 {t(`help.groups.${group.id}`)}
               </p>
               <ul className="space-y-1">
@@ -175,7 +175,7 @@ function VersionWidget() {
   };
 
   return (
-    <div className="mt-8 flex items-center gap-3 border-y border-editorial-border/70 py-3">
+    <div className="mt-8 flex items-center gap-3 border-y border-rule py-3">
       <span className="font-mono text-xs text-editorial-muted/70">v{__APP_VERSION__}</span>
       <IconButton
         title={t('help.version.check')}

@@ -26,6 +26,11 @@ fn get_deepl_api_key(app: &AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn preview_deepl_stage(input: DeeplStageInput) -> Result<serde_json::Value, String> {
+    serde_json::to_value(client::build_translate_request(&input)?).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 pub async fn run_deepl_stage(
     app: AppHandle,
     input: DeeplStageInput,

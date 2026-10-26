@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { EmbeddingJobStatus, PhraseMatch } from '../types';
+import type { EmbeddingJobStatus, PhraseMatch, TextProvenance } from '../types';
 
 export type PhraseMemorySearchStatus = 'idle' | 'searching' | 'done' | 'error';
 
@@ -12,6 +12,18 @@ export type PhraseMemoryMatch = {
   author?: string;
   work?: string;
   createdAt: string;
+  /** Provenienza: workspace di casa (`null` = senza workspace), traduzione e
+   *  frammento (`null` = frase importata). */
+  workspaceId: string | null;
+  projectId: string | null;
+  chunkId: string | null;
+  sourceLanguage: string;
+  targetLanguage: string;
+  sourceLanguageVariety: string | null;
+  targetLanguageVariety: string | null;
+  provenance?: TextProvenance;
+  embeddingModel?: string;
+  dimensions?: number;
 };
 
 export type ChunkPhraseMatches = {
@@ -41,6 +53,16 @@ function toMemoryMatch(m: PhraseMatch): PhraseMemoryMatch {
     score: Math.max(0, Math.min(1, 1 - m.distance)),
     confidence: Math.max(0, Math.min(1, m.confidence)),
     createdAt: new Date().toISOString(),
+    workspaceId: m.workspaceId,
+    projectId: m.projectId,
+    chunkId: m.chunkId,
+    sourceLanguage: m.sourceLanguage,
+    targetLanguage: m.targetLanguage,
+    sourceLanguageVariety: m.sourceLanguageVariety,
+    targetLanguageVariety: m.targetLanguageVariety,
+    provenance: m.provenance,
+    embeddingModel: m.embeddingModel,
+    dimensions: m.dimensions,
   };
 }
 

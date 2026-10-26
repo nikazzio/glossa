@@ -23,9 +23,9 @@ function validBackup(): BackupPayload {
 describe('external data validation', () => {
   it('accepts a backup containing BLOB columns encoded as byte arrays', () => {
     const backup = validBackup();
-    backup.tables.phrase_memory.push({
-      id: 'pm-1',
-      embedding: [0, 32, 169, 255],
+    backup.tables.text_embeddings.push({
+      revision_id: 'rev-1', provider: 'openai', model: 'test-model', profile: 'source-verbatim-v1', dimensions: 1,
+      embedding: [0, 0, 128, 63],
     });
 
     expect(backupPayloadSchema.safeParse(backup).success).toBe(true);
@@ -33,12 +33,24 @@ describe('external data validation', () => {
 
   it('accepts an empty BLOB column encoded as an empty byte array', () => {
     const backup = validBackup();
-    backup.tables.phrase_memory.push({
-      id: 'pm-2',
+    backup.tables.artifacts.push({
+      id: 'artifact-1',
       embedding: [],
     });
 
     expect(backupPayloadSchema.safeParse(backup).success).toBe(true);
+  });
+
+  it('rejects model-less, incomplete, zero or non-finite embeddings before restoring', () => {
+    for (const changes of [
+      { model: '' }, { dimensions: 2 }, { embedding: [] },
+      { embedding: [0, 0, 0, 0] }, { embedding: [0, 0, 128, 127] },
+    ]) {
+      const backup = validBackup();
+      backup.tables.text_embeddings.push({ revision_id: 'rev-1', provider: 'openai', model: 'test-model',
+        profile: 'source-verbatim-v1', dimensions: 1, embedding: [0, 0, 128, 63], ...changes });
+      expect(backupPayloadSchema.safeParse(backup).success).toBe(false);
+    }
   });
 
   it('rejects a backup with a missing table or a non-database value', () => {

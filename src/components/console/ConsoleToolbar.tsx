@@ -56,7 +56,7 @@ export function ConsoleToolbar({
           type="button"
           onClick={() => setFiltersOpen((open) => !open)}
           aria-pressed={filtersOpen}
-          className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
+          className={`shrink-0 text-xs uppercase tracking-section transition-colors focus:outline-none ${
             filtersOpen ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
           }`}
         >
@@ -80,7 +80,7 @@ export function ConsoleToolbar({
                   type="button"
                   onClick={() => group.onToggle(option.value)}
                   aria-pressed={option.active}
-                  className={`text-xs uppercase tracking-[0.16em] transition-colors focus:outline-none ${
+                  className={`text-xs uppercase tracking-section transition-colors focus:outline-none ${
                     option.active
                       ? (option.activeClassName ?? 'text-terminal-ink')
                       : 'text-terminal-dim line-through'

@@ -1,6 +1,6 @@
-import { BarChart2, History, Info, Sparkles } from 'lucide-react';
+import { BarChart2, History, Sparkles, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { InspectorShell, StatRow } from '../ui';
+import { InspectorShell } from '../ui';
 import type {
   TranscriptionDocument,
   TranscriptionRevision,
@@ -14,7 +14,7 @@ import type { OcrImageMode, OcrImagePreferences } from '../../services/ocrImageS
 import { TranscriptionSummaryTab } from './TranscriptionSummaryTab';
 import { TranscriptionHistoryTab } from './TranscriptionHistoryTab';
 
-export type TranscriptionInspectorTab = 'history' | 'assist' | 'summary' | 'metadata';
+export type TranscriptionInspectorTab = 'history' | 'assist' | 'summary';
 
 interface TranscriptionInspectorProps {
   activeTab: TranscriptionInspectorTab;
@@ -90,19 +90,14 @@ export function TranscriptionInspector({
       headerHeightClassName="h-12"
       tabRowHeightClassName="h-12"
       tabs={[
-        {
-          id: 'assist',
-          label: t('transcription.tabs.assist'),
-          icon: <Sparkles size={13} />,
-        },
-        { id: 'history', label: t('transcription.tabs.history'), icon: <History size={13} /> },
-        { id: 'summary', label: t('transcription.tabs.summary'), icon: <BarChart2 size={13} /> },
-        { id: 'metadata', label: t('transcription.tabs.metadata'), icon: <Info size={13} /> },
+        { id: 'history', label: t('transcription.tabs.history'), icon: <History size={16} /> },
+        { id: 'assist', label: t('transcription.tabs.assist'), icon: <Sparkles size={16} /> },
+        { id: 'summary', label: t('transcription.tabs.summary'), icon: <BarChart2 size={16} /> },
       ]}
       activeTab={activeTab}
       onTabChange={(id) => onTabChange(id as TranscriptionInspectorTab)}
       actions={<span className="font-display text-sm italic text-editorial-ink">{t(`transcription.tabs.${activeTab}`)}</span>}
-      panelIcon={<History size={15} />}
+      panelIcon={<Wrench size={15} />}
       panelLabel={t('transcription.inspectorPanelTitle')}
       collapsed={collapsed}
       onCollapsedChange={onCollapsedChange}
@@ -143,22 +138,14 @@ export function TranscriptionInspector({
           onName={onNameRevision} onClear={onClearHistory}
           pending={pagePending} pendingError={pagePendingError} />
       ) : activeTab === 'summary' ? (
-        <TranscriptionSummaryTab documentId={document?.id ?? null} pageTotal={pageTotal} revisionCount={revisions.length} />
-      ) : activeTab === 'metadata' ? (
-        <dl className="flex flex-col gap-3 p-4">
-          <StatRow label={t('transcription.meta.page')} value={displayIndex + 1} />
-          <StatRow label={t('transcription.meta.pageLabel')} value={pageLabel ?? '—'} />
-          <StatRow
-            label={t('transcription.meta.status')}
-            value={t(verified ? 'transcription.verifiedBadge' : 'transcription.draftBadge')}
-          />
-          <StatRow label={t('transcription.meta.revisionCount')} value={revisions.length} />
-          <StatRow label={t('transcription.meta.segmentId')} value={segment?.id ?? '—'} />
-          <StatRow
-            label={t('transcription.meta.sourcePageId')}
-            value={segment?.source_page_id ?? t('transcription.meta.sourcePageIdUnset')}
-          />
-        </dl>
+        <TranscriptionSummaryTab
+          documentId={document?.id ?? null}
+          displayIndex={displayIndex}
+          pageLabel={pageLabel}
+          pageTotal={pageTotal}
+          verified={verified}
+          revisionCount={revisions.length}
+        />
       ) : null}
     </InspectorShell>
   );

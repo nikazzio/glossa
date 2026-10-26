@@ -1,5 +1,7 @@
 ---
 title: Workspace e progetti
+Finestre e menu condividono lo stesso fondo; pannelli, campi e righe evidenziate mantengono colori coerenti fra le schermate.
+
 ---
 
 # Workspace e progetti
@@ -23,25 +25,112 @@ originale; creare una copia produce invece un dizionario indipendente.
 
 ## Creazione e salvataggio
 
-La pagina del workspace e l’area **Traduzioni** consentono di creare progetti.
-L’area Traduzioni raccoglie i progetti di tutti i workspace. Nome, descrizione e
-icona del workspace aiutano a riconoscerne l’appartenenza nelle diverse viste.
+La pagina del workspace e l’area **Traduzioni** consentono di creare progetti:
+il «+» accanto al titolo Traduzioni apre una finestra che chiede il nome, il
+workspace e, facoltativo, il file da tradurre, negli stessi formati dell’import
+dall’editor. Il file si legge appena scelto: se non è leggibile (un PDF
+scansionato senza testo, un file non in UTF-8) il motivo compare sotto il campo
+e non si crea nulla. Con **Crea** la traduzione si apre nell’editor con
+l’anteprima dell’import, dove si scelgono lingue e frammenti; chiudendo
+l’anteprima la traduzione resta vuota e il file si importa poi dall’editor.
+Sotto **Libro e versione di origine** la riga mostra il titolo del libro scelto
+(troncato; titolo completo e copia compaiono nel suggerimento): l’icona del
+libro apre un elenco con ricerca per titolo o copia, dove ogni voce mostra il
+titolo e, sotto, la copia; la X toglie il libro. La finestra non si allarga con
+i titoli lunghi.
 
-Il salvataggio automatico opera su progetti già creati. Le modifiche vengono
-rilevate e salvate dopo un breve intervallo di inattività; durante l’elaborazione
-il salvataggio automatico attende uno stato stabile. La barra di stato distingue
-modifiche da salvare, salvataggio in corso, completamento ed errore.
-`Ctrl + S` richiede un salvataggio manuale, con i limiti descritti nelle
-[scorciatoie](./keyboard-shortcuts).
+L’anteprima dell’import è la finestra standard dell’app, ampia e quasi a tutta
+altezza. In cima il nome del file e il titolo. A sinistra, in una colonna che
+scorre da sola: **Lingue dell’opera** (Partenza, poi Arrivo), **Modello**
+(servizio e modello) e **Suddivisione in frammenti** (suddivisione automatica,
+titoli per il Markdown, accorpamento dei blocchi brevi finali, misure
+predefinite, ricalcolo). A destra i conteggi di parole, paragrafi e frammenti,
+la scelta fra vista a schede e vista a segmenti (piccole icone rotonde) e
+l’anteprima dei frammenti a tutta altezza. In fondo l’esito del controllo del
+conteggio delle parole, Annulla e Importa.
+Nome, descrizione e icona del workspace aiutano a riconoscerne l’appartenenza
+nelle diverse viste.
+
+## Il catalogo delle Traduzioni
+
+L’area Traduzioni raccoglie le traduzioni di tutti i workspace ed è organizzata
+come il [catalogo delle Trascrizioni](./transcription#il-catalogo-delle-trascrizioni):
+scaffali a destra, ricerca e filtri rapidi sopra l’elenco, tre viste (elenco,
+copertine, tabella).
+
+- **Riga**: nome in corsivo, sotto i nomi delle lingue di partenza e di arrivo, poi
+  workspace, frammenti tradotti sul totale, frammenti verificati e la barretta
+  di completamento, verde quando tutti i frammenti sono verificati.
+- **Scaffali**: Tutte, Recenti (modificate negli ultimi 30 giorni), Da iniziare
+  (nessun frammento tradotto), In corso, Verificate (tutti i frammenti
+  verificati).
+- **Filtri rapidi**: workspace (resta anche uscendo e rientrando nella pagina)
+  e coppia di lingue; ordine per nome, ultima modifica o avanzamento;
+  raggruppamento per workspace o coppia di lingue.
+- **Comandi di riga**: rinomina ed elimina; nelle copertine e nella tabella
+  stanno nel menu con i tre puntini. Un click sulla riga apre l’editor.
+
+Limiti attuali: i conteggi riguardano la prima pipeline del progetto, quella
+che l’editor apre; una traduzione non è ancora legata all’opera o alla
+trascrizione da cui parte, quindi mancano i comandi per aprirle, i filtri per
+biblioteca e secolo e l’archiviazione.
+
+Una traduzione si salva da sola poco dopo l’ultima modifica, sempre per intero:
+testo di partenza e tutti i frammenti. Durante la traduzione automatica il
+salvataggio attende la fine, perché la pipeline salva da sé. La barra di stato,
+in basso a destra, distingue modifiche non salvate, salvataggio in corso,
+salvato ed errore; il suggerimento riporta l’ora dell’ultimo salvataggio e,
+dopo un errore, il motivo.
+
+Per salvare subito c’è il dischetto in cima al foglio della traduzione (su
+quello dell’originale quando è aperto solo l’originale), oppure `Ctrl + S`,
+che funziona anche mentre scrivi nei fogli. Il dischetto scrive anche una
+versione nello [storico](./document-pipeline#storico-del-frammento) di ogni
+frammento cambiato. È spento quando non c’è niente da salvare né versioni nuove
+da scrivere, e durante la traduzione automatica; se un salvataggio
+fallisce diventa rosso e il suo clic riprova.
+
+Uscire dalla traduzione — ritorno al catalogo, barra principale, percorso in
+alto, cambio di workspace — salva prima di chiudere. Se quel salvataggio
+fallisce, la traduzione resta aperta con l’errore in vista: nessuna modifica
+si perde uscendo. Resta un limite: chiudere la finestra di Glossa entro un
+istante dall’ultima modifica può perderla.
+
+## Barra di sinistra
+
+La barra di sinistra raccoglie la navigazione: in alto la Dashboard con
+Panoramica e Ricerca, poi le aree nell’ordine del lavoro (Biblioteca,
+Trascrizioni, Traduzioni, Analisi) e infine i workspace, con il più per
+crearne uno. Ogni gruppo è separato da un filetto; la spiegazione di una voce
+compare passando il puntatore.
+
+In fondo c’è il menu generale: salva tutto, risorse linguistiche generali,
+impostazioni, guida e lingua dell’interfaccia. È sempre disponibile, anche
+senza un workspace attivo.
+
+L’icona in alto chiude la barra: restano le icone delle voci e del menu
+generale, e un clic porta alla pagina senza riaprirla. Il segno di Glossa in
+alto la riapre.
+
+## Aree e loro inchiostro
+
+Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio —
+petrolio, seppia e indaco — per riconoscerle a colpo d'occhio: l'icona
+dell'area nella barra di sinistra e un filetto corto sotto il titolo grande.
+I cataloghi e Analisi condividono lo stesso fondo; le pagine di testo e le
+anteprime mantengono una superficie dedicata alla lettura. I colori di stato restano gli stessi in ogni
+area: il verde segna ciò che è scelto o attivo, il rosso gli errori, l'ocra le
+cautele, l'oro i lavori in corso.
 
 ## Dashboard
 
-La Dashboard comprende una panoramica, la ricerca su più fonti e la ricerca
-singola o per identificativo. Solo la scheda visibile viene montata
+La Dashboard comprende una panoramica, le statistiche, la ricerca su più fonti e
+la ricerca singola o per identificativo. Solo la scheda visibile viene montata
 nell’interfaccia; i lavori già avviati sono gestiti separatamente dal backend.
 
-La panoramica mostra opere e traduzioni recenti, elementi da controllare, lavori
-per stato, ricerche e attività recenti. L’apertura dei riquadri viene ricordata.
+La panoramica mostra i lavori a metà con quanto manca, opere, trascrizioni e
+traduzioni recenti, elementi da controllare (anche i job falliti), lavori per
+stato, ricerche recenti e una riga con il lavoro del mese. L’apertura dei riquadri viene ricordata.
 Il filtro workspace si applica ai riepiloghi pertinenti; lavori e ricerche
 mantengono ambito globale. Se una sezione non può caricare i dati, mostra un
 errore anziché un conteggio pari a zero.
@@ -49,7 +138,47 @@ errore anziché un conteggio pari a zero.
 I riquadri si dispongono come serve: la maniglia a sinistra del titolo permette
 di trascinare un riquadro più in alto, più in basso o nell’altra colonna, e la
 disposizione scelta viene ricordata. A destra della panoramica sta l’elenco
-completo dei jobs, in una colonna ridimensionabile e richiudibile.
+completo dei jobs, diviso per giorno, in una colonna ridimensionabile e
+richiudibile.
+
+### Statistiche
+
+In alto scegli il periodo (30 giorni, 6 mesi, tutto) e il workspace.
+
+- **Previsioni**: quante giornate di lavoro mancano per finire ogni lavoro, e
+  per le traduzioni quanto costa finire.
+- **Ritmo di lavoro**: un calendario delle ultime 26 settimane.
+- **Spesa**: per mese, fra traduzione e OCR, con la stima a fine mese.
+- **Modelli più usati**, **Qualità per modello**, **Precisione OCR**, **Tempi e
+  affidabilità**, **Token e cache**.
+- **Memoria e lingue**: frasi salvate e lingue delle traduzioni.
+- **Glossari**: quanto le traduzioni rispettano ogni glossario, le voci mai
+  trovate nei testi e i termini tradotti in modo diverso da glossari diversi.
+
+**Come si calcolano i numeri**
+
+- *Quanto manca*: il programma guarda quanto hai fatto nei giorni in cui hai
+  lavorato su quel testo e simula molte volte il resto del lavoro. Mostra il
+  numero centrale di giornate (mediana) e un intervallo. Servono almeno 3 giorni di
+  lavoro.
+- *Costo per finire*: è la stessa stima che lo Studio mostra prima di avviare
+  la pipeline, sui frammenti che mancano.
+- *Costi*: si usa il costo registrato della chiamata, oppure il listino se manca.
+  Con prezzi mancanti la spesa totale e la proiezione sono indicate come non
+  disponibili; il grafico mostra solo i costi noti. Il costo per mille parole
+  riguarda i frammenti completati nel periodo, includendo tutte le loro chiamate.
+  Questi importi non sostituiscono la fattura del fornitore.
+- *Percentuali*: accanto c'è un intervallo, cioè dove sta il valore vero con
+  buona probabilità. Con pochi casi l'intervallo è largo.
+- *Precisione OCR*: quanti caratteri hai dovuto cambiare a mano, sul totale.
+- *Glossari*: un termine è rispettato se la traduzione usa la forma scritta nel
+  glossario. I conflitti confrontano solo glossari con la stessa coppia di lingue. Un plurale o un'altra forma conta come non rispettato.
+
+I job falliti restano in «Richiede attenzione» anche dopo 24 ore. Il mese e
+il calendario rispettano il fuso del computer. Le colonne dei grafici mostrano
+i dettagli anche quando ricevono il focus da tastiera.
+
+Con pochi dati un riquadro scrive «Dati insufficienti» invece di un numero.
 
 ## Spostamento e archiviazione
 

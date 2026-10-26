@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Archive,
   Bookmark,
@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, SectionLabel } from '../ui';
+import { IconButton, SectionLabel, ShelfItem } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import {
   LIBRARY_SHELVES,
@@ -33,59 +33,6 @@ const SHELF_ICONS: Record<LibraryShelf, LucideIcon> = {
   unlinked: FolderMinus,
   archived: Archive,
 };
-
-/** Gli identificativi trascinati da una riga del catalogo, se lo sono davvero. */
-function draggedSources(event: DragEvent): string[] {
-  try {
-    const parsed: unknown = JSON.parse(event.dataTransfer.getData(DRAGGED_SOURCES));
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Una voce della colonna: segno, nome, quante opere. La scelta è in verde.
- *  Con `onDropSources` la voce accetta le opere trascinate dal catalogo. */
-function ShelfItem({ icon: Icon, label, count, active, onSelect, action, onDropSources }: {
-  icon: LucideIcon;
-  label: string;
-  count?: number;
-  active: boolean;
-  onSelect: () => void;
-  action?: ReactNode;
-  onDropSources?: (sourceIds: string[]) => void;
-}) {
-  const [over, setOver] = useState(false);
-  const accepts = (event: DragEvent) => onDropSources !== undefined && event.dataTransfer.types.includes(DRAGGED_SOURCES);
-  return (
-    <li
-      className={`group/shelf flex items-center gap-1 rounded ${over ? 'ring-2 ring-editorial-accent' : ''}`}
-      onDragOver={(event) => { if (!accepts(event)) return; event.preventDefault(); setOver(true); }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(event) => {
-        setOver(false);
-        if (!accepts(event)) return;
-        event.preventDefault();
-        const ids = draggedSources(event);
-        if (ids.length > 0) onDropSources?.(ids);
-      }}
-    >
-      <button
-        type="button"
-        onClick={onSelect}
-        aria-current={active ? 'true' : undefined}
-        className={`flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-          active ? 'bg-editorial-accent/10 text-editorial-accent' : 'text-editorial-ink hover:bg-surface-hover/50'
-        }`}
-      >
-        <Icon size={14} className="shrink-0" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-        {count !== undefined && <span className="shrink-0 text-xs tabular-nums text-editorial-muted">{count}</span>}
-      </button>
-      {action}
-    </li>
-  );
-}
 
 /**
  * Il nome di una voce nuova, scritto dove la voce comparirà. Si apre solo dal
@@ -202,7 +149,8 @@ export function LibraryShelves({
               count={collectionCounts.get(collection.id) ?? 0}
               active={filters.collectionId === collection.id}
               onSelect={() => onChange({ ...filters, shelf: 'all', collectionId: collection.id })}
-              onDropSources={(sourceIds) => onDropOnCollection(collection.id, sourceIds)}
+              dropType={DRAGGED_SOURCES}
+              onDropIds={(sourceIds) => onDropOnCollection(collection.id, sourceIds)}
               action={
                 <IconButton size="xs" tone="danger" className="opacity-0 group-hover/shelf:opacity-100 focus-visible:opacity-100"
                   onClick={() => onDeleteCollection(collection.id)}

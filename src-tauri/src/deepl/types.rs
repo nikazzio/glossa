@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeeplConfig {
+    pub source_lang: Option<String>,
+    pub target_lang: Option<String>,
     pub model_type: Option<String>,
     pub formality: Option<String>,
     pub context: Option<String>,
@@ -17,9 +19,7 @@ pub struct DeeplConfig {
 #[serde(rename_all = "camelCase")]
 pub struct DeeplStageInput {
     pub text: String,
-    pub source_lang: Option<String>,
-    pub target_lang: String,
-    pub deepl_config: Option<DeeplConfig>,
+    pub deepl_config: DeeplConfig,
 }
 
 // Output di run_deepl_stage

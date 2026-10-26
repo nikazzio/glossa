@@ -17,17 +17,17 @@ note can be edited or removed without rewriting the translation.
 | Problem | An error requiring action |
 | Approved | A note recording the outcome of review |
 
-The Approved type does not replace **Lock translation**. Annotations describe
-review work; locking controls whether a segment can be reprocessed.
+The Approved type does not replace the **Mark as verified** check. Annotations
+describe review work; verification controls whether a segment can be reprocessed.
 
 ## Creating an annotation
 
 Select a passage in the translation and choose **Add annotation** from the
 context menu. The selected text becomes the note’s anchor. You can also add
-an unanchored note in the segment’s **Notes** tab or convert an audit finding
+an unanchored note with **+** in the **Notes** sub-tab of **Review** or convert an audit finding
 into an annotation.
 
-Segment notes are in the project sidebar. They are separate from notes about
+Segment notes are in the studio’s Tools column. They are separate from notes about
 a bibliographic work, which belong to its Library record.
 
 ## Display and export

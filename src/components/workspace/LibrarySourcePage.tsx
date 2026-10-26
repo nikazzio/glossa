@@ -3,7 +3,6 @@ import {
   Archive,
   ArchiveRestore,
   AlertCircle,
-  ArrowLeft,
   BookOpenText,
   Check,
   ExternalLink,
@@ -12,14 +11,13 @@ import {
   Library,
   Link2,
   Loader2,
-  type LucideIcon,
   MoreVertical,
   NotebookText,
   RefreshCw,
   Tags,
   Trash2,
 } from 'lucide-react';
-import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
+import { Group, Panel, usePanelCallbackRef } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
 import { ProviderSiteLink } from '../library/ProviderSiteLink';
 import { libraryItemUrl } from '../../services/libraryLinks';
@@ -28,13 +26,17 @@ import { SOURCE_KINDS } from '../../utils/libraryCatalogFilters';
 import { type ShownPage } from './OpenPageSection';
 import {
   ClickPopover,
+  clampInspectorWidth,
   IconButton,
+  INSPECTOR_WIDTH,
   IconLink,
   InspectorShell,
   LinkChip,
   MenuActionRow,
+  PageHeader,
+  PanelSection,
   PopoverItem,
-  SectionLabel,
+  ResizeHandle,
   Select,
   StatBlock,
   Tooltip,
@@ -61,14 +63,7 @@ import type {
   Workspace,
 } from '../../types';
 
-const INSPECTOR_COLLAPSED = 56;
-const INSPECTOR_MIN = 320;
-const INSPECTOR_MAX = 560;
 const VIEWER_MIN = 480;
-
-function clampWidth(width: number, min: number, max: number) {
-  return Math.min(Math.max(width, min), max);
-}
 
 interface LibrarySourcePageProps {
   detail: LibrarySourceDetail;
@@ -167,7 +162,7 @@ export function LibrarySourcePage({
   const countRefreshedFor = useRef<string | null>(null);
   /** Cresce ogni volta che il visore conserva una pagina: la scheda delle
    *  digitalizzazioni rilegge il deposito senza aspettare un lavoro in coda. */
-  const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
+  const initialInspectorWidth = useRef(clampInspectorWidth(inspectorWidth));
 
   // Un'altra opera: la posizione di quella precedente non va lasciata a
   // schermo finché il nuovo manifesto non è arrivato.
@@ -215,72 +210,71 @@ export function LibrarySourcePage({
           davvero. La parola «Digitalizzazione» non si scrive: resta come
           etichetta per chi legge con la voce, perché a schermo il nome della
           biblioteca basta. */}
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
-            <ArrowLeft size={15} />
-          </IconButton>
-          <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />
-          <h1 className="min-w-0">
-            <WorkIdentity
-              variant="header"
-              work={{
-                title: detail.source.title,
-                creator: detail.creator,
-                date: detail.date,
-                place: detail.originPlace,
-                publisher: detail.publisher,
-              }}
-            />
-          </h1>
-        </div>
-
-        {/* Biblioteca e uscite stanno con i comandi, a destra: al centro
-            rubavano larghezza al titolo, che è la cosa che si legge. */}
-        <div className="flex shrink-0 items-center justify-end gap-1">
-          {manifestVersion && (readableVersions.length > 1 ? (
-            <Select
-              value={manifestVersion.id}
-              onChange={setSelectedVersionId}
-              ariaLabel={t('areas.library.digitalizationLabel')}
-              // Il tipo si scrive accanto al nome: con due copie della stessa
-              // opera — le immagini e il documento — il solo nome non dice
-              // quale delle due si sta per aprire.
-              options={readableVersions.map((version) => ({
-                value: version.id,
-                label: `${t(`areas.library.versionKindLabels.${version.versionKind}`)} · ${version.label}`,
-              }))}
-              className="min-w-0 max-w-[12rem]"
-            />
-          ) : (
-            <CopyProvenance
-              providerLabel={providerLabel}
-              className="mr-1 max-w-[12rem] truncate text-xs text-editorial-ink"
-            />
-          ))}
-          {libraryPageUrl && (
-            <IconLink
-              size="sm"
-              href={libraryPageUrl}
-              title={t('areas.library.openOnLibrarySite')}
-              tooltipSide="bottom"
-            >
-              <ExternalLink size={13} />
-            </IconLink>
-          )}
-          {/* Senza l'indirizzo dell'opera resta la porta della biblioteca:
-              si cerca lì e si torna con l'indirizzo giusto. */}
-          {!libraryPageUrl && <ProviderSiteLink provider={provider} tooltipSide="bottom" />}
-          {entry && (
-            <SourceHeaderActions
-              entry={entry}
-              onRemoved={onRemoved}
-              onSetArchived={onSetArchived}
-              onRefresh={onRefresh}
-            />
-          )}
-        </div>
-      </header>
+      <PageHeader
+        area="library"
+        icon={BookOpenText}
+        onBack={onBack}
+        backLabel={t('areas.library.backToCatalogue')}
+        title={
+          <WorkIdentity
+            variant="header"
+            work={{
+              title: detail.source.title,
+              creator: detail.creator,
+              date: detail.date,
+              place: detail.originPlace,
+              publisher: detail.publisher,
+            }}
+          />
+        }
+        actions={
+          // Biblioteca e uscite stanno con i comandi, a destra: al centro
+          // rubavano larghezza al titolo, che è la cosa che si legge.
+          <>
+            {manifestVersion && (readableVersions.length > 1 ? (
+              <Select
+                value={manifestVersion.id}
+                onChange={setSelectedVersionId}
+                ariaLabel={t('areas.library.digitalizationLabel')}
+                // Il tipo si scrive accanto al nome: con due copie della stessa
+                // opera — le immagini e il documento — il solo nome non dice
+                // quale delle due si sta per aprire.
+                options={readableVersions.map((version) => ({
+                  value: version.id,
+                  label: `${t(`areas.library.versionKindLabels.${version.versionKind}`)} · ${version.label}`,
+                }))}
+                className="min-w-0 max-w-[12rem]"
+              />
+            ) : (
+              <CopyProvenance
+                providerLabel={providerLabel}
+                className="mr-1 max-w-[12rem] truncate text-xs text-editorial-ink"
+              />
+            ))}
+            {libraryPageUrl && (
+              <IconLink
+                size="sm"
+                href={libraryPageUrl}
+                title={t('areas.library.openOnLibrarySite')}
+                tooltipSide="bottom"
+              >
+                <ExternalLink size={13} />
+              </IconLink>
+            )}
+            {/* Senza l'indirizzo dell'opera resta la porta della biblioteca:
+                si cerca lì e si torna con l'indirizzo giusto. */}
+            {!libraryPageUrl && <ProviderSiteLink provider={provider} tooltipSide="bottom" />}
+            {entry && (
+              <SourceHeaderActions
+                entry={entry}
+                onRemoved={onRemoved}
+                onSetArchived={onSetArchived}
+                onRefresh={onRefresh}
+              />
+            )}
+          </>
+        }
+      />
 
       <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
       <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col bg-surface-panel">
@@ -334,26 +328,14 @@ export function LibrarySourcePage({
         )}
       </Panel>
 
-      <Separator
-        onPointerDown={() => setDragging(true)}
-        className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-          dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
-        }`}
-      >
-        <span
-          aria-hidden="true"
-          className={`relative h-7 w-px rounded-full transition-colors ${
-            dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-          }`}
-        />
-      </Separator>
+      <ResizeHandle dragging={dragging} onDragStart={() => setDragging(true)} />
 
       <Panel
         id="library-source-inspector"
         collapsible
-        collapsedSize={INSPECTOR_COLLAPSED}
-        minSize={INSPECTOR_MIN}
-        maxSize={INSPECTOR_MAX}
+        collapsedSize={INSPECTOR_WIDTH.collapsed}
+        minSize={INSPECTOR_WIDTH.min}
+        maxSize={INSPECTOR_WIDTH.max}
         defaultSize={initialInspectorWidth.current}
         panelRef={setInspectorPanel}
         onResize={syncInspectorCollapsed}
@@ -421,22 +403,22 @@ export function LibrarySourcePage({
                 />
               ) : (
                 <>
-                  <Section icon={Link2} label={t('areas.library.linkedWorkspaces')}>
+                  <PanelSection icon={Link2} label={t('areas.library.linkedWorkspaces')}>
                     <WorkspaceLinkPicker
                       workspaces={workspaces}
                       linkedIds={detail.linkedWorkspaceIds}
                       onToggleLink={onToggleLink}
                     />
-                  </Section>
+                  </PanelSection>
 
-                  <Section icon={Tags} label={t('areas.library.collectionsSection')}>
+                  <PanelSection icon={Tags} label={t('areas.library.collectionsSection')}>
                     <CollectionPicker
                       collections={collections}
                       memberIds={detail.collections.map((collection) => collection.id)}
                       onSetCollection={onSetCollection}
                       onCreateCollection={onCreateCollection}
                     />
-                  </Section>
+                  </PanelSection>
                 </>
               )}
             </div>
@@ -456,38 +438,6 @@ const INSPECTOR_TABS: { id: InspectorTabId; labelKey: string; icon: ReactNode }[
   { id: 'links', labelKey: 'areas.library.linksTab', icon: <Link2 size={16} /> },
   { id: 'notes', labelKey: 'areas.library.notesTab', icon: <NotebookText size={16} /> },
 ];
-
-/** Intestazione di sezione con un filo sotto: basta a distinguerla dal
- *  contenuto senza introdurre un altro stile di riquadro nella pagina. */
-function Section({
-  icon,
-  label,
-  actions,
-  children,
-}: {
-  icon?: LucideIcon;
-  /** Senza etichetta la sezione non si intesta: resta la riga dei comandi,
-   *  quando ce ne sono. Una sezione che raccoglie i dati dell'opera dentro la
-   *  scheda dell'opera non ha bisogno di dichiarare che sono dati. */
-  label?: string;
-  actions?: ReactNode;
-  children: ReactNode;
-}) {
-  const heading = label !== undefined && icon !== undefined;
-  return (
-    <section className="space-y-3">
-      {(heading || actions) && (
-        <div className={`flex items-center gap-2 border-b border-editorial-border/70 pb-1.5 ${
-          heading ? 'justify-between' : 'justify-end'
-        }`}>
-          {heading && <SectionLabel icon={icon} label={label} />}
-          {actions}
-        </div>
-      )}
-      {children}
-    </section>
-  );
-}
 
 /** I workspace collegati come etichette rimovibili, più un comando per
  *  collegarne un altro — stesso pattern già in uso nella riga di catalogo,
@@ -636,7 +586,7 @@ function DataSection({
   const [first, ...rest] = groups;
 
   return (
-    <Section>
+    <PanelSection>
       <dl className="space-y-2.5">
         {first.fields.map((spec) => (
           <SourceFieldRow
@@ -656,7 +606,7 @@ function DataSection({
           key={group.id}
           open={openGroups[group.id] ?? false}
           onToggle={(event) => setGroupOpen(group.id, event.currentTarget.open)}
-          className="mt-2 border-t border-editorial-border/70 pt-2"
+          className="mt-2 border-t border-rule pt-2"
         >
           <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
             {t(`areas.library.fieldGroups.${group.id}`)}
@@ -676,7 +626,7 @@ function DataSection({
           </dl>
         </details>
       ))}
-    </Section>
+    </PanelSection>
   );
 }
 
@@ -750,7 +700,7 @@ function SourceInfoSection({
   ];
 
   return (
-    <Section
+    <PanelSection
       icon={Library}
       label={t('areas.library.sourceSection')}
       actions={
@@ -774,7 +724,7 @@ function SourceInfoSection({
           />
         ))}
       </dl>
-    </Section>
+    </PanelSection>
   );
 }
 
@@ -901,7 +851,7 @@ function SourceHeaderActions({
 
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
+      <span className="mr-1 flex h-6 w-6 items-center justify-center text-caption text-editorial-muted">
         {runningJob ? (
           <Tooltip label={t('areas.library.downloadRunning')} side="top">
             <span className="text-editorial-accent">{Math.round(runningJob.progress * 100)}%</span>

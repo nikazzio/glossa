@@ -1,3 +1,4 @@
+import { makeMemoryEntry } from '../../test/memoryEntryFactory';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
@@ -14,6 +15,7 @@ vi.mock('../../utils/logger', () => ({
 import { invoke } from '@tauri-apps/api/core';
 import { fetchEmbeddings } from '../embeddingService';
 import {
+  addPhraseMemoryEmbedding,
   deletePhraseMemoryEntry,
   extractPhraseMemoryPairs,
   listPhraseMemoryEntries,
@@ -167,10 +169,14 @@ describe('phrase memory entry management', () => {
         confidence: 0.88,
         source_language: 'Italian',
         target_language: 'English',
+        source_language_variety: 'oldi1245',
+        target_language_variety: null,
         author: null,
         work: null,
         domain: null,
-        tags: null,
+        tags: [],
+        unit_id: "unit-1", source_revision_id: "sr", target_revision_id: "tr",
+        source_id: null, source_version_id: null, provenance: {}, embeddings: [],
         notes: null,
         chunk_id: 'c1',
         project_id: 'p1',
@@ -180,13 +186,17 @@ describe('phrase memory entry management', () => {
 
     const result = await listPhraseMemoryEntries('ws-1');
 
-    expect(mockInvoke).toHaveBeenCalledWith('vec_list_phrase_memory', { workspaceId: 'ws-1' });
+    expect(mockInvoke).toHaveBeenCalledWith('vec_list_phrase_memory', { workspaceId: 'ws-1', chunkId: null });
     expect(result[0]).toMatchObject({
       id: 'pm-1',
       workspaceId: 'ws-1',
       sourcePhrase: 'ciao',
       targetPhrase: 'hello',
       confidence: 0.88,
+      sourceLanguage: 'Italian',
+      targetLanguage: 'English',
+      sourceLanguageVariety: 'oldi1245',
+      targetLanguageVariety: null,
     });
   });
 
@@ -201,25 +211,44 @@ describe('phrase memory entry management', () => {
     });
   });
 
-  it('regenerates source-only embedding when updating an entry', async () => {
-    mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2]]);
-    mockInvoke.mockResolvedValueOnce(undefined);
-
-    await updatePhraseMemoryEntry({
-      workspaceId: 'ws-1',
-      phraseMemoryId: 'pm-1',
-      embeddingModel: 'text-embedding-3-small',
-      sourcePhrase: ' ciao ',
-      targetPhrase: ' hello ',
-    });
-
+  it('recalculates every stored source model when the source changes', async () => {
+    const entry = makeMemoryEntry({ embeddings: [
+      { provider: 'openai', model: 'text-embedding-3-small', dimensions: 1536, profile: 'source-verbatim-v1' },
+      { provider: 'openai', model: 'text-embedding-3-large', dimensions: 3072, profile: 'source-verbatim-v1' },
+    ] });
+    mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
+    await updatePhraseMemoryEntry({ entry, sourcePhrase: ' ciao ', targetPhrase: ' hello ' });
     expect(mockFetchEmbeddings).toHaveBeenCalledWith(['ciao'], 'text-embedding-3-small');
-    expect(mockInvoke).toHaveBeenCalledWith('vec_update_phrase_memory', {
-      workspaceId: 'ws-1',
-      phraseMemoryId: 'pm-1',
-      sourcePhrase: 'ciao',
-      targetPhrase: 'hello',
-      embedding: [0.1, 0.2],
+    expect(mockFetchEmbeddings).toHaveBeenCalledWith(['ciao'], 'text-embedding-3-large');
+    expect(mockInvoke).toHaveBeenCalledWith('vec_update_phrase_memory', { input: {
+      workspaceId: entry.workspaceId, phraseMemoryId: entry.id, sourceRevisionId: entry.sourceRevisionId,
+      targetRevisionId: entry.targetRevisionId, sourcePhrase: 'ciao', targetPhrase: 'hello',
+      embeddings: [{ model: 'text-embedding-3-small', embedding: [0.1, 0.2] }, { model: 'text-embedding-3-large', embedding: [0.1, 0.2] }],
+    } });
+  });
+
+  it('does not call an embedding provider when only the translation changes', async () => {
+    const entry = makeMemoryEntry();
+    await updatePhraseMemoryEntry({ entry, sourcePhrase: entry.sourcePhrase, targetPhrase: 'Greetings' });
+    expect(mockFetchEmbeddings).not.toHaveBeenCalled();
+    expect(mockInvoke).toHaveBeenCalledWith('vec_update_phrase_memory', { input: expect.objectContaining({
+      sourceRevisionId: entry.sourceRevisionId, targetRevisionId: entry.targetRevisionId, embeddings: [],
+    }) });
+  });
+
+  it('writes nothing when one source model fails to recalculate', async () => {
+    mockFetchEmbeddings.mockRejectedValueOnce(new Error('provider error'));
+    await expect(updatePhraseMemoryEntry({ entry: makeMemoryEntry(), sourcePhrase: 'changed', targetPhrase: 'Hello' })).rejects.toThrow('provider error');
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('adds another measure to the expected source revision', async () => {
+    const entry = makeMemoryEntry();
+    mockFetchEmbeddings.mockResolvedValueOnce([[1, 2]]);
+    await addPhraseMemoryEmbedding(entry, 'text-embedding-3-large');
+    expect(mockInvoke).toHaveBeenCalledWith('vec_add_phrase_embedding', {
+      workspaceId: entry.workspaceId, phraseMemoryId: entry.id, sourceRevisionId: entry.sourceRevisionId,
+      embedding: { model: 'text-embedding-3-large', embedding: [1, 2] },
     });
   });
 });
@@ -236,8 +265,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.93 }],
     });
 
@@ -247,8 +274,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [
         {
           sourcePhrase: 'Ciao mondo',
@@ -259,6 +284,10 @@ describe('saveApprovedPhrasePairs', () => {
       ],
     });
     expect(savedCount).toBe(1);
+    // Le lingue le legge il backend dalla lingua dell'opera: il frontend non le manda.
+    const payload = mockInvoke.mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty('sourceLanguage');
+    expect(payload).not.toHaveProperty('targetLanguage');
   });
 
   it('throws when called with no pairs, instead of silently doing nothing', async () => {
@@ -267,8 +296,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [],
     })).rejects.toThrow();
 
@@ -281,35 +308,22 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [{ sourcePhrase: '   ', targetPhrase: 'Hello world', confidence: 1 }],
     })).rejects.toThrow();
 
     expect(mockFetchEmbeddings).not.toHaveBeenCalled();
   });
 
-  it('drops a pair whose embedding could not be generated and saves the rest', async () => {
+  it('rejects an incomplete batch without dropping approved pairs or saving any', async () => {
     mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2], []]);
-    mockInvoke.mockResolvedValueOnce(1);
-
-    const savedCount = await saveApprovedPhrasePairs({
-      workspaceId: 'ws-1',
-      projectId: 'proj-1',
-      chunkId: 'c1',
-      embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
+    await expect(saveApprovedPhrasePairs({
+      workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c1', embeddingModel: 'text-embedding-3-small',
       pairs: [
         { sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 },
         { sourcePhrase: 'Buona notte', targetPhrase: 'Good night', confidence: 0.9 },
       ],
-    });
-
-    expect(mockInvoke).toHaveBeenCalledWith('vec_save_locked_phrases', expect.objectContaining({
-      pairs: [expect.objectContaining({ sourcePhrase: 'Ciao mondo' })],
-    }));
-    expect(savedCount).toBe(1);
+    })).rejects.toThrow('Incomplete embedding response');
+    expect(mockInvoke).not.toHaveBeenCalled();
   });
 
   it('propagates the backend save error without a silent fallback', async () => {
@@ -321,8 +335,6 @@ describe('saveApprovedPhrasePairs', () => {
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
       pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }],
     })).rejects.toThrow('db locked');
   });

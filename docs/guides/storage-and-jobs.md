@@ -16,7 +16,7 @@ richiedere che la relativa schermata resti aperta.
 | Deposito | Manifesti, immagini, miniature e versioni locali | Cartella selezionabile, anche su disco esterno |
 | Cache di rete | Risposte di ricerca e immagini riutilizzabili | Spazio temporaneo con limite configurabile |
 
-In **Impostazioni → Dati** puoi consultare e cambiare le posizioni.
+In **Impostazioni → Dati → Cartelle** puoi consultare e cambiare le posizioni.
 Cambiare la cartella dati copia il database, verifica la copia e registra la
 nuova posizione per il riavvio; l’originale non viene cancellato automaticamente.
 Cambiare deposito seleziona una cartella vuota o ricollega un deposito Glossa
@@ -115,7 +115,7 @@ correttamente.
 La cache di rete riutilizza risposte e immagini; il limite predefinito è
 512 MB e la validità predefinita delle ricerche è 24 ore. Le immagini sono
 soggette al limite di spazio, senza la stessa scadenza temporale. In
-**Impostazioni → Dati** puoi modificare questi valori e svuotare la
+**Impostazioni → Dati → Cache di rete** puoi modificare questi valori e svuotare la
 cache. La cache non aumenta il conteggio delle pagine scaricate e non entra
 nel [backup](../reference/backup-and-restore).
 

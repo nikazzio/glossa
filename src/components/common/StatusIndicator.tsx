@@ -49,7 +49,7 @@ export function StatusIndicator({ status, label, retryInfo }: StatusIndicatorPro
     >
       <span className={`h-2 w-2 rounded-full ring-2 ${tone.dot}`} />
       <span
-        className={`text-[11px] font-bold uppercase tracking-[0.18em] ${tone.label}`}
+        className={`text-caption font-bold uppercase tracking-section ${tone.label}`}
       >
         {label}
       </span>

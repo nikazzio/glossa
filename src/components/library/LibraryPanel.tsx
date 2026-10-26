@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { reportUiError } from '../../utils/reportUiError';
+import { useEffect, useState } from 'react';
 import { BookMarked, BookOpenText, Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -8,7 +9,7 @@ import { confirm } from '../../stores/confirmStore';
 import { DictionariesTab } from './DictionariesTab';
 import { MemoriesTab } from './MemoriesTab';
 import { PromptTemplatesTab } from './PromptTemplatesTab';
-import { Dialog, DialogCancelButton, IconButton } from '../ui';
+import { Dialog, DialogCancelButton, TabStrip } from '../ui';
 
 const TABS: { id: LibraryTab; labelKey: string }[] = [
   { id: 'dictionaries', labelKey: 'library.tabDictionaries' },
@@ -24,6 +25,9 @@ function tabIcon(tab: LibraryTab) {
 
 export function LibraryPanel() {
   const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [closing, setClosing] = useState(false);
   const {
     showLibraryPanel,
     activeTab,
@@ -32,37 +36,41 @@ export function LibraryPanel() {
     loadGlossaries,
     dirtyIds,
     saveAllDirty,
+    discardDirty,
   } = useLibraryStore();
   const { activeWorkspace } = useWorkspaceStore();
   const isGlobalScope = libraryScope === 'global';
 
   const handleClose = async () => {
-    if (dirtyIds.length > 0) {
-      const save = await confirm({
-        title: t('library.unsavedChangesTitle'),
-        message: t('library.unsavedChangesMessage'),
-        confirmLabel: t('library.saveAndClose'),
-        cancelLabel: t('library.closeWithoutSaving'),
-      });
-      if (save) {
-        try {
-          await saveAllDirty();
-        } catch {
-          toast.error(t('library.dictionarySaveError'));
-        }
+    if (busy || closing) return;
+    setClosing(true);
+    try {
+      if (editing && !await confirm({ title: t('library.discardDraftTitle'), message: t('library.discardDraftMessage'),
+        confirmLabel: t('library.discardDraft'), cancelLabel: t('common.cancel') })) return;
+      if (dirtyIds.length > 0) {
+        const save = await confirm({
+          title: t('library.unsavedChangesTitle'),
+          message: t('library.unsavedChangesMessage'),
+          confirmLabel: t('library.saveAndClose'),
+          cancelLabel: t('library.closeWithoutSaving'),
+        });
+        if (save) {
+          try { await saveAllDirty(); }
+          catch { toast.error(t('library.dictionarySaveError')); return; }
+        } else discardDirty();
       }
-    }
-    setShowLibraryPanel(false);
+      setShowLibraryPanel(false);
+    } finally { setClosing(false); }
   };
 
   useEffect(() => {
     if (!showLibraryPanel) return;
     if (isGlobalScope) {
-      void loadGlossaries(null);
+      void loadGlossaries(null).catch((error: unknown) => reportUiError(t('library.dictionaryLoadError'), error));
       return;
     }
-    if (activeWorkspace) void loadGlossaries(activeWorkspace.id);
-  }, [showLibraryPanel, isGlobalScope, activeWorkspace, loadGlossaries]);
+    if (activeWorkspace) void loadGlossaries(activeWorkspace.id).catch((error: unknown) => reportUiError(t('library.dictionaryLoadError'), error));
+  }, [showLibraryPanel, isGlobalScope, activeWorkspace, loadGlossaries, t]);
 
   const panelTitle = isGlobalScope
     ? t('library.globalTitle')
@@ -71,25 +79,11 @@ export function LibraryPanel() {
       : t('library.title');
 
   const tabBar = (
-    <div className="flex gap-2" role="tablist" aria-label={panelTitle}>
-      {TABS.map((tab) => {
-        return (
-          <IconButton
-            key={tab.id}
-            id={`library-tab-${tab.id}`}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`library-panel-${tab.id}`}
-            size="lg"
-            tone={activeTab === tab.id ? 'accent' : 'default'}
-            onClick={() => useLibraryStore.getState().setShowLibraryPanel(true, tab.id, libraryScope)}
-            title={t(tab.labelKey)}
-          >
-            {tabIcon(tab.id)}
-          </IconButton>
-        );
-      })}
-      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+    <div className="flex items-center gap-2">
+      <TabStrip tabs={TABS.map((tab) => ({ id: tab.id, label: `${t(tab.labelKey)}${(editing || busy) && tab.id !== activeTab ? ` — ${t('library.finishEditing')}` : ''}`,
+        disabled: (editing || busy) && tab.id !== activeTab, icon: tabIcon(tab.id) }))}
+        activeId={activeTab} onChange={(id) => setShowLibraryPanel(true, id as LibraryTab, libraryScope)} ariaLabel={panelTitle} idPrefix="library" />
+      <span className="mx-1 h-4 w-px self-center bg-rule" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
         {t(TABS.find((tab) => tab.id === activeTab)?.labelKey ?? 'library.title')}
       </span>
@@ -98,6 +92,8 @@ export function LibraryPanel() {
 
   return (
     <Dialog
+      compact
+      closeDisabled={busy || closing}
       open={showLibraryPanel}
       onOpenChange={(open) => {
         if (!open) void handleClose();
@@ -107,19 +103,21 @@ export function LibraryPanel() {
       icon={<BookMarked size={22} />}
       widthClassName="max-w-3xl"
       panelClassName="h-[85vh]"
-      bodyClassName="px-6 py-6 md:px-8"
+      bodyClassName="px-6 py-4"
       tabBar={tabBar}
       footer={
         <div className="flex justify-end">
-          <DialogCancelButton onClick={() => void handleClose()}>
+          <DialogCancelButton onClick={() => void handleClose()} disabled={busy || closing}>
             {t('common.close')}
           </DialogCancelButton>
         </div>
       }
     >
-      {activeTab === 'dictionaries' && <DictionariesTab />}
-      {activeTab === 'templates' && <PromptTemplatesTab />}
-      {activeTab === 'memories' && <MemoriesTab />}
+      <div id={`library-panel-${activeTab}`} role="tabpanel" aria-labelledby={`library-tab-${activeTab}`}>
+        {activeTab === 'dictionaries' && <DictionariesTab onEditingChange={setEditing} onBusyChange={setBusy} />}
+        {activeTab === 'templates' && <PromptTemplatesTab onEditingChange={setEditing} onBusyChange={setBusy} />}
+        {activeTab === 'memories' && <MemoriesTab onEditingChange={setEditing} onBusyChange={setBusy} />}
+      </div>
     </Dialog>
   );
 }

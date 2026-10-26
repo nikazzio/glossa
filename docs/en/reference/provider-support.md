@@ -20,7 +20,7 @@ describes implemented roles without ranking model quality by brand.
 
 ## Credentials
 
-Open **Settings → Provider**. Keys are stored in the operating system’s
+Open **Settings → Models**. Keys are stored in the operating system’s
 credential store when available; otherwise Glossa uses an encrypted local
 store. Keys are not included in application backups.
 

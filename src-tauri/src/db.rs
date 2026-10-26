@@ -191,7 +191,7 @@ pub fn backup_database_file(
 
 /// A JSON array of small non-negative integers is how the frontend represents
 /// a BLOB column (tauri-plugin-sql/JSON can't carry raw bytes otherwise) —
-/// e.g. phrase_memory.embedding, round-tripped through a workspace backup.
+/// e.g. text_embeddings.embedding, round-tripped through a workspace backup.
 /// Without this, such arrays fell through to the generic `JsonValue` bind
 /// below, which sqlx serializes as JSON *text* instead of raw bytes, silently
 /// corrupting the embedding for any semantic search that reads it back.
@@ -270,6 +270,11 @@ mod tests {
             "transcription_segments",
             "transcription_revisions",
             "translation_origins",
+            "text_units",
+            "text_unit_revisions",
+            "text_embeddings",
+            "text_unit_tags",
+            "phrase_memory",
             "jobs",
             "artifacts",
             "provenance_events",
