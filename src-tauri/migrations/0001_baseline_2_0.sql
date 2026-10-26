@@ -37,7 +37,11 @@ CREATE TABLE IF NOT EXISTS projects (
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trashed')),
   trashed_at DATETIME DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  source_language_variety TEXT,
+  source_language_note TEXT NOT NULL DEFAULT '',
+  target_language_variety TEXT,
+  target_language_note TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_projects_workspace ON projects(workspace_id);
@@ -49,8 +53,6 @@ CREATE TABLE IF NOT EXISTS pipelines (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name TEXT NOT NULL DEFAULT 'Default',
-  source_language TEXT NOT NULL DEFAULT 'English',
-  target_language TEXT NOT NULL DEFAULT 'Italian',
   pipeline_mode TEXT DEFAULT 'standard',
   stages TEXT NOT NULL DEFAULT '[]',
   judge_prompt TEXT DEFAULT '',
@@ -62,9 +64,6 @@ CREATE TABLE IF NOT EXISTS pipelines (
   source_processing_text TEXT DEFAULT NULL,
   source_footnotes TEXT DEFAULT NULL,
   review_provider_options TEXT DEFAULT NULL,
-  persona TEXT DEFAULT NULL,
-  custom_source_language TEXT DEFAULT NULL,
-  custom_target_language TEXT DEFAULT NULL,
   blob_budget_tokens INTEGER DEFAULT 0,
   blob_overlap INTEGER DEFAULT 1,
   coherence_prompt TEXT DEFAULT NULL,
@@ -77,7 +76,9 @@ CREATE TABLE IF NOT EXISTS pipelines (
   last_run_config TEXT DEFAULT NULL,
   run_in_progress INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  work_brief TEXT,
+  prompt_composition TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_pipelines_project_id ON pipelines(project_id);

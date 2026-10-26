@@ -29,12 +29,10 @@
 # Consolidamento pre-1.0 (23 settembre 2026): nome delle versioni consolidate
 # della trascrizione nella baseline, prima del merge. Database locale ricreato.
 
-0001_baseline_2_0.sql 78fd5b2f9c0d3588
-0002_workspace_memory_scope.sql c55dcc7e778fe168
+# Consolidamento beta privata autorizzato (27 ottobre 2026): 0004–0008
+# incorporate in 0001 e 0003. Database locale conservato; ripristino manuale
+# dal backup applicativo su database nuovo prima di riprendere il lavoro.
 
-0003_text_corpus.sql a37f19b0640b0551
-0004_pipeline_work_brief.sql ef82af7e7b69dd3d
-0005_pipeline_shared_context.sql 5c739564ba240f04
-0006_pipeline_prompt_composition.sql fb72574825df2ba7
-0007_work_languages.sql 676a265773629b03
-0008_text_language_variety.sql bcf89a39ab85c6ba
+0001_baseline_2_0.sql fd39c6330979e96e
+0002_workspace_memory_scope.sql c55dcc7e778fe168
+0003_text_corpus.sql 38c9002d6ba57cfe

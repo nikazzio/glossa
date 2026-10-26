@@ -22,19 +22,6 @@ fn incremental_upgrade_preserves_texts_and_only_identified_embeddings() -> TestR
         "../../migrations/0002_workspace_memory_scope.sql"
     ))?;
     conn.execute_batch(include_str!("../../migrations/0003_text_corpus.sql"))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0004_pipeline_work_brief.sql"
-    ))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0005_pipeline_shared_context.sql"
-    ))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0006_pipeline_prompt_composition.sql"
-    ))?;
-    conn.execute_batch(include_str!("../../migrations/0007_work_languages.sql"))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0008_text_language_variety.sql"
-    ))?;
     let entries = list(&conn, None, None)?;
     assert_eq!(entries.len(), 2);
     for entry in &entries {
@@ -61,19 +48,6 @@ fn connection() -> Result<Connection, Box<dyn std::error::Error>> {
         "../../migrations/0002_workspace_memory_scope.sql"
     ))?;
     conn.execute_batch(include_str!("../../migrations/0003_text_corpus.sql"))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0004_pipeline_work_brief.sql"
-    ))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0005_pipeline_shared_context.sql"
-    ))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0006_pipeline_prompt_composition.sql"
-    ))?;
-    conn.execute_batch(include_str!("../../migrations/0007_work_languages.sql"))?;
-    conn.execute_batch(include_str!(
-        "../../migrations/0008_text_language_variety.sql"
-    ))?;
     conn.execute_batch("INSERT INTO workspaces(id,name,created_at) VALUES('ws-a','Archivio',CURRENT_TIMESTAMP),('ws-b','Studio',CURRENT_TIMESTAMP);
         INSERT INTO projects(id,name,workspace_id,source_language,target_language) VALUES('project','Traduzione','ws-a','la','en');
         INSERT INTO translations(id,project_id,source_processing_text,translation_processing_text,position,translation_locked)

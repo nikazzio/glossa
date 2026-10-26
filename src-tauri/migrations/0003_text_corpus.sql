@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS text_unit_revisions (
   content_hash TEXT NOT NULL CHECK (length(content_hash) > 0),
   revision_number INTEGER NOT NULL CHECK (revision_number > 0),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  language_variety TEXT,
+  language_note TEXT NOT NULL DEFAULT '',
   UNIQUE(unit_id, role, language, revision_number),
   UNIQUE(unit_id, id)
 );

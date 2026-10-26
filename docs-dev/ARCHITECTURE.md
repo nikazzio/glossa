@@ -396,9 +396,9 @@ consolidati direttamente nella baseline invece di aprire un file di migrazione
 incrementale (coerente con «zero legacy» — vedi
 `docs-dev/PRODUCT_ARCHITECTURE_2_0.md`).
 
-Un cambio di baseline richiede di ricreare il database locale: si cancella
-`glossa.db` con i suoi sidecar WAL/SHM, con backup automatico prima
-dell'eliminazione, e si reimportano i progetti da un backup applicativo. Non è
+Un cambio di baseline richiede di ricreare il database locale: si mette da parte
+`glossa.db` con i suoi sidecar WAL/SHM ad applicazione chiusa, conservando
+il deposito dei file scaricati, e si reimportano i progetti da un backup applicativo. Non è
 un'autorizzazione a cancellazioni automatiche non annunciate, e non garantisce
 che un backup prodotto da una baseline precedente sia importabile: prima di
 consolidare si verifica di avere una copia dei dati e la strada per rimetterli
@@ -408,9 +408,10 @@ dentro.
 baseline si fissa e vale di nuovo la regola sopra — ogni cambiamento riceve un
 file di migrazione nuovo, la baseline non si tocca più.
 
-Per il ramo Studio/corpus (PR #488), istruzione esplicita dell'utente:
-conservare 0001 applicata e usare 0003 incrementale. L'eventuale consolidamento
-prima del merge viene eseguito dall'utente, non dall'agente.
+Lo schema iniziale include contesto e composizione dei prompt nelle pipeline
+e lingue, varietà e note nelle opere. La migrazione 0003 include varietà e
+note nelle revisioni del corpus. Il ripristino usa il backup applicativo;
+il deposito dei file rimane separato e va conservato.
 
 ## Modello di prodotto
 
@@ -983,9 +984,8 @@ vuoto. Il libro di origine si sceglie con `SearchPicker` (titolo, copia sotto),
 mai con un `Select` che si allarga al titolo più lungo.
 
 **Lingue dell'opera.** Le lingue sono dell'opera (`projects`), valgono per
-tutte le sue pipeline; `pipelines` non ha più colonne di lingua (migrazione
-0007, che converte i vecchi nomi inglesi in codici e aggiunge
-`*_language_variety` e `*_language_note`). Ogni lato è un `LanguageChoice`
+tutte le sue pipeline; `pipelines` non ha colonne di lingua. La baseline include
+`*_language_variety` e `*_language_note` nelle opere. Ogni lato è un `LanguageChoice`
 (`code` ISO 639-3 o null, `variety` Glottocode o null, `note`); `WorkLanguages`
 vive in `pipelineStore.workLanguages`, caricato da `getProjectSource` e salvato
 da `saveProjectSource`, `createProject` e `projectStore.updateWorkLanguages`
@@ -2206,7 +2206,7 @@ le revisioni prima della scrittura atomica. La rigenerazione del workspace aggiu
 il modello selezionato e conserva tutti gli altri, con controllo dello snapshot.
 
 Lingua delle revisioni: `language` (ISO 639-3, `und` = non indicata) più
-`language_variety` (Glottocode) e `language_note` (migrazione 0008). Una lingua
+`language_variety` (Glottocode) e `language_note` (migrazione 0003). Una lingua
 corretta è una revisione nuova con lo stesso testo: `text_languages::relabel_project`
 crea le revisioni per le frasi dell'opera con lingue diverse da quelle
 dell'opera, ricopia le misure dell'originale, sposta i puntatori di
