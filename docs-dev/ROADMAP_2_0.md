@@ -343,7 +343,10 @@ consultati, adozione/adattamento/scarto e motivo; non copiare la sua interfaccia
 o introdurre compatibilità dati implicita. #383 raccoglie riferimenti secondari;
 #404 riguarda approfondimento bibliografico.
 
-#408: ricontrollare l'eccezione di sicurezza e rimuoverla quando risolta.
+#408: ricontrollare le eccezioni di sicurezza e rimuoverle quando risolte.
+Comprende i tre avvisi ZIP transitivi dell’updater Windows (RUSTSEC-2026-0367,
+0368, 0369); motivazione e criterio di rimozione in ARCHITECTURE,
+«Eccezioni temporanee dell’audit ZIP».
 #410 e #402: evoluzione delle risposte strutturate, evitando di duplicare il
 contratto di revisione già implementato. #396: Dashboard orientata alle attività.
 

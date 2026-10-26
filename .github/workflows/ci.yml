@@ -125,7 +125,11 @@ jobs:
         # RUSTSEC-2026-0194/0195: quick-xml DoS via tauri -> plist, no upstream fix yet
         # RUSTSEC-2026-0235: rkyv out-of-bounds read via sqlx -> rust_decimal, which pins
         #   rkyv 0.7; Glossa never deserializes rkyv archives. Tracked in #408.
-        run: cd src-tauri && cargo audit --ignore RUSTSEC-2023-0071 --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195 --ignore RUSTSEC-2026-0235
+        # ZIP 4 remains only through the Windows updater; application ZIP uses 9.
+        # Updates are signature-verified; current releases use MSI/EXE, not ZIP.
+        # Temporary maintainer-approved exceptions; removal criteria in
+        # docs-dev/ARCHITECTURE.md, "Eccezioni temporanee dell'audit ZIP" (#408).
+        run: cd src-tauri && cargo audit --ignore RUSTSEC-2023-0071 --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195 --ignore RUSTSEC-2026-0235 --ignore RUSTSEC-2026-0367 --ignore RUSTSEC-2026-0368 --ignore RUSTSEC-2026-0369
 
   security-checks:
     runs-on: ubuntu-latest

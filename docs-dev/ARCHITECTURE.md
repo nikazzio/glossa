@@ -2251,3 +2251,29 @@ altrimenti alla prima abilitata. `TabButton` usa aria-disabled e blocca il click
 le linguette indisponibili sono focusabili per la spiegazione e saltate dalle frecce.
 
 Lo Studio conserva le viste dei gruppi Memoria/Revisione/Documento in `studioGroupViews`; cambio e creazione pipeline sono bloccati durante elaborazione anche nello store. `CatalogSearchField` supporta `disabled` e motivo accessibile; il catalogo memorie disabilita la ricerca durante modifica. Le stringhe di provenienza lunghe usano `StatBlock` per andare a capo.
+
+
+### Eccezioni temporanee dell'audit ZIP
+
+L’audit Cargo mantiene tre eccezioni circoscritte alla dipendenza transitiva
+`tauri-plugin-updater 2.10.1 → zip 4.6.1`, usata dall’updater Windows:
+
+| Avviso | Problema |
+|---|---|
+| [RUSTSEC-2026-0368](https://rustsec.org/advisories/RUSTSEC-2026-0368) | Creazione di link simbolici verso destinazioni esterne alla cartella di estrazione. |
+| [RUSTSEC-2026-0369](https://rustsec.org/advisories/RUSTSEC-2026-0369) | Modifica di permessi Unix attraverso link simbolici. |
+| [RUSTSEC-2026-0367](https://rustsec.org/advisories/RUSTSEC-2026-0367) | Conservazione dei bit Unix SUID/SGID durante l’estrazione. |
+
+L’updater verifica la firma del pacchetto prima dell’installazione. La release
+pubblica `glossa-v1.3.0` indica installer Windows MSI/EXE nel suo `latest.json`,
+non archivi ZIP; il percorso ZIP resta una capacità del componente. Le due
+segnalazioni sui permessi Unix non si applicano al target Windows. Gli archivi
+gestiti direttamente dall’app (documenti e backup) usano invece ZIP 9.1.2.
+L’eccezione accetta un rischio residuo: non corregge la libreria transitiva e
+non deve essere estesa ai documenti importati o a nuove dipendenze.
+
+**Rimozione (#408):** a ogni aggiornamento dell’updater o prima di cambiare il
+formato degli installer, verificare se la dipendenza ZIP 4 è eliminata o corretta.
+Aggiornare il componente, rimuovere i tre `--ignore` dalla CI e rieseguire l’audit.
+Le versioni updater 2.13.0/2.14.0 conservano ZIP 4: il solo aggiornamento a queste
+versioni non elimina le segnalazioni. Tutti gli altri controlli restano attivi.
