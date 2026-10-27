@@ -25,5 +25,6 @@ Piani e specifiche implementative completati non restano come documentazione:
 invarianti in architettura, regole visive nel design system, lavoro residuo
 nella roadmap.
 
-Piano aperto: [Ricerca federata e Dashboard](./PIANO_RICERCA_FEDERATA_DASHBOARD.md),
-riferimento per il lavoro sulla Dashboard; si toglie a lavoro concluso.
+Il piano corrente di Home, Ricerca e Statistiche e l’ordine degli interventi
+sono nella [roadmap](./ROADMAP_2_0.md). I contratti implementati di ricerca,
+job e persistenza sono in [architettura](./ARCHITECTURE.md).

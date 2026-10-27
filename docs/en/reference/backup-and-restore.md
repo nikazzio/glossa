@@ -60,3 +60,10 @@ restoring to another installation.
 
 See [Storage and jobs](../guides/storage-and-jobs) for directory locations and
 integrity checks.
+
+## Restoring into a new database
+
+If the database is recreated during the private beta, import the backup from
+Settings after starting the app. Keep the previous database and file repository
+until your data is available after restarting as well. A database copy alone
+does not replace a separate copy of images and exported documents.

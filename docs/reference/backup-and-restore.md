@@ -61,3 +61,10 @@ necessarie quando ripristini su un’altra installazione.
 
 Vedi [Archiviazione e lavori](../guides/storage-and-jobs) per posizione delle
 cartelle e verifiche di integrità.
+
+## Ripristino su un database nuovo
+
+Se il database viene ricreato durante la beta privata, importa il backup dalle
+Impostazioni dopo l’avvio dell’app. Conserva il database precedente e il deposito
+finché hai ritrovato i tuoi dati anche dopo un riavvio. Una copia del solo
+database non sostituisce la copia delle immagini e dei documenti esportati.
