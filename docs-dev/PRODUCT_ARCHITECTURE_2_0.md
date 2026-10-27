@@ -1,12 +1,15 @@
 # Architettura di prodotto Glossa 2.0
 
 Stato: decisione architetturale per #180  
-Ultimo aggiornamento: 2026-09-10
+Ultimo aggiornamento: 2026-10-27
 
 Questo documento descrive il prodotto verso cui evolve la beta, non un elenco
 di funzioni già disponibili. La numerazione 2.x deriva da prove di rilascio.
-Biblioteca e traduzione sono operative; Studio di trascrizione, OCR/HTR,
-bridge, Export Studio e Analisi richiedono ancora completamento.
+Biblioteca, Studio di trascrizione e traduzione, OCR della pagina e Statistiche
+sono operativi. Restano selezione multipagina, bridge, Export Studio e Analisi
+avanzate. La navigazione attuale mantiene Panoramica, ricerca e Statistiche
+nella Dashboard; Home con ricerca predominante, Ricerca autonoma e Statistiche
+sotto Analisi sono il prossimo intervento pianificato, non funzioni già spostate.
 Stato implementato in ARCHITECTURE.md; ordine e criteri in ROADMAP_2_0.md.
 
 ## 1. Scopo

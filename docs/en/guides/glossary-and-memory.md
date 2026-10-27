@@ -86,6 +86,7 @@ The **Prompt Templates** tab searches names and prompt text and filters by
 Stages, Quality control, Translation context, System, Memory, or OCR. Templates are shared across
 the application without belonging to a workspace. Use **+** to create a
 template or its pencil command to edit it.
+Editing updates the existing template; there is no need to delete and recreate it.
 
 The form stores a name, scope, workflow, text, and an optional default provider
 and model. Label hints explain each field. Select a provider and model to

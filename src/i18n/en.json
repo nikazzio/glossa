@@ -2628,7 +2628,8 @@
             "paragraphs": [
               "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Translation context, System, Memory or OCR. If a saved template has a scope the app no longer recognises, it is left out of the list and a notice names it; the other templates stay available.",
               "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
-              "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
+              "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it.",
+              "The pencil edits a saved prompt template and the disk updates the same entry; you do not need to delete and recreate it."
             ]
           },
           {
@@ -3145,7 +3146,8 @@
             "paragraphs": [
               "Pause active searches, select the backup file and enter its password or recovery code if required. Glossa checks that the backup is valid and compatible before asking for confirmation.",
               "Restoring replaces data in all existing workspaces. It does not merge collections or import one workspace. Create another backup first if you need to retain the current state.",
-              "If both the password and recovery code are lost, encrypted backup contents cannot be recovered."
+              "If both the password and recovery code are lost, encrypted backup contents cannot be recovered.",
+              "When restoring into a new database, keep the previous database and file repository until your data is available after a restart as well. The backup does not contain downloaded images."
             ]
           },
           {

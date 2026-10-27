@@ -1,388 +1,122 @@
-# Roadmap verso il completamento della beta
+# Roadmap della beta privata
 
-Aggiornata: 26 ottobre 2026.
+## Stato corrente
 
-## Prossimi passi concordati (26 ottobre 2026)
+Glossa permette di cercare fonti in più biblioteche, conservarle e consultarle,
+trascrivere con assistenza OCR, tradurre con glossari e memoria, revisionare ed
+esportare. Sono integrati Studio di trascrizione e traduzione, contesto e
+composizione dei prompt, lingue e varietà dell’opera, corpus con revisioni e
+misure multiple, Panoramica e Statistiche. Le superfici condividono le regole
+di leggibilità e il pannello OCR distingue la scelta dell’immagine dalle istruzioni.
 
-- Studio di traduzione accettabile per il maintainer; affinamenti UI/UX rimandati.
-- OCR: scelta dell’immagine in sezione autonoma dopo il prompt, con opzione
-  attiva leggibile; pubblicata, da provare dal vivo.
-- Colori delle superfici (#485 D): uniformati finestre/menu, pannelli, intestazioni,
-  campi e hover; resta la prova visiva nei due temi.
-- Dashboard (#491): corretti i rilievi su costi, periodi, errori, OCR, glossari,
-  letture delle previsioni, accessibilità e documentazione; verifica dal vivo
-  di Panoramica e Statistiche prima del merge in #488.
-- Unione di #488 su `main` con l'accorpamento delle migrazioni 0004-0008; poi
-  chiusura di #489.
-- Dopo i merge di #491 e #488: nuova PR da `main` per Home con ricerca in
-  primo piano, Ricerca autonoma e Statistiche dentro Analisi.
-- Futuro, senza data: sblocco del prompt delle fasi quando esistono frammenti
-  tradotti; traduzione eseguita come job della coda (#469).
+Le issue #311 (modifica dei prompt salvati) e #489 (contesto e lingue) sono
+chiuse. Le epic ancora aperte non indicano che le loro fondamenta siano da rifare.
+Lo Studio di traduzione è accettabile per questa fase; rifiniture UI/UX rimandate.
 
-## Ricerca e Dashboard: consegna corrente e consolidamento
+## Ordine dei prossimi interventi
 
-Prima implementazione di #395/#396: ricerca persistente con un job per pagina e
-provider, risultati progressivi, filtri locali dichiarati, raccolte opt-in ed
-estensione collegata, monitor/storico/rilanci, backup dei risultati. Le due
-viste stanno nella Dashboard come voci di nav laterale, non come linguette
-interne: quadro d'insieme (patrimonio, ripresa, attenzione, lavori, ricerche
-recenti, attività) e ricerca unica, con apertura diretta di identificativi e
-indirizzi. Monta
-solo la vista attiva. La Biblioteca è
-tornata area unica con il solo catalogo.
+1. **Home, Ricerca e Statistiche**, in una PR dedicata da main (#485/#379).
+   Home all’apertura e sempre raggiungibile: ricerca in primo piano, ripresa
+   del lavoro e riepilogo sintetico. Ricerca come destinazione autonoma
+   principale; Statistiche dentro Analisi, collegate anche dalla Home.
+   Riutilizzare motore, risultati e riepiloghi esistenti. Conservare ricerca
+   e filtri durante la navigazione; non duplicare le richieste passando dalla Home.
+   Verificare contestualmente i residui di #210, senza prometterne la chiusura
+   prima del confronto con tutti i criteri.
+2. **Cartella predefinita degli export (#375).** Preferenza proposta nei dialoghi
+   di salvataggio, modificabile per ogni file. Nessuno spostamento dei file esistenti.
+   È una funzione piccola ancora da realizzare, non una consegna già conclusa.
+3. **Filtri del visore e preset (#221).** Zoom, pan e cambio fonte esistono;
+   restano luminosità, contrasto, saturazione, tonalità, inversione e scala di grigi.
+   I filtri non devono alterare gli originali. Ritaglio e corpus visivo restano separati.
+4. **Selezione multipagina e OCR (#388/#220).** Definire insieme selezione e
+   azioni collettive: intervalli, pagine non contigue, seleziona tutto/azzera,
+   numero di pagine visibile. Riutilizzare i comandi singoli e la coda esistente.
+   Restano OCR da PDF e contesto delle pagine vicine. Lo Studio e l’OCR della
+   pagina singola sono già disponibili.
 
-Il 28 settembre 2026 ogni biblioteca è stata verificata contro il servizio vero
-(#486): sintassi delle richieste, paginazione, lettura dei campi, parole
-evidenziate nei risultati, frase esatta dove la biblioteca la sa fare, Library
-of Congress e Scozia fuori da «tutte». Restano: ricerca nel testo delle pagine
-come ricerca a parte e «cerca in questo libro» (#487); operatori booleani e
-frasi tradotti per biblioteca (#468); una fonte vera per la Biblioteca di
-Scozia, oggi limitata a un elenco di titoli; Library of Congress dietro una
-verifica anti-robot.
+La PR di navigazione non include nuovi operatori di ricerca, nuove biblioteche,
+OCR multipagina o analisi avanzate. #485 raccoglie più interventi: non si chiude
+automaticamente spostando Statistiche. Gli altri rilievi storici vanno prima
+confrontati con l’app attuale.
 
-Il piano dettagliato resta riferimento per il consolidamento, non promessa di
-funzioni già presenti. Restano inoltre: criteri per campo sulle biblioteche oltre a
-Gallica;
-retry automatici configurabili; archiviazione/eliminazione delle ricerche;
-paginazione server dei risultati (lo storico delle ricerche è già paginato);
-consultazione affiancata delle occorrenze; statistiche temporali più complete;
-riepiloghi per
-workspace. Il filtro workspace della Dashboard resta stato locale, non
-persistito, e non entra nella posizione di navigazione. Il pannello log generale
-resta #413.
-Nessuna ricerca OAI massiva, crawler o aggiramento di controlli anti-bot.
+## Ricerca e Biblioteca
 
-## Cosa significa completare Glossa
+La ricerca persistente, i lavori per fonte/pagina, i risultati progressivi,
+il monitor e i rilanci sono disponibili. La Biblioteca contiene il catalogo
+personale; la ricerca esterna resta globale, il workspace è destinazione di
+aggiunta e non filtro dei cataloghi remoti.
 
-Glossa è una beta privata, sviluppata e provata dal maintainer; non ha ancora
-una base di utenti esterni. La numerazione 2.x deriva dalle prove di rilascio
-automatico e non è un indicatore di completezza. Non serve tornare indietro con
-i numeri: serve completare i percorsi fondamentali.
+- #468: operatori booleani e filtri nativi verificati per biblioteca; distinguere
+  restrizioni inviate al servizio dai filtri applicati ai risultati ricevuti.
+- #487: ricerca nel testo delle pagine separata dalla ricerca nei metadati e
+  comando «cerca in questo libro» dove supportato. Non promettere pagine o
+  estratti quando il servizio non li restituisce.
+- #397/#472: copertura delle fonti, prima Europa e poi grandi raccolte
+  internazionali. Verificare capacità e limiti reali prima di rendere una fonte
+  disponibile; nessun aggiramento dei controlli anti-bot o crawling massivo.
+- Residui da valutare sui casi reali: filtri per campo, retry configurabili,
+  archiviazione/eliminazione delle ricerche, paginazione server dei risultati,
+  confronto affiancato delle occorrenze e riepiloghi per workspace.
+- Deposito/metadati (#183/#187): rivalutare i residui di primo avvio, spazio
+  libero, segnaposto cloud, spostamento, valori multipli e ottimizzazione per
+  opera prima di implementarli. Le vecchie descrizioni non provano un’assenza attuale.
 
-Obiettivo: trovare una fonte, conservarla e leggerla, trascriverla e correggerla,
-portare il testo approvato in traduzione, revisionare ed esportare il risultato,
-ritrovando dati e provenienza dopo il riavvio. Le aree visibili e le tabelle già
-esistenti non bastano a considerare completo un percorso.
+## Percorso fonte → trascrizione → traduzione
 
-Le fasi sotto sono l'ordine operativo proposto. Non sono tutte bloccanti una
-rispetto all'altra: attività indipendenti possono avanzare, mantenendo priorità
-al percorso completo. Le issue conservano i criteri implementativi dettagliati.
+- #222/#223 e #208/#209: ritaglio con coordinate e note, corpus di evidenze
+  visive riutilizzabili, collegato al corpus testuale ma distinto da esso.
+- #224/#189: creare una traduzione dal testo approvato preservando versione,
+  provenienza e workspace; non partire direttamente da immagini grezze.
+- #227: selezionare passaggi, pagine e sezioni anche multipagina; classificazione
+  assistita con conferma, ricerca ibrida e analisi estese. Unità, revisioni,
+  tag manuali, provenienza e misure multiple sono già nella fondazione.
+- #391: motore locale FastEmbed e rigenerazione esplicita tramite coda, con
+  modello, ambito, progresso ed errori visibili. Conservare le altre misure;
+  confrontare solo provider/modello/dimensioni/profili compatibili.
 
-## Stato integrato
+## Export, portabilità e Analisi
 
-La Biblioteca è su main: #456 include #457, #460 e #461.
-Sono presenti ricerca per le biblioteche implementate, catalogo e scheda opera,
-visore IIIF, lettura locale, versioni a più misure, deposito, cache, coda
-persistente, ottimizzazione e verifica. La traduzione editoriale, glossari,
-memoria di frasi, annotazioni, storico e backup applicativo sono operativi.
+- #188/#225: Export Studio contestuale, profili e risultati tracciati; formati
+  base scelti dai casi d’uso, senza aspettare tutte le estensioni di #192.
+- #434: esportare/importare un workspace come nuovo contesto, rigenerando
+  identificatori e collegamenti senza sovrascrivere gli altri. È distinto dal
+  backup dell’intera app e non è un lavoro piccolo.
+- Import CSV dei glossari nel backend: residuo da affrontare nel percorso export/import.
+- #377/#379: oltre alle Statistiche presenti, esplorazione filtrabile, accesso
+  agli oggetti di origine, confronti controllati e viste salvate.
+- #382/#380/#381: allineamento semantico, dataset versionati e modelli locali;
+  priorità e minimo necessario alla beta da definire sui materiali reali.
+  L’addestramento resta esterno. Confronti fra testimoni, vocabolari multilingui
+  e tag automatici sono estensioni successive.
 
-Restano incompleti collegamento alla traduzione, PDF nella Biblioteca, Export
-Studio e Analisi. OCR/HTR (#220) è consegnato in prima versione — vedi lo
-stato del punto 2. La proposta di rilascio automatica non sostituisce questi
-criteri di completamento.
+## Rimandati e manutenzione
 
-**Proposta di rilascio aperta: #386.** Si aggiorna da sola a ogni arrivo su
-main e resta aperta finché non la si unisce. Unirla pubblica il tag, le note,
-gli installatori Linux/Windows/macOS e propone l'aggiornamento a chi ha Glossa
-installata; dichiara inoltre che i backup nei formati precedenti non vengono più
-accettati. Va unita quando si vuole distribuire, non perché esiste.
+- #469: traduzione nella coda persistente. Rimandati anche sblocco dei prompt
+  con frammenti già tradotti e ulteriori rifiniture UI/UX delle traduzioni.
+- #408: monitorare eccezioni rkyv e ZIP transitivo dell’updater Windows;
+  riesaminarle agli aggiornamenti upstream o al cambio formato degli installer.
+  Motivazioni e criteri di rimozione in ARCHITECTURE; nessun monitor automatico configurato.
+- #410/#402: evoluzione delle risposte strutturate senza duplicare il contratto esistente.
+- Da valutare separatamente: processi rimasti attivi alla chiusura, anteprima
+  di audit/coerenza sul frammento, fasi configurabili, posizione del comando
+  di aggiornamento dell’app oggi nella guida.
+- #186/#446: Scriptoria resta riferimento tecnico; #383/#404 raccolgono
+  riferimenti di prodotto e approfondimenti bibliografici.
+- Nuovi formati, cloud, varianti dei prompt e altre estensioni restano nel backlog.
 
-## Decisioni già chiuse, da non riaprire
+## Criteri di completamento e distribuzione
 
-- **Apertura delle pagine** (10 settembre): vince sempre la copia migliore
-  presente sul computer; la misura nelle impostazioni dice cosa chiedere alla
-  biblioteca, non come mostrare ciò che si possiede. Nessuna preferenza salvata
-  per opera o per copia; la scelta a mano vale finché il libro è aperto; il
-  ripiego online si spegne per il libro aperto, dal visore.
-- **Due copie digitali della stessa opera** sono due opere distinte: non si
-  fondono le schede, si aggregano con workspace e collezioni.
-- **Provenienza dell'immagine**: due parole («File locale», «File online») e tre
-  colori del pallino (deposito, cache, biblioteca appena interpellata).
-- **Campi anagrafici**: tutti e venti sempre visibili in sola lettura, «—» dove
-  il dato manca; natura dell'originale e formato della copia restano separati.
-  Restano da costruire la scelta dei campi modificabili e l'editor dei valori
-  multipli.
-- **Scheda dell'opera**: colonna visore più colonna informazioni a linguette,
-  guscio condiviso con la traduzione. Quando nasce lo Studio di trascrizione
-  usa lo stesso schema, non uno nuovo per area.
-- **Campi dei log**: opera, copia, pagina, misura, provenienza, esito. Ogni
-  parte nuova li scrive già così, perché la #413 debba solo raccoglierli.
-- **Compressione** sempre non distruttiva; **PDF** modalità separata dalla
-  sequenza IIIF; misure chieste solo fra quelle già pronte.
+La beta resta privata: il numero di versione non misura la completezza.
+La PR automatica #386 è una proposta di rilascio, non il prossimo merge obbligatorio.
 
-## 1. Consolidare Biblioteca e visibilità dei lavori
+Prima della distribuzione: percorso completo su materiali reali, salvataggio e
+riavvio, interruzione/ripresa, backup e recupero, prova installata sui sistemi
+supportati, limiti dei servizi dichiarati, guide IT/EN coerenti e controlli verdi.
+Il backup esclude deposito e credenziali; il ripristino non importa un singolo
+workspace. Le modifiche allo schema non autorizzano cancellazioni automatiche.
+Prima di distribuire all’esterno va fissata una politica stabile di migrazione.
 
-Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
-
-**Stato al 15 settembre 2026, verificato leggendo il codice.**
-
-- #413 (barra di stato, console e pannello lavori): chiusa da #470.
-- #458 (riordino dell'interfaccia, «Fase B»): di fatto finita. Impostazioni di
-  rete ridotte alle tre leve utili più due avanzate; misure delle immagini nella
-  riga della biblioteca; righe delle versioni locali con origine, copertura,
-  spazio e stati distinti; nomi corretti a schermo. Dal visore si apre la pagina
-  che si sta guardando sul sito della biblioteca. **Resta** un punto solo:
-  «riscarica questa pagina», che dipende da una decisione della #459. Il segnale
-  `needs_viewer_warmup` non è un residuo: la manopola morta è sparita dalle
-  impostazioni, il preriscaldamento della Vaticana è implementato nel suo
-  gestore di ricerca (visita della pagina del catalogo e `Referer`), e il
-  segnale resta dichiarato come segnaposto per quando anche lo scaricamento
-  dovrà aprire una sessione.
-- #459 (azioni sulla pagina, «Fase A»): **consegnata**. Una copia a immagini
-  sola per opera con un file per pagina, comandi sulla pagina che sostituiscono
-  invece di affiancare, esclusione persistente rispettata dallo scaricamento,
-  ricompressione sul posto al posto della copia derivata, riallineamento che non
-  butta le correzioni sui campi che la biblioteca non dichiara. La **selezione
-  multipla** è uscita dalla issue: con una copia sola i suoi motivi si riducono
-  a «togliere molte pagine in fila», e vive meglio nello Studio di trascrizione
-  (#388), dove serve a scegliere cosa trascrivere.
-- #462 (PDF della biblioteca, «Fase C»): **realizzata** il 16 settembre, sopra
-  la #459, in due giri — il secondo perché il primo aveva costruito lo
-  scaricamento di una copia che nessun percorso creava mai. Adesso il documento
-  si **scopre** dal manifesto della biblioteca, compare nei risultati di ricerca
-  e nella scheda (anche quando non c'è), e solo dopo si scarica. Il PDF è una **copia a sé** accanto a quella a immagini: si scarica
-  con la stessa cortesia di rete e la stessa scrittura atomica delle pagine, si
-  dichiara fra le copie locali con pagine, spazio e stato, si elimina da solo e
-  si legge nel visore con pdf.js. Le pagine si contano **dal file**; se la
-  biblioteca ne dichiara un altro numero vince il file e la differenza resta nel
-  registro, senza avvisi a schermo. La trascrizione a partire dal documento
-  **resta fuori**: non esiste ancora un punto dove si sceglie da cosa
-  trascrivere, e la decisione va presa con lo Studio (#388/#220).
-- #471 (biblioteche scozzesi) e #472 (membri del consorzio IIIF): la prima
-  consegnata con #473, la seconda è l'elenco ordinato di chi manca.
-- #474 (scheda a template fisso): tutti i campi sempre visibili e compilabili a
-  mano, con sezione principale aperta e il resto richiudibile. Il motore accetta
-  già una correzione per ogni campo; il lavoro è di schermata. **Prossimo in
-  ordine**, prima della Fase A.
-
-- Verificare i percorsi già presenti e correggere le regressioni prima di
-  aggiungere nuove varianti. Revisione UI/UX generale ancora da fare.
-- Rendere visibili log generali, salvataggio (fatto per traduzioni e
-  trascrizioni, mancano le fonti) e stato dei lavori (#413),
-  riusando la coda e i pannelli esistenti.
-- Riallineare capacità dichiarate e reali dei provider (#397). La ricerca
-  aggregata (#395) viene dopo la verifica dei singoli provider. I risultati
-  dichiarano già se il libro si apre: l'assenza si scrive solo quando la
-  biblioteca risponde che non ce l'ha, e segna la riga senza nasconderla.
-- Completare e-rara, e-manuscripta e Wellcome; implementare ricerca reale per
-  le biblioteche oggi limitate al manifesto diretto. Procedere secondo fonti
-  realmente usate, non attivare un provider perché presente nel registro.
-- Applicare il divieto di download dichiarato dalla fonte; verificare sessione
-  Vaticana e ritmi delle biblioteche. Aumentare parallelismo solo dopo misure.
-- Completare scelta del deposito al primo avvio, controllo spazio libero,
-  riconoscimento segnaposto cloud e spostamento del deposito.
-- Metadati: mantenere distinta natura dell'originale e formato della copia;
-  completare scelta dei campi modificabili e modifica dei valori multipli.
-- Valori di ottimizzazione specifici per opera restano da completare.
-
-Uscita: ricerca → aggiunta → lettura → scaricamento → riapertura offline,
-con disponibilità e fallimenti comprensibili e senza duplicare materiale.
-Verificare anche interruzione, ripresa e cancellazione durante lavori attivi.
-
-## 2. Studio di trascrizione utilizzabile, con assistenza OCR/HTR
-
-Issue: #182, #388, #219, #220, #185.
-
-- Studio pagina + testo + strumenti, coerente con Biblioteca e Traduzioni.
-- Trascrizione manuale con salvataggio, revisioni, approvazione per pagina —
-  utile anche senza OCR: l'editor resta testo semplice, non a riquadri.
-- Visore minimo (zoom/pan), senza filtri visuali avanzati né ritaglio: quelli
-  arrivano al punto 3.
-- OCR/HTR tramite lavori persistenti (stesso motore già in uso per lo
-  scaricamento delle pagine, non un tracciamento in memoria che si perde a un
-  riavvio), con provider espliciti ed errori recuperabili. Primo provider: gli
-  stessi già configurati per la traduzione (stessa chiave, stesso motore di
-  chiamata); predisposto per aggiungere in seguito un motore locale (Kraken) o
-  altro, senza riscrivere l'astrazione.
-- Conservare identità di pagina e collegamenti anche dopo un nuovo download.
-- Consultare Scriptoria per viewer e workflow di revisione — non per l'editor
-  di correzione, che in Scriptoria stesso è testo semplice a pagina intera,
-  non un editor a riquadri sull'immagine.
-
-**Stato al 21 settembre 2026.** #219, la prima metà di #388 e il pezzo
-zoom/pan di #221 **consegnati**: comandi dati (servizio TS sulle tabelle già
-in schema, storico revisioni append-only, verifica/ritiro come per le
-traduzioni), schermata Studio (testo con salvataggio automatico al centro,
-storico e ripristino a destra) e visore a sinistra — riuso di
-`PageViewer`/`DocumentViewer` già scritti per la Biblioteca, non un
-componente nuovo. **Un segmento per pagina**, non per documento: cambiare
-pagina nel visore cambia il testo, ognuna con il proprio storico — un
-documento senza visore (nato da zero) resta su un solo blocco di testo. Un
-documento si crea dall'area Trascrizioni o direttamente dalla scheda di
-un'opera in Biblioteca; solo nel secondo caso c'è una pagina da mostrare, il
-primo resta un documento senza digitalizzazione collegata. Il cambio fonte
-immagini/PDF nel visore, con riallineamento delle pagine quando le due copie
-non promettono la stessa numerazione, è consegnato. **Restano**: filtri
-visuali e preset (resto di #221, spostati al punto 3 come da decisione del 20
-settembre).
-
-**Stato al 22 settembre 2026.** OCR/HTR (#220) consegnato in prima versione:
-scheda OCR attiva, con select provider/modello per documento (filtrata sui
-modelli che leggono immagini, fornitori senza vista spenti in elenco) e
-**un prompt per documento**, modificabile da qualunque pagina, con il prompt
-del workspace (caricabile dalla libreria) come punto di partenza. Il comando legge la pagina aperta tramite un lavoro
-persistente, stesso motore dello scaricamento; il risultato entra nello
-storico come revisione marcata "riconoscimento automatico", mai come
-sovrascrittura. Mentre una pagina è in lettura il suo foglio è velato e in
-sola lettura, e una pastiglia nell'intestazione del testo dice quale pagina sta
-lavorando anche se si sfoglia altrove. Scheda "Log trascrizione" nel cassetto
-in basso, speculare al Log traduzione — appare solo dentro un documento di
-trascrizione, mai insieme a quello — con quattro righe per lettura (avvio,
-immagine inviata, prompt inviato per intero, esito), ricerca, filtri per tipo
-di riga e livello, raggruppamento per pagina, token e costo stimato.
-L'ancoraggio a `source_page_id` è risolto: si completa da sé al primo tocco di
-un segmento, e non è comunque un prerequisito della lettura.
-**Restano fuori da questo primo giro**: comando per leggere un intervallo di
-pagine o l'intero documento in interfaccia (la forma dati lo prevede già),
-lettura su un documento unico (PDF) — solo le copie IIIF sono coperte —, il
-e il testo delle pagine vicine come contesto di continuità nel prompt.
-L'immagine inviata (ottimizzata a misura scelta o copia locale così com'è) si
-sceglie in Impostazioni → Trascrizioni e per sessione nella scheda OCR.
-
-**Stato al 1° ottobre 2026 (#485 H e L).** Lo Studio sta nella finestra a
-ogni larghezza; salvataggio manuale di una versione (comando e Ctrl+S). La
-pagina iniziale delle Trascrizioni è un catalogo sul modello della Biblioteca,
-con gli stessi pezzi condivisi (scaffali, ricerca, filtri rapidi, tre viste,
-comandi di riga, barretta di completamento). Anche la pagina iniziale delle
-Traduzioni segue lo stesso modello (#485 N, primo passo: scaffali, filtri
-workspace e lingue, rinomina | elimina, creazione «da zero» con il file).
-**Restano**: strada «da una trascrizione» con copia fissata, legame con opera
-e trascrizione d'origine e, solo allora, i comandi apri l'opera / apri la
-trascrizione, filtri per biblioteca e secolo, raggruppamento per biblioteca;
-Studio di traduzione (#485 N): fatta la disposizione (T1: barra principale
-sempre in vista, riga d'intestazione, una colonna Strumenti a destra) e il
-salvataggio (T2: stato nella barra di stato anche per le trascrizioni,
-dischetto e Ctrl/⌘+S nei fogli, salvataggio prima di uscire) e la verifica (T3: spunta, motivi dei comandi
-spenti; il «da aggiornare» resta solo in memoria per scelta, si perde
-riaprendo) e lo storico (T4: sottolinguetta in Revisione, versioni dal
-dischetto, ripristino; **in futuro**: nomi/puntine sulle versioni, con una
-colonna nuova) e la configurazione della pipeline (T5: finestra a sei linguette
-comuni, sezione Modello e editor dei prompt comuni, niente spiegazioni fisse,
-«Azzera tutte le traduzioni» a icona, velo comune) e il velo oro sul frammento
-in traduzione (T6) e Memoria/risorse linguistiche (T7: scheda del frammento,
-modelli modificabili con filtro OCR, dizionari con ambito visibile, memorie
-con provenienza/modello e filtri, ricerca fra workspace). T7 implementato:
-resta la prova dal vivo. Decisione del 3 ottobre: nessuna retrocompatibilità
-per embedding senza modello; più misure per unità testuale, modello obbligatorio
-e ricerca compatibile. Base corpus implementata: unità/revisioni/misure/tag,
-provenienza e libro esplicito; selezione di pagine/sezioni e analisi restano future.
-Schema aggiornato da `0003_text_corpus.sql`, baseline applicata conservata;
-consolidamento prima del merge riservato all'utente.
-Costi T8 su pannelli comuni; conteggio blocchi confermato dall'utente.
-T9: revisione finale e nove correzioni della review implementate; i due Studio
-sono inclusi nello stesso ramo della PR #488. CI verde sull’ultimo commit pubblicato. Lo Studio di traduzione è accettabile
-per il maintainer; affinamenti UI/UX rimandati. Restano uniformità delle superfici
-e verifica delle nuove modifiche OCR prima dell’integrazione.
-quali riepiloghi unire
-nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
-ora.
-
-Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
-da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti
-alla fonte.
-
-## 3. Image workbench, corpus di frammenti e passaggio alla traduzione
-
-Issue: #208, #221, #222, #209, #223, #189, #224; risorse contestuali #227.
-
-- Filtri visuali, ritaglio, coordinate e note; corpus di frammenti riusabile.
-- Creare il progetto di traduzione dal testo approvato senza perdere provenienza.
-- Collegare fonte, trascrizioni e traduzioni dalla scheda dell'opera.
-- Integrare corpus e suggerimenti contestuali con ambito workspace chiaro.
-- Generalizzare #227 a unità testuali di lunghezza variabile, anche passaggi
-  attraverso più pagine; tecniche storiche come esempio di classificazione.
-  Tenere distinti corpus testuale ed evidenze visive #209/#223, collegandone
-  le provenienze. Tag manuali riutilizzabili e versioni del testo nella base.
-
-Uscita: image workbench e corpus di frammenti pronti; passaggio trascrizione
-→ traduzione con provenienza conservata, storico ricostruibile.
-
-## 4. Consegna e portabilità
-
-Issue: #188, #225, #375, #434; riferimento per ambiti #213 (già chiusa).
-
-- Export Studio contestuale: contenuto, pagine, versione, formato, profilo
-  e destinazione, con output tracciati; riusare il sistema di lavori.
-- Definire il set di formati base dai casi d'uso, senza aspettare tutti i
-  formati opzionali della #192.
-- Esportare/importare un singolo workspace come nuovo contesto (#434),
-  senza confonderlo col ripristino dell'intera app.
-- Portare import CSV dei glossari nel backend.
-- Documentare limiti dei backup: immagini escluse, chiavi provider escluse,
-  formati precedenti non supportati. Conservare una copia dei materiali utili.
-
-Uscita: consegnare il risultato e trasferire una ricerca su un'altra installazione,
-con riferimenti coerenti e senza sostituire workspace già presenti.
-
-## 5. Analisi e validazione finale
-
-Issue: #377, #379, #391, #382, #380, #381.
-
-Completare prima i riepiloghi utili al lavoro: qualità, costi, tempi, errori,
-confronti e provenienza. La raccolta dei fatti già esiste; la superficie Analisi
-è ancora da costruire. Dataset versionati, registro modelli/adapter e valutazioni
-semantiche restano nella visione, in ordine successivo al percorso principale.
-L'addestramento resta esterno a Glossa.
-
-Il loro perimetro minimo per la prima beta completa va deciso sulla base dei
-casi reali: non dichiararli rimossi né prometterli tutti nel prossimo tag.
-
-La base del corpus testuale è consegnata (unità, revisioni, misure con
-modello/dimensioni/profilo, tag, provenienza; vedi architettura). #391 va
-riallineata alla conservazione delle misure; #382 riusa questa base per
-originali e traduzioni. Restano passi successivi, da valutare su testi
-medievali reali: selettore di pagine/sezioni, ricerca ibrida lessicale +
-semantica, tag automatici con conferma, vocabolari multilingui (SKOS),
-confronti fra testimoni e analisi di opere intere.
-
-## Riferimenti e lavori trasversali
-
-Scriptoria resta il primo riferimento tecnico per fonti, deposito, lavori,
-Studio, trascrizione ed export (#186, #446). Per ogni capacità annotare pattern
-consultati, adozione/adattamento/scarto e motivo; non copiare la sua interfaccia
-o introdurre compatibilità dati implicita. #383 raccoglie riferimenti secondari;
-#404 riguarda approfondimento bibliografico.
-
-#408: ricontrollare le eccezioni di sicurezza e rimuoverle quando risolte.
-Comprende i tre avvisi ZIP transitivi dell’updater Windows (RUSTSEC-2026-0367,
-0368, 0369); motivazione e criterio di rimozione in ARCHITECTURE,
-«Eccezioni temporanee dell’audit ZIP».
-#410 e #402: evoluzione delle risposte strutturate, evitando di duplicare il
-contratto di revisione già implementato. #396: Dashboard orientata alle attività.
-
-Punti aperti senza issue:
-
-- Chiusura dell'app: chiudendo l'ambiente di sviluppo a volte restano attivi
-  processi vecchi (app e server di sviluppo), e la X della finestra a volte non
-  chiude davvero l'app. Da indagare: ciclo di sviluppo o app, e se capita anche
-  nella versione installata.
-- Anteprima diretta di audit e coerenza nel singolo frammento: oggi le
-  conservano le opzioni e i log.
-- Fasi della pipeline configurabili: idea da valutare come issue a parte.
-
-Il Backlog conserva estensioni opzionali (nuovi formati, cloud, varianti di
-prompt e traduzione). Non sono cancellate; non dettano l'ordine del percorso base.
-
-## Criteri della beta completa
-
-- Percorso fonte → testo approvato → traduzione → export provato su materiali reali.
-- Salvataggio, riavvio, interruzione, ripresa e recupero verificati.
-- Prova installata sui sistemi supportati; i test browser simulati non bastano.
-- Limiti di biblioteche e provider dichiarati; nessun comando promette capacità assenti.
-- Backup/ripristino verificati su dati rappresentativi della beta corrente.
-- Documentazione in-app e pubblica IT/EN coerente col comportamento.
-- Controlli automatici verdi e problemi bloccanti risolti.
-- Note di distribuzione con funzionalità incluse e compatibilità; nessuna
-  retrocompatibilità presunta durante la beta privata.
-
-Le revisioni dello schema in questa fase possono consolidare la baseline,
-ma non autorizzano cancellazioni automatiche dei dati locali del maintainer.
-Prima di una distribuzione destinata a utenti reali occorre fissare una
-politica stabile di migrazione e recupero.
-
-## Regole di manutenzione
-
-GitHub descrive le attività e i criteri di accettazione; questa roadmap ne
-ordina le dipendenze. Lo stato di sessione contiene solo situazione corrente,
-decisioni nuove e prossimi passi. Le epic restano aperte finché hanno residui.
-Il codice integrato aggiorna guide IT/EN, help e contratti tecnici pertinenti.
+GitHub conserva requisiti e criteri delle singole attività; questa roadmap
+ne ordina le priorità. Architettura e guide descrivono il comportamento corrente.
+Le prove e le decisioni di sessione restano nei registri del progetto e nelle PR.

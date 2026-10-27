@@ -2628,7 +2628,8 @@
             "paragraphs": [
               "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Contesto di traduzione, Sistema, Memoria oppure OCR. Se un modello salvato ha un ambito che l’app non riconosce più, non compare nell’elenco e un avviso ne indica il nome: gli altri modelli restano disponibili.",
               "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
-              "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
+              "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma.",
+              "La matita modifica il modello di prompt salvato e il dischetto aggiorna la stessa voce: non occorre cancellarla e ricrearla."
             ]
           },
           {
@@ -3145,7 +3146,8 @@
             "paragraphs": [
               "Sospendi le ricerche in corso, scegli il file da ripristinare e, se richiesto, inserisci password o codice di recupero. Glossa controlla che il backup sia valido e compatibile prima della conferma.",
               "Il ripristino sostituisce i dati di tutti i workspace presenti. Non unisce due raccolte e non importa un solo workspace. Se vuoi conservare la situazione attuale, crea prima un altro backup.",
-              "Per un backup cifrato, perdere sia password sia codice di recupero rende il contenuto irrecuperabile."
+              "Per un backup cifrato, perdere sia password sia codice di recupero rende il contenuto irrecuperabile.",
+              "Se ripristini su un database nuovo, conserva il database precedente e il deposito finché hai ritrovato i dati anche dopo un riavvio. Il backup non contiene le immagini scaricate."
             ]
           },
           {

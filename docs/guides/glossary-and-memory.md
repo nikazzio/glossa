@@ -89,6 +89,7 @@ La scheda **Modelli Prompt** delle Risorse linguistiche cerca nel nome e nel
 testo e filtra per Fasi, Controllo qualità, Contesto di traduzione, Sistema, Memoria oppure OCR.
 I modelli sono comuni all’applicazione, senza appartenenza a un workspace.
 Usa **+** per crearne uno o la matita sulla sua riga per modificarlo.
+La modifica aggiorna il modello esistente: non occorre cancellarlo e ricrearlo.
 
 Il modulo conserva nome, ambito, flusso, testo e, facoltativamente, servizio e
 modello predefinito. I suggerimenti delle etichette spiegano l’uso dei campi.

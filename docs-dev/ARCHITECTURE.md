@@ -12,12 +12,12 @@ nuova, idempotente sui database che l'hanno già superata.
 `src-tauri/migrations.lock` elenca nome e impronta di ogni migrazione; la prova
 `migrations_are_frozen` confronta il lucchetto con i file e fallisce sia quando
 una migrazione dichiarata è cambiata o sparita, sia quando ne compare una non
-dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
+dichiarata. Aggiornare il lucchetto è legittimo per aggiungere una migrazione o nel consolidamento della beta privata autorizzato esplicitamente (vedi «Migrazioni»).
 
 ## Contesto e anteprime della pipeline (#489)
 
 `PipelineConfig.workBrief` / Rust `work_brief` è l’unico contesto comune degli
-LLM. Migrazione 0004 aggiunge la colonna; 0005 elimina Persona e override
+LLM. La baseline include la colonna ed esclude Persona e override
 lingua globali, senza conversioni semantiche o percorsi legacy. Le lingue non
 stanno più nella pipeline: sono dell'opera (vedi «Lingue dell'opera» sotto).
 Lettura, salvataggio e duplicazione includono la descrizione. Backup usa righe
@@ -29,7 +29,7 @@ una riga sola non svuota più l’intero elenco. I tre template `persona` del
 database di sviluppo sono stati riclassificati a mano in `brief` (correzione
 dati una tantum, nessuna migrazione).
 
-Regole per fase: le frasi della memoria si aggiungono solo a traduzione e Refine (`receivesMemory` in `engine.ts`, stessa regola nell’anteprima); il glossario sta una volta nelle regole del blocco statico, senza promemoria nelle istruzioni; intestazione del contesto `Translation context:`. La prova di equivalenza confronta con una copia della composizione precedente aggiornata con gli stessi cambi di testo voluti. Testi di sistema (`src-tauri/src/llm/prompt_texts.rs`): ogni testo del programma attorno ai prompt dell’utente ha id, predefinito e segnaposto obbligatori (`SYSTEM_TEXTS`); `render(config, id, values)` usa la sostituzione della pipeline se completa, altrimenti il predefinito; sostituzione dei segnaposto in un solo passaggio. Comando `prompt_system_texts` per l’editor. Migrazione 0006 aggiunge `pipelines.prompt_composition` (JSON `{texts: {id: testo}, disabled: [id pezzo]}`, NULL = predefiniti) ↔ `PipelineConfig.promptComposition`; si copia nella duplicazione insieme a `coherence_prompt` (prima perso). I separatori fra pezzi restano nel codice, così i predefiniti producono gli stessi byte di prima. Categoria template `system`. Pezzi spenti: `promptComposition.disabled` con chiavi `fase:pezzo` (`translation`, `refine`, `format`, `audit`, `coherence`); `on()`/`when_on()` in `prompts.rs` li omettono; spenti i frammenti vicini, si omette anche l’id del frammento. Elenco dei facoltativi in `SWITCHABLE_PARTS` (`promptParts.ts`). Composizione a pezzi (`src-tauri/src/llm/composition.rs`): `compose_stage_prompts`,
+Regole per fase: le frasi della memoria si aggiungono solo a traduzione e Refine (`receivesMemory` in `engine.ts`, stessa regola nell’anteprima); il glossario sta una volta nelle regole del blocco statico, senza promemoria nelle istruzioni; intestazione del contesto `Translation context:`. La prova di equivalenza confronta con una copia della composizione precedente aggiornata con gli stessi cambi di testo voluti. Testi di sistema (`src-tauri/src/llm/prompt_texts.rs`): ogni testo del programma attorno ai prompt dell’utente ha id, predefinito e segnaposto obbligatori (`SYSTEM_TEXTS`); `render(config, id, values)` usa la sostituzione della pipeline se completa, altrimenti il predefinito; sostituzione dei segnaposto in un solo passaggio. Comando `prompt_system_texts` per l’editor. La baseline include `pipelines.prompt_composition` (JSON `{texts: {id: testo}, disabled: [id pezzo]}`, NULL = predefiniti) ↔ `PipelineConfig.promptComposition`; si copia nella duplicazione insieme a `coherence_prompt` (prima perso). I separatori fra pezzi restano nel codice, così i predefiniti producono gli stessi byte di prima. Categoria template `system`. Pezzi spenti: `promptComposition.disabled` con chiavi `fase:pezzo` (`translation`, `refine`, `format`, `audit`, `coherence`); `on()`/`when_on()` in `prompts.rs` li omettono; spenti i frammenti vicini, si omette anche l’id del frammento. Elenco dei facoltativi in `SWITCHABLE_PARTS` (`promptParts.ts`). Composizione a pezzi (`src-tauri/src/llm/composition.rs`): `compose_stage_prompts`,
 `compose_judge_prompts`, `compose_coherence_prompts` producono blocchi di `PromptPart`
 con id stabile; `into_structured()` li concatena (la richiesta vera), `preview_parts()`
 li restituisce all’anteprima nei comandi `preview_*_prompt` (campo `parts`). Anteprima e
@@ -2224,10 +2224,10 @@ Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel
 registro esistente con chiave distinta per ogni azione. Backup aggiunge le quattro
 tabelle prima delle coppie, differisce i parent autocorrelati, ripristina con INSERT
 rigoroso e include revisioni/vettori/tag. `0003_text_corpus.sql` aggiorna lo schema
-senza modificare la baseline già applicata e conserva testi, metadati e provenienza.
+e conserva testi, metadati e provenienza nel passaggio al corpus.
 Trasferisce solo vettori con modello registrato e dimensione compatibile; nessun
-modello viene inferito per quelli senza identità. Nessun reset del database.
-Il consolidamento prima del merge è riservato all'utente.
+modello viene inferito per quelli senza identità.
+Il consolidamento della beta privata richiede autorizzazione esplicita; il database precedente e i sidecar vanno conservati ad app chiusa prima della ricreazione e del ripristino applicativo.
 
 `createProject` crea progetto, pipeline e origine di libro opzionale nella stessa
 transazione. La finestra di creazione propone versioni della Biblioteca, senza

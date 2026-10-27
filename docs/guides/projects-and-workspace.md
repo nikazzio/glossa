@@ -1,7 +1,5 @@
 ---
 title: Workspace e progetti
-Finestre e menu condividono lo stesso fondo; pannelli, campi e righe evidenziate mantengono colori coerenti fra le schermate.
-
 ---
 
 # Workspace e progetti
@@ -121,6 +119,8 @@ I cataloghi e Analisi condividono lo stesso fondo; le pagine di testo e le
 anteprime mantengono una superficie dedicata alla lettura. I colori di stato restano gli stessi in ogni
 area: il verde segna ciò che è scelto o attivo, il rosso gli errori, l'ocra le
 cautele, l'oro i lavori in corso.
+
+Finestre e menu condividono lo stesso fondo; pannelli, campi e righe evidenziate mantengono colori coerenti fra le schermate.
 
 ## Dashboard
 
