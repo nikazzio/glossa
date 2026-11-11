@@ -11,7 +11,9 @@
 # Consolidamento pre-1.0 (14 settembre 2026): 0002-0005 fuse nella baseline
 # prima di unirle a main, che non le aveva mai ricevute. Lecito solo finché
 # nessun database distribuito le ha applicate: chi le aveva in locale ricrea
-# il database e reimporta un backup. Dopo la 1.0 questa strada è chiusa.
+# il database e reimporta un backup. La strada resta aperta per tutta la beta
+# privata, indipendentemente dal numero di versione, e si chiude alla prima
+# distribuzione a utenti esterni (vedi docs-dev/ARCHITECTURE.md, «Migrazioni»).
 #
 # Consolidamento pre-1.0 (21 settembre 2026): 0002_excluded_pages e
 # 0003_single_pdf_copy fuse nella baseline prima di unire la PR #475 a main,
@@ -33,6 +35,8 @@
 # incorporate in 0001 e 0003. Database locale conservato; ripristino manuale
 # dal backup applicativo su database nuovo prima di riprendere il lavoro.
 
-0001_baseline_2_0.sql fd39c6330979e96e
-0002_workspace_memory_scope.sql c55dcc7e778fe168
-0003_text_corpus.sql 38c9002d6ba57cfe
+# Consolidamento beta privata autorizzato (11 novembre 2026): 0002 e 0003
+# incorporate in 0001; schema risultante verificato identico. Database locale
+# conservato; ripristino dal backup applicativo su database nuovo.
+
+0001_baseline_2_0.sql 9e516d504414db6f
