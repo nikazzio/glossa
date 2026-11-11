@@ -205,7 +205,7 @@ ma nessun percorso ne crea più di una:
   quando il file di arrivo esiste già: su Windows lo standard di Rust passa
   `MOVEFILE_REPLACE_EXISTING`, quindi è già sicuro — nessun percorso alternativo
   necessario;
-- togliere una pagina la **esclude** (`excluded_pages`, migrazione 0002): lo
+- togliere una pagina la **esclude** (`excluded_pages`): lo
   scaricamento la salta con l'esito `Excluded`, contato nell'avanzamento
   (`units.done` include le escluse: un libro con **tutte** le pagine escluse
   arriva al 100% e non fallisce, `finished()` distingue `present == 0` da
@@ -408,9 +408,9 @@ dentro.
 baseline si fissa e vale di nuovo la regola sopra — ogni cambiamento riceve un
 file di migrazione nuovo, la baseline non si tocca più.
 
-Lo schema iniziale include contesto e composizione dei prompt nelle pipeline
-e lingue, varietà e note nelle opere. La migrazione 0003 include varietà e
-note nelle revisioni del corpus. Il ripristino usa il backup applicativo;
+Lo schema è un'unica baseline (`0001_baseline_2_0.sql`): include contesto e
+composizione dei prompt nelle pipeline, lingue, varietà e note nelle opere e
+nelle revisioni del corpus, e la portata della memoria di frasi. Il ripristino usa il backup applicativo;
 il deposito dei file rimane separato e va conservato.
 
 ## Modello di prodotto
@@ -1049,7 +1049,7 @@ lingua di arrivo dell'opera; nessun filtro se non indicata), e restituisce la
 provenienza (workspace di casa = quello della traduzione o dell'importazione,
 `NULL` = senza workspace; `project_id`, `chunk_id`), mostrata da
 `PhraseProvenance` con `usePhraseProvenanceLookup` (due letture in tutto).
-`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo del
+`workspaces.memory_search_all_workspaces` è il campo del
 globo nei Riferimenti (`ReferencesTab`, `updateActiveWorkspace`), non più nelle
 impostazioni workspace. `ReferencesTab` ordina con `orderByCircle`
 (`utils/memoryCircles.ts`): documento corrente, poi workspace, poi altrove,
@@ -2206,7 +2206,7 @@ le revisioni prima della scrittura atomica. La rigenerazione del workspace aggiu
 il modello selezionato e conserva tutti gli altri, con controllo dello snapshot.
 
 Lingua delle revisioni: `language` (ISO 639-3, `und` = non indicata) più
-`language_variety` (Glottocode) e `language_note` (migrazione 0003). Una lingua
+`language_variety` (Glottocode) e `language_note`. Una lingua
 corretta è una revisione nuova con lo stesso testo: `text_languages::relabel_project`
 crea le revisioni per le frasi dell'opera con lingue diverse da quelle
 dell'opera, ricopia le misure dell'originale, sposta i puntatori di
@@ -2223,10 +2223,8 @@ Tag manuali in `text_unit_tags`, non proposte automatiche né vocabolario contro
 Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel
 registro esistente con chiave distinta per ogni azione. Backup aggiunge le quattro
 tabelle prima delle coppie, differisce i parent autocorrelati, ripristina con INSERT
-rigoroso e include revisioni/vettori/tag. `0003_text_corpus.sql` aggiorna lo schema
-e conserva testi, metadati e provenienza nel passaggio al corpus.
-Trasferisce solo vettori con modello registrato e dimensione compatibile; nessun
-modello viene inferito per quelli senza identità.
+rigoroso e include revisioni/vettori/tag. Vettori senza modello registrato non
+sono supportati: nessun modello viene inferito.
 Il consolidamento della beta privata richiede autorizzazione esplicita; il database precedente e i sidecar vanno conservati ad app chiusa prima della ricreazione e del ripristino applicativo.
 
 `createProject` crea progetto, pipeline e origine di libro opzionale nella stessa
