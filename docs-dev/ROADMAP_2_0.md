@@ -94,9 +94,19 @@ aggiunta e non filtro dei cataloghi remoti.
 
 - #469: traduzione nella coda persistente. Rimandati anche sblocco dei prompt
   con frammenti già tradotti e ulteriori rifiniture UI/UX delle traduzioni.
-- #408: monitorare eccezioni rkyv e ZIP transitivo dell’updater Windows;
-  riesaminarle agli aggiornamenti upstream o al cambio formato degli installer.
+- #408: monitorare le eccezioni rkyv e SQLite (`libsqlite3-sys` bloccata da
+  `tauri-plugin-sql`/`sqlx` 0.8); riesaminarle a ogni aggiornamento upstream.
   Motivazioni e criteri di rimozione in ARCHITECTURE; nessun monitor automatico configurato.
+- Aggiornamenti di librerie rimandati, per rischio:
+  - medio: `quick-xml` (import Word, ricerca Gallica/MDZ), `reqwest` (tutte le
+    chiamate di rete), `schemars` (schemi delle risposte strutturate), `rand`;
+    interfaccia: `lucide-react` 1, `@iconify-icons/game-icons` 2, `i18next`/`react-i18next`,
+    `motion`; strumenti: ESLint 10, Vitest 5, jsdom, jest-dom;
+  - alto: `aes-gcm`/`argon2` (cifratura di backup e chiavi) e `keyring` 4
+    (chiavi API salvate), da provare con backup e chiavi reali;
+  - TypeScript 7 quando gli strumenti lo supportano; `@types/node` resta sulla
+    versione di Node usata;
+  - bloccati: `sqlx`, `rusqlite`, `libsqlite3-sys`, `gtk` (legato a Tauri).
 - #410/#402: evoluzione delle risposte strutturate senza duplicare il contratto esistente.
 - Da valutare separatamente: processi rimasti attivi alla chiusura, anteprima
   di audit/coerenza sul frammento, fasi configurabili, posizione del comando

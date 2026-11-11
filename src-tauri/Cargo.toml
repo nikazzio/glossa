@@ -23,7 +23,7 @@ serde_json = { version = "1.0", features = ["raw_value"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 log = "0.4"
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "json", "migrate"] }
-tauri = { version = "2.10.3", features = [] }
+tauri = { version = "2.12", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-updater = "2"
@@ -36,7 +36,7 @@ reqwest = { version = "0.12", features = ["json", "cookies", "stream"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 # Codifica delle immagini OCR (#220) nel messaggio utente: ogni fornitore
 # vuole i byte in base64, nessuno accetta il file grezzo nel corpo JSON.
-base64 = "0.22"
+base64 = "0.23"
 # Ridimensionamento con le istruzioni vettoriali del processore: stesso
 # risultato del filtro Lanczos già in uso, diverse volte più veloce. Puro
 # Rust anche questa: nessuna libreria di sistema in più da compilare.
@@ -56,14 +56,14 @@ pdf-extract = "0.12"
 # Senza le funzioni predefinite: contare le pagine non ha bisogno né di date né
 # del parallelismo di `rayon`, che tirava dentro una catena di dipendenze in più
 # (una con un avviso di sicurezza aperto) per niente.
-lopdf = { version = "0.42", default-features = false }
+lopdf = { version = "0.47", default-features = false }
 aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"
 async-trait = "0.1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 sqlite-vec = "0.1.6"
-thiserror = "1"
+thiserror = "2"
 schemars = { version = "0.8", features = ["derive"] }
 futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 tauri-plugin-opener = "2.5.5"

@@ -2251,27 +2251,22 @@ le linguette indisponibili sono focusabili per la spiegazione e saltate dalle fr
 Lo Studio conserva le viste dei gruppi Memoria/Revisione/Documento in `studioGroupViews`; cambio e creazione pipeline sono bloccati durante elaborazione anche nello store. `CatalogSearchField` supporta `disabled` e motivo accessibile; il catalogo memorie disabilita la ricerca durante modifica. Le stringhe di provenienza lunghe usano `StatBlock` per andare a capo.
 
 
-### Eccezioni temporanee dell'audit ZIP
+### Eccezione temporanea dell'audit SQLite
 
-L’audit Cargo mantiene tre eccezioni circoscritte alla dipendenza transitiva
-`tauri-plugin-updater 2.10.1 → zip 4.6.1`, usata dall’updater Windows:
+L’audit Cargo ignora [RUSTSEC-2026-0459](https://rustsec.org/advisories/RUSTSEC-2026-0459)
+(SQLite precedente alla 3.54.0): aprendo un database insieme a un file `-wal`
+preparato con dimensione di pagina diversa, le query possono restituire memoria
+non inizializzata. La correzione è in `libsqlite3-sys` 0.39, non raggiungibile:
+`tauri-plugin-sql` (ogni versione, anche 3.0 alpha) richiede `sqlx` 0.8, che
+blocca `libsqlite3-sys` 0.30; anche `sqlx` 0.9 si ferma sotto la 0.38, e
+`rusqlite` deve condividere la stessa `libsqlite3-sys`.
 
-| Avviso | Problema |
-|---|---|
-| [RUSTSEC-2026-0368](https://rustsec.org/advisories/RUSTSEC-2026-0368) | Creazione di link simbolici verso destinazioni esterne alla cartella di estrazione. |
-| [RUSTSEC-2026-0369](https://rustsec.org/advisories/RUSTSEC-2026-0369) | Modifica di permessi Unix attraverso link simbolici. |
-| [RUSTSEC-2026-0367](https://rustsec.org/advisories/RUSTSEC-2026-0367) | Conservazione dei bit Unix SUID/SGID durante l’estrazione. |
+Esposizione: l’app apre solo il proprio `glossa.db`, scritto da lei stessa; il
+backup è JSON dentro un archivio e il ripristino non apre file SQLite esterni.
+Serve accesso locale alla cartella dati, che già consente di leggere il database.
+L’eccezione non deve estendersi a funzioni che aprano database ricevuti da terzi.
 
-L’updater verifica la firma del pacchetto prima dell’installazione. La release
-pubblica `glossa-v1.3.0` indica installer Windows MSI/EXE nel suo `latest.json`,
-non archivi ZIP; il percorso ZIP resta una capacità del componente. Le due
-segnalazioni sui permessi Unix non si applicano al target Windows. Gli archivi
-gestiti direttamente dall’app (documenti e backup) usano invece ZIP 9.1.2.
-L’eccezione accetta un rischio residuo: non corregge la libreria transitiva e
-non deve essere estesa ai documenti importati o a nuove dipendenze.
-
-**Rimozione (#408):** a ogni aggiornamento dell’updater o prima di cambiare il
-formato degli installer, verificare se la dipendenza ZIP 4 è eliminata o corretta.
-Aggiornare il componente, rimuovere i tre `--ignore` dalla CI e rieseguire l’audit.
-Le versioni updater 2.13.0/2.14.0 conservano ZIP 4: il solo aggiornamento a queste
-versioni non elimina le segnalazioni. Tutti gli altri controlli restano attivi.
+**Rimozione (#408):** a ogni aggiornamento di `tauri-plugin-sql` o `sqlx`,
+verificare se ammettono `libsqlite3-sys` ≥ 0.39; allora aggiornare `sqlx`,
+`rusqlite` e il plugin insieme, togliere il `--ignore` dalla CI e rieseguire
+l’audit. Tutti gli altri controlli restano attivi.
