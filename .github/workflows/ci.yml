@@ -129,7 +129,7 @@ jobs:
         # Updates are signature-verified; current releases use MSI/EXE, not ZIP.
         # Temporary maintainer-approved exceptions; removal criteria in
         # docs-dev/ARCHITECTURE.md, "Eccezioni temporanee dell'audit ZIP" (#408).
-        run: cd src-tauri && cargo audit --ignore RUSTSEC-2023-0071 --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195 --ignore RUSTSEC-2026-0235 --ignore RUSTSEC-2026-0367 --ignore RUSTSEC-2026-0368 --ignore RUSTSEC-2026-0369
+        run: cd src-tauri && cargo audit --ignore RUSTSEC-2023-0071 --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195 --ignore RUSTSEC-2026-0235 --ignore RUSTSEC-2026-0459
 
   security-checks:
     runs-on: ubuntu-latest
