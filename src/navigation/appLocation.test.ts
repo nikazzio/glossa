@@ -15,8 +15,8 @@ describe('withWorkspaceFilter', () => {
   });
 
   it('is a no-op on a non-global-area location', () => {
-    const dashboard = { area: 'dashboard' } as const;
-    expect(withWorkspaceFilter(dashboard, 'ws-1')).toBe(dashboard);
+    const home = { area: 'home' } as const;
+    expect(withWorkspaceFilter(home, 'ws-1')).toBe(home);
   });
 });
 
@@ -38,6 +38,6 @@ describe('locationsEqual', () => {
   });
 
   it('treats different areas as different', () => {
-    expect(locationsEqual({ area: 'dashboard' }, { area: 'translations' })).toBe(false);
+    expect(locationsEqual({ area: 'home' }, { area: 'translations' })).toBe(false);
   });
 });

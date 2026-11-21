@@ -5,7 +5,7 @@ title: Library and IIIF viewer
 # Library and IIIF viewer
 
 The Library contains sources added to your personal catalogue, their metadata
-and workspace links. [Search](./source-search) is available in the Dashboard.
+and workspace links. [Search](./source-search) has its own item in the left bar, under Home.
 IIIF is the protocol used to describe and display many supported digital
 copies: a manifest provides metadata, page order and image references.
 

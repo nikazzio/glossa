@@ -74,26 +74,40 @@ Sotto-tab inattive disabilitate. Editor pipeline con bozza locale e conferma;
 applicazione modelli e rifinitura non salvano implicitamente. Coppia DeepL
 sempre visibile in Generale, abilitata soltanto in DeepL.
 
-## Ricerca federata e Dashboard
+## Home, Ricerca federata e Analisi
 
-Le tre viste vivono nella Dashboard (`DashboardArea`): `overview`, statistiche
-(`view: 'stats'`) e ricerca (`view: 'search'`). Si scelgono dalla barra a sinistra,
-come voci sotto la Dashboard (`WorkspaceRailNext`, che in fondo porta anche il
-menu generale `ShellNavFooter`, tolto dalla testata), non da una fila di linguette
-dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
-continua a leggere. Contratto di navigazione: la variante `dashboard` di
-`AppLocation` porta `view` e `searchId`; la variante `library` porta solo
-`itemId` e `workspaceFilter` e non ha più concetto di linguetta. Navigare non
-annulla lavori.
+Tre posizioni distinte di `AppLocation`, ognuna con la sua voce nella barra a
+sinistra (`WorkspaceRailNext`, che in fondo porta anche il menu generale
+`ShellNavFooter`):
+
+- `{ area: 'home' }`: la Home (`HomeArea` → `AppDashboard`), posizione di avvio
+  (`homeLocation()`); la posizione non è persistita.
+- `{ area: 'search', searchId?, query? }`: la Ricerca (`SearchArea` →
+  `FederatedSearchArea`), voce singola sotto Home, fuori dalle aree. `query`
+  arriva dalla casella della Home: la pagina la mette nella casella e la tratta
+  come un invio su tutte le biblioteche (`allLibraries`); un indirizzo resta
+  solo al riconoscimento. Subito dopo `query` è sostituita da `searchId` della
+  ricerca creata (o tolta, per un indirizzo), così tornare sulla pagina non
+  rilancia la ricerca.
+- `{ area: 'analysis', view?: 'stats' }`: Analisi (`AnalysisArea` →
+  `StatsDashboard`); senza `view` vale Statistiche. Le viste stanno nella barra
+  come voci sotto Analisi (`ANALYSIS_VIEWS`), non come linguette dentro la
+  pagina; Analisi e la vista aperta risultano attive insieme. Il filtro
+  workspace delle Statistiche resta interno al componente.
+
+Home e Ricerca condividono il titolo d'area (`AreaPage`). La variante `library`
+porta solo `itemId` e `workspaceFilter`. Navigare non annulla lavori.
 
 La ricerca è una sola (`FederatedSearchArea`): la ricerca singola per
 biblioteca e il comando `discover_iiif` non esistono più. Nella barra in cima
 stanno la scelta di dove cercare (`SearchScopeSelect`: tutte le biblioteche,
 una sola, scelta personalizzata), la casella, avvio, criteri avanzati,
 estensione e aggiornamento; criteri e fonti una per una sono la terza scheda
-della colonna di destra, insieme a Fonti e storico. La scheda Fonti è una riga
-per fonte — stato, nome, record ricevuti, «riprova» dopo un errore, filtro sulla
-sola fonte — senza pause, ripartenze né tentativi, che restano nel pannello dei
+della colonna di destra, insieme a Fonti e storico. La scheda Fonti
+(`SearchExecutionPanel`) è una riga per fonte — stato, nome, record ricevuti,
+sito della biblioteca con le parole della ricerca (`ProviderSiteLink`, in ogni
+stato; assente senza `siteSearch`), «riprova» dopo un errore, filtro sulla sola
+fonte — senza pause, ripartenze né tentativi, che restano nel pannello dei
 lavori; il comando «altri risultati» in fondo all'elenco rilancia in modo
 `continue` tutte le esecuzioni concluse con `hasMore`. L'ordine dei risultati
 (`utils/searchResultOrder.ts`) è pertinenza, anno, autore o titolo; la copia di
@@ -159,9 +173,18 @@ fila per biblioteca, una volta per esecuzione).
 
 Le pagine vuote non entrano nella cache HTTP delle ricerche: uno zero dovuto a
 una risposta anomala resterebbe anche dopo la correzione.
-La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
+L'avviso «N fonti non hanno risposto» apre la scheda Fonti. Il menu «dove
+cercare» ha in fondo il gruppo «Solo sul sito della biblioteca»
+(`siteOnlyLibraries`: `kind === 'library'`, `!supportsSearch`, `siteSearch` non
+vuoto): la voce apre `providerSiteUrl(siteSearch, parole)` con
+`useOpenExternal` e non cambia l'ambito; queste biblioteche restano fuori da
+`allLibraries`.
+
+La Home legge patrimonio, oggetti modificati, attenzione e fatti locali in
 sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
-Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.
+Ambito workspace esplicito; il riepilogo lavori resta globale. La casella in
+cima naviga a `searchLocation({ query })`; i risultati compaiono solo nella
+Ricerca.
 Sezioni richiudibili con comandi condivisi; grafico a barre degli stati dei lavori,
 non una percentuale di completamento fra operazioni eterogenee.
 
@@ -333,12 +356,14 @@ ignorava il comando di riapertura (#484). Ogni contenitore intermedio di
 un'area porta `min-w-0`: senza, le colonne non possono stringersi e comparivano
 barre di scorrimento orizzontali.
 
-Il quadro d'insieme della Dashboard è fatto di cinque riquadri con la stessa
-cornice (`DashboardSection`), distribuiti su due colonne: ripresa, ricerche
-recenti, attività, attenzione e lavori. Apertura e chiusura di ciascuno vivono
-in `uiStore.dashboardSections`, persistito. Il filtro workspace della Dashboard è
-stato locale del componente e restringe solo patrimonio, ripresa e attenzione;
-lavori e ricerche restano globali.
+Il quadro d'insieme della Home è fatto di riquadri con la stessa cornice
+(`DashboardSection`), distribuiti su due colonne: avanzamento, ripresa,
+attenzione e lavori. Le ricerche recenti non sono un riquadro: stanno nella
+scheda Ricerche della Ricerca. Apertura e chiusura di ciascuno vivono in
+`uiStore.dashboardSections`, persistito; i nomi interni restano `dashboard*`
+per non toccare le preferenze salvate. Il filtro workspace della Home è stato
+locale del componente e restringe solo patrimonio, ripresa e attenzione; i
+lavori restano globali.
 
 Backup dati versione 5: oltre alle ricerche, include annotazioni, provider
 personalizzati, storico delle operazioni ed elenco degli artefatti. Le colonne
@@ -1274,7 +1299,7 @@ significa retention, non filtro di vista.
   tolto dalla vista (`jobsStore.dismissed`): è stato di sessione, non retention,
   e un job che torna non terminale rientra da solo.
 - `list_jobs`: storico completo, filtrato per stato, tipo e testo del messaggio
-  e paginato, con il totale. Vive nella colonna destra della Panoramica
+  e paginato, con il totale. Vive nella colonna destra della Home
   (`JobsHistoryList` dentro `InspectorShell`, larghezza e collasso persistiti in
   `uiStore`); la lettura analitica degli stessi dati (durate, tassi di errore,
   throughput) è materiale dell'area Analisi quando nascerà (#379), non un
@@ -1291,8 +1316,9 @@ significa retention, non filtro di vista.
   `search_executions`: morirà con la sua ricerca quando arriverà
   l'archiviazione delle ricerche.
 
-La Panoramica tiene in `uiStore` anche la disposizione dei riquadri
-(`dashboardSectionColumns`: due elenchi, sinistra e destra) e la geometria della
+La Home tiene in `uiStore` anche la disposizione dei riquadri
+(`dashboardSectionColumns`: due elenchi, sinistra e destra; un id salvato senza
+riquadro, come il vecchio `searches`, viene ignorato) e la geometria della
 colonna dei lavori (`dashboardJobsWidth`, `dashboardJobsCollapsed`); le
 Statistiche hanno la propria (`statsSectionColumns`) e il periodo scelto
 (`statsPeriod`). `DashboardBoard` riceve la disposizione da chi lo monta. Il
@@ -1306,7 +1332,7 @@ cima) e filtra per esito e per tutti i tipi di job registrati
 lettura OCR, ricerca, verifica del deposito). Un tipo nuovo va aggiunto lì, in
 `JOB_TYPE_ICONS` e in `jobs.type.*` dei testi.
 
-### Panoramica e Statistiche: da dove vengono i numeri
+### Home e Statistiche: da dove vengono i numeri
 
 I confini locali del mese e del calendario sono passati a SQLite come istanti
 ISO con offset UTC. Le spese con prezzi mancanti non diventano zero né una
@@ -1319,7 +1345,7 @@ il confronto testuale usa lowercase Unicode indipendente dal locale.
 Nessun contatore nuovo e nessuna tabella nuova: tutto è letto da dati già
 registrati e calcolato nel frontend.
 
-- **Panoramica** (`AppDashboard`): «A che punto sei» viene da
+- **Home** (`AppDashboard`): «A che punto sei» viene da
   `workProgressService.loadWorkProgress`, che riusa i servizi dei cataloghi
   (pagine scritte sul totale atteso dell'opera; frammenti tradotti sulla prima
   pipeline del progetto), aggiunge la previsione e, per le traduzioni, la stima
@@ -1831,7 +1857,16 @@ ad aspettare finché non scadeva. I permessi si prendono sempre nello stesso
 ordine — `bulk_seats`, `behind_the_page`, `seats` — così due richieste non
 possono tenersi a vicenda quello che serve all'altra.
 
-La finestra a raffica e il raffreddamento valgono per tutte e tre.
+La finestra a raffica e il raffreddamento valgono per tutte e tre. Le immagini
+del visore (`cached_image`) però non aspettano un raffreddamento: se l'host è in
+pausa (`Courtesy::cooling_down`) la richiesta fallisce subito con `throttled`,
+invece di occupare un posto fino a dieci minuti. Gli scaricamenti aspettano.
+
+Prima ancora della coda, la finestra chiede l'immagine con `local_cached_image`
+(deposito, memoria di lavoro, riduzione da una pagina più grande; mai la rete).
+Solo se manca prende un posto nella coda di `cacheService` (6 posti, 4 per la
+pagina aperta): una miniatura di un libro scaricato non aspetta dietro
+richieste verso una biblioteca in pausa.
 
 Tentativi e scadenze per classe: pagina un tentativo a 90 secondi, miniatura un
 tentativo a 20 secondi, scaricamento tre tentativi con la scadenza del profilo.

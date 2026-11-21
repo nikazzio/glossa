@@ -182,6 +182,20 @@ impl Courtesy {
         })
     }
 
+    /// Vero se l'host è in raffreddamento adesso. Non crea niente: un host mai
+    /// sentito non è in pausa.
+    ///
+    /// Serve a chi guarda e non può aspettare: il visore preferisce sapere
+    /// subito che la biblioteca è in pausa piuttosto che restare minuti in coda.
+    pub async fn cooling_down(&self, host: &str) -> bool {
+        let gate = self.hosts.lock().await.get(host).cloned();
+        let Some(gate) = gate else {
+            return false;
+        };
+        let mut timeline = gate.timeline.lock().await;
+        cooldown_delay_at(&mut timeline, Instant::now()).is_some()
+    }
+
     /// Mette un host in raffreddamento: da qui in avanti, per quei secondi,
     /// nessuno gli parla — né il visore né gli scaricamenti. Un raffreddamento
     /// più lungo di quello in corso lo estende, uno più corto non lo accorcia.
@@ -600,6 +614,23 @@ mod tests {
             outcome.expect("non deve restare appeso").is_none(),
             "chi si sta fermando non aspetta il raffreddamento"
         );
+    }
+
+    #[tokio::test]
+    async fn cooling_down_tells_whether_a_host_is_paused_without_creating_it() {
+        let courtesy = Courtesy::new();
+        assert!(!courtesy.cooling_down("gallica.bnf.fr").await);
+        assert!(
+            courtesy.hosts.lock().await.is_empty(),
+            "un host mai sentito non si crea"
+        );
+
+        courtesy
+            .cool_down("gallica.bnf.fr", &crate::iiif::network::CAUTIOUS, 600)
+            .await;
+
+        assert!(courtesy.cooling_down("gallica.bnf.fr").await);
+        assert!(!courtesy.cooling_down("www.e-codices.unifr.ch").await);
     }
 
     #[test]

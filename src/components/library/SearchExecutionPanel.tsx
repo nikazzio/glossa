@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { currentExecutions, relaunchSearch, type SearchExecution, type SearchRun } from '../../services/federatedSearchService';
 import type { IIIFProvider } from '../../types';
 import { IconButton, Tooltip } from '../ui';
+import { ProviderSiteLink } from './ProviderSiteLink';
 import { SEARCH_ERRORS } from './SourceListRow';
 
 /** Lo stato di una fonte è un segno, non una parola: il nome sta nel suggerimento. */
@@ -30,8 +31,10 @@ function StateMark({ status }: { status: SearchExecution['job']['status'] }) {
 }
 
 /**
- * Una riga per fonte: stato, nome, quanti risultati, e i due comandi che
- * servono a chi cerca — riprovare dopo un errore e guardare solo quella fonte.
+ * Una riga per fonte: stato, nome, quanti risultati, e i comandi che servono a
+ * chi cerca — cercare sul sito della biblioteca, riprovare dopo un errore e
+ * guardare solo quella fonte. Il sito è offerto in ogni stato: anche una
+ * biblioteca che ha risposto espone a Glossa solo una parte del catalogo.
  * Pause, ripartenze e tentativi precedenti sono affari del lavoro, e stanno nel
  * pannello dei lavori.
  */
@@ -44,7 +47,7 @@ export function SearchExecutionPanel({ run, providers, busy, providerFilter, onP
   act: (work: () => Promise<unknown>) => void;
 }) {
   const { t } = useTranslation();
-  const label = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
+  const find = (key: string) => providers.find((provider) => provider.key === key);
 
   return (
     <ul className="divide-y divide-rule border-b border-rule px-3">
@@ -55,8 +58,9 @@ export function SearchExecutionPanel({ run, providers, busy, providerFilter, onP
           <li key={job.id} className="min-w-0 py-2">
             <div className="flex min-w-0 items-center gap-2">
               <StateMark status={job.status} />
-              <span className="min-w-0 flex-1 truncate text-xs text-editorial-ink">{label(execution.providerKey)}</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-editorial-ink">{find(execution.providerKey)?.label ?? execution.providerKey}</span>
               <span className="shrink-0 tabular-nums text-xs text-editorial-muted">{execution.received}</span>
+              <ProviderSiteLink provider={find(execution.providerKey)} query={run.criteria.query} size="xs" />
               {job.status === 'error' && (
                 <IconButton size="xs" title={t('federation.retry')} disabled={busy}
                   onClick={() => act(() => relaunchSearch(run.id, job.id, 'retry'))}><RotateCcw size={12} /></IconButton>

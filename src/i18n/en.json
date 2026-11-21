@@ -15,6 +15,7 @@
       "printed": "Printed books"
     },
     "title": "Search",
+    "navHint": "Search the libraries",
     "catalog": "Catalogue",
     "criteria": "Criteria",
     "execution": "Sources",
@@ -26,6 +27,7 @@
     "refresh": "Refresh",
     "library": "Libraries",
     "aggregator": "Aggregators",
+    "siteOnly": "Only on the library website",
     "selectedCount": "{{count}} selected sources",
     "draftHint": "Edited criteria apply to a new search; they do not change running searches.",
     "dateHint": "Inclusive range. Where arriving results are filtered, century-based or approximate dates are not enough to decide.",
@@ -34,6 +36,7 @@
     "readFailed": "Unable to refresh searches. Visible data may be out of date.",
     "empty": "Type the words to search, or paste an identifier or an address to open the work directly.",
     "noVisible": "No results for these criteria.",
+    "tryProviderSites": "Search the library websites from the Sources column",
     "retry": "Retry",
     "pageCount": "Page {{page}} · {{count}} records received",
     "fields": {
@@ -60,7 +63,6 @@
     "remoteGroup": "Sent to catalogues",
     "unavailableGroup_one": "{{count}} source cannot be searched by words",
     "unavailableGroup_other": "{{count}} sources cannot be searched by words",
-    "viewAll": "See every search",
     "copies": "{{count}} copies",
     "copies_one": "{{count}} copy",
     "failedSources_one": "{{count}} source did not answer",
@@ -79,6 +81,7 @@
     "unknownShort_other": "{{count}} unverifiable",
     "unknownHint": "Results the filters can neither confirm nor rule out, because the catalogue does not state that field or the date is approximate.",
     "failedHint": "These sources did not answer: whatever they list is missing from the results.",
+    "showSources": "Show sources",
     "extendHint": "Searches the same words in the selected collections that were not included, as a linked search.",
     "onlyThisSource": "Show only results from this source",
     "allSources": "Show results from every source",
@@ -115,17 +118,14 @@
     "workspaces": "Workspaces",
     "scope": "Scope",
     "global": "All workspaces",
-    "subtitle": "Glossa collections and activity",
-    "patrimony": "Collections",
+    "patrimony": "Your material",
     "openSource": "Open work",
     "openProject": "Open translation",
     "openJobs": "Open jobs",
     "jobsSummary": "Global: {{active}} active · {{failed}} failed",
-    "searchGlobal": "Searches and jobs are global, independent of the workspace filter. Multi-source searches are not added to their job counts.",
     "resumeHint": "Recently modified works and projects, not necessarily recently opened.",
     "attentionHint": "Chunks to review and jobs requiring intervention. Charts count jobs, not work completion.",
     "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
-    "title": "Overview",
     "thisMonth": "This month",
     "costUnavailable": "Spend unavailable: missing prices",
     "monthSummary": "{{pages}} pages · {{fragments}} fragments · {{phrases}} phrases · {{cost}}",
@@ -181,6 +181,7 @@
     "backToLibrary": "Back to Library",
     "backToTranscriptions": "Back to Transcriptions",
     "backToAnalysis": "Back to Analysis",
+    "backToSearch": "New search",
     "resize": "Resize sidebar",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
@@ -1886,9 +1887,7 @@
     },
     "analysis": {
       "title": "Analysis",
-      "sidebarHint": "Metrics and datasets",
-      "emptyMessage": "The Analysis area has no content yet.",
-      "emptyHint": "Coming with metrics, comparisons and datasets."
+      "sidebarHint": "Metrics and datasets"
     }
   },
   "workspace": {
@@ -2001,8 +2000,8 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
-    "navHint": "Application home",
+    "title": "Home",
+    "navHint": "Your material and work in progress",
     "loadFailed": "Failed to load the dashboard",
     "discovery": {
       "loadMore": "Load more results",
@@ -2895,13 +2894,13 @@
           {
             "title": "Finding your way around",
             "paragraphs": [
-              "The Dashboard shows work in progress with what is left, what to resume, items requiring attention, current jobs and this month's work. Failed jobs remain visible beyond 24 hours. Job history can be filtered by state and type, including PDF downloads and OCR, and searched by text. Its Search tab searches across multiple sources or within one source, including by identifier.",
-              "Statistics show how your work is going: forecasts, working days, spend, models, quality, OCR accuracy, glossaries. Choose the period and workspace at the top. Hover a card title to see what it measures. With too little data, a card says so instead of showing a number. Forecasts show the central estimate (median). Cost per 1,000 words covers fragments completed in the period and all their calls. Missing prices make total spend unavailable. Glossary conflicts compare the same language pair.",
+              "Home is the page Glossa opens on. At the top is the search field: type words, an identifier or an address and confirm, and the Search page opens with the results. Below you find your material, this month's work, work in progress with what is left, what to resume, items requiring attention and current jobs. Failed jobs remain visible beyond 24 hours. Job history can be filtered by state and type, including PDF downloads and OCR, and searched by text.",
+              "Analysis opens Statistics, which show how your work is going: forecasts, working days, spend, models, quality, OCR accuracy, glossaries. You also reach them from the command next to “This month” on Home. Choose the period and workspace at the top. Hover a card title to see what it measures. With too little data, a card says so instead of showing a number. Forecasts show the central estimate (median). Cost per 1,000 words covers fragments completed in the period and all their calls. Missing prices make total spend unavailable. Glossary conflicts compare the same language pair.",
               "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
-              "The left bar holds the Dashboard, the areas in working order and the workspaces; at the bottom the general menu: save all, language resources, settings, help and language. Collapsed, the icons remain and a click opens the page without expanding it.",
+              "The left bar holds Home and Search at the top, then the areas in working order (with Statistics under Analysis) and the workspaces; at the bottom the general menu: save all, language resources, settings, help and language. Collapsed, the icons remain and a click opens the page without expanding it.",
               "Library, Transcriptions and Translations each have their own ink: petrol, sepia and indigo. You see it in the area icon in the left sidebar, in the short rule under the large title. Catalogues and Analysis share the same background; text pages and previews keep a dedicated reading surface. State colours do not change: green always marks what is selected or active.",
               "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed.",
-              "Overview and Statistics cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
+              "Home and Statistics cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
             ]
           },
           {
@@ -2959,14 +2958,15 @@
       },
       "search": {
         "title": "Searching for sources",
-        "intro": "From the Dashboard open Search: a single field to look for works in the libraries or to open one whose identifier you know. Results enter the Library only when you decide.",
+        "intro": "Search has its own item in the left bar, right under Home: a single field to look for works in the libraries or to open one whose identifier you know. You can also start from the field at the top of Home. Results enter the Library only when you decide.",
         "blocks": [
           {
             "title": "Searching",
             "paragraphs": [],
             "steps": [
-              "Open Search from the left bar, under Dashboard.",
+              "Open Search from the left bar, under Home, or type in the Home field: the search runs on all libraries.",
               "To the left of the field choose where to search: all libraries, a single one, or a custom choice made in the advanced criteria.",
+              "At the bottom of the “where to search” menu, the “Only on the library website” group lists the libraries Glossa cannot query (today Heidelberg, Harvard, e-rara, e-manuscripta and Glasgow). Choosing one opens its website in the browser with the words typed in the field, when the site accepts them; otherwise its start page. Where to search does not change and no search starts in Glossa.",
               "Type the words and start with the command next to them. To narrow down, open the advanced criteria, first tab of the right column: title, author, printer, material, years. Aggregators such as Europeana are added on purpose; Europeana needs a key in the Library settings.",
               "Results appear as sources answer. Above the list choose the order: by relevance, year, author, or title. When the data needed to judge a criterion is missing, the result stays in the list marked “incomplete data”.",
               "The searched words are in bold and in the accent color where they appear, in the row and in the opened record data. An icon next to the row marks results whose words are not in the record: on Gallica, found only in the page text. \"Exact phrase\", in the advanced criteria, searches the words in sequence where the library supports it. Library of Congress and National Library of Scotland are not part of \"all\": choose them by hand in the advanced criteria.",
@@ -2988,14 +2988,14 @@
             "paragraphs": [
               "Type or paste the identifier of a work, or its address, in the same field. If a library recognises it, an “Open on …” row appears above the results: press the command next to it and the work opens, ready to add to the Library.",
               "A full address also opens with Enter. An IIIF manifest from an institution not listed opens the same way, by pasting its address.",
-              "When the list stays empty, or you are looking at one source only, a command opens the library’s own search in the browser with the same words. What Glossa queries is what the library offers to a program, rarely its whole catalogue: when in doubt, search on their site, copy the address of the work and paste it here."
+              "The command that opens the library’s own search in the browser, with the same words, is on every row of the Sources tab, even when the library answered. It also appears above the results when you look at one source only; when the list stays empty, a line points to the Sources tab. What Glossa queries is what the library offers to a program, rarely its whole catalogue: when in doubt, search on their site, copy the address of the work and paste it here."
             ]
           },
           {
             "title": "Sources, history and saving",
             "paragraphs": [
-              "The Sources tab, on the right, has one row per library: state, how many results arrived, “retry” after an error, and the filter to look at that source only.",
-              "The search history lives in the next tab: from there you reopen an earlier search with its criteria and results.",
+              "The Sources tab, on the right, has one row per library: state, how many results arrived, the library website, “retry” after an error, and the filter to look at that source only. The “sources did not answer” warning above the results leads to this tab.",
+              "The search history lives in the Searches tab, next to it: from there you reopen an earlier search with its criteria and results.",
               "Add to Library saves the record. Add to workspace also links it to the chosen workspace. The same manifest is not duplicated. Extend to aggregators starts a linked search using only newly selected aggregators.",
               "You can switch screens while the search goes on. Closing Glossa stops it; history remains available when you reopen it."
             ]
@@ -3087,7 +3087,7 @@
             "title": "Reviewing and deleting past jobs",
             "paragraphs": [
               "The bottom panel shows running, waiting and recently finished jobs: it is the view of what is happening now. The bin command in its header takes the finished rows out of the view, so new jobs read clearly; it deletes nothing.",
-              "The full list lives in the right-hand column of the Overview, and can be narrowed, widened or closed with the command at the top left of the column. Every row expands like in the bottom panel, with phase, attempts, times and error.",
+              "The full list lives in the right-hand column of Home, and can be narrowed, widened or closed with the command at the top left of the column. Every row expands like in the bottom panel, with phase, attempts, times and error.",
               "At the top of the column there is a free-text search and two rows of commands: the first picks how the job went (running, succeeded, failed, interrupted), the second the kind of work. Several choices can be on at once.",
               "The bin at the top of the column deletes the finished jobs the filters are showing: with the filters off that is all of them, with a filter on only those. No job is ever deleted automatically. Search jobs are the exception — they stay as long as the search they belong to, otherwise its history would lose pieces."
             ]
@@ -3095,7 +3095,7 @@
           {
             "title": "Choosing a resolution",
             "paragraphs": [
-              "Under Settings → Library → Images, choose page and thumbnail dimensions. A setting made for an individual work overrides the general value.",
+              "Under Settings → Library → Images, choose page and thumbnail dimensions. A setting made for an individual work overrides the general value. Pages and thumbnails already on your computer show at once even when the library does not answer; if the library is paused after a refusal, the viewer says so at once instead of waiting.",
               "The size specifies the desired long edge. Depending on the service and request mode, the received image may be larger or smaller. Maximum resolution requests all available detail.",
               "Existing downloads are unchanged. To obtain a smaller version without downloading again, use image reduction: it creates a new copy and retains the original. Delete a version only after checking the result."
             ]

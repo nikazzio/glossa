@@ -69,15 +69,53 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
   });
 
-  it('shows Dashboard, every area and workspace icons when the rail is collapsed', () => {
+  it('shows Home, Search, every area and workspace icons when the rail is collapsed', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'sidebar.collapse' }));
     expect(screen.getByRole('button', { name: /Beta/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /dashboard\.title/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^federation\.title/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /areas\.translations\.title/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /areas\.library\.title/ })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: /areas\.transcriptions\.title/ })).not.toBeDisabled();
+  });
+
+  it('lists Home, then Search, then the areas, with no views under Home', () => {
+    renderShell();
+
+    const home = screen.getByRole('button', { name: /^dashboard\.title/ });
+    const search = screen.getByRole('button', { name: /^federation\.title/ });
+    const library = screen.getByRole('button', { name: /areas\.library\.title/ });
+    expect(home.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(search.compareDocumentPosition(library) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText('overview.title')).not.toBeInTheDocument();
+  });
+
+  it('opens Search from its own nav item and marks only it as current', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: /^federation\.title/ }));
+    expect(useUiStore.getState().location).toEqual({ area: 'search' });
+    expect(screen.getByRole('button', { name: /^federation\.title/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^dashboard\.title/ })).not.toHaveAttribute('aria-current');
+  });
+
+  it('opens Statistics from Analysis and marks both as current', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: /areas\.analysis\.title/ }));
+    expect(useUiStore.getState().location).toEqual({ area: 'analysis' });
+    expect(screen.getByRole('button', { name: /areas\.analysis\.title/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /^dashboardStats\.title/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('opens Statistics from its item under Analysis', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: /^dashboardStats\.title/ }));
+    expect(useUiStore.getState().location).toEqual({ area: 'analysis', view: 'stats' });
+    expect(screen.getByRole('button', { name: /areas\.analysis\.title/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('places Library before Translations in the area navigation', () => {
@@ -99,19 +137,19 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useUiStore.getState().location).toEqual({ area: 'translations' });
   });
 
-  it('returns to the dashboard from the standalone dashboard nav item', () => {
+  it('returns home from the standalone Home nav item', () => {
     renderShell();
 
     fireEvent.click(screen.getByText('areas.translations.title'));
     fireEvent.click(screen.getByText('dashboard.title'));
-    expect(useUiStore.getState().location).toEqual({ area: 'dashboard' });
+    expect(useUiStore.getState().location).toEqual({ area: 'home' });
   });
 
   describe('with a translation open', () => {
     beforeEach(() => {
       useProjectStore.setState({ currentProjectId: 'p1' });
       useChunksStore.setState({ isProcessing: false });
-      useUiStore.setState({ location: { area: 'dashboard' } });
+      useUiStore.setState({ location: { area: 'home' } });
     });
 
     it('marks Translations as the current area, not the place the translation was opened from', () => {

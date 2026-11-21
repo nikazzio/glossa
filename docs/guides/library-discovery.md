@@ -5,8 +5,8 @@ title: Biblioteca e lettore IIIF
 # Biblioteca e lettore IIIF
 
 La Biblioteca contiene le fonti aggiunte al catalogo personale, i relativi
-metadati e i collegamenti ai workspace. La [ricerca](./source-search) si trova
-nella Dashboard. IIIF è il protocollo usato per descrivere e visualizzare molte
+metadati e i collegamenti ai workspace. La [ricerca](./source-search) ha una voce sua
+nella barra di sinistra, sotto Home. IIIF è il protocollo usato per descrivere e visualizzare molte
 delle riproduzioni digitali supportate: il manifesto contiene metadati, sequenza
 delle pagine e riferimenti alle immagini.
 

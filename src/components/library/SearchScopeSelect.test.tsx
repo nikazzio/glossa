@@ -1,15 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import '../../test/i18n-mock';
 import { SearchScopeSelect, allLibraries } from './SearchScopeSelect';
 import { RecognizedWorks } from './RecognizedWorks';
 import type { IIIFProvider } from '../../types';
 
-function provider(key: string, kind: IIIFProvider['kind'], supportsSearch = true): IIIFProvider {
+vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn(async () => {}) }));
+
+function provider(key: string, kind: IIIFProvider['kind'], supportsSearch = true, siteSearch = ''): IIIFProvider {
   return {
     key, label: key.toUpperCase(), aliases: [], placeholder: '', isEnabled: true, resolver: key,
     searchHandler: supportsSearch ? key : null, supportsDirectResolution: true, supportsSearch, kind,
-    availability: supportsSearch ? 'searchable' : 'directOnly', siteSearch: '', searchFields: [],
+    availability: supportsSearch ? 'searchable' : 'directOnly', siteSearch, searchFields: [],
   };
 }
 
@@ -26,7 +29,7 @@ describe('SearchScopeSelect', () => {
 
   it('mostra la scelta attuale e cambia fonte con una scelta sola', () => {
     const onChange = vi.fn();
-    render(<SearchScopeSelect providers={PROVIDERS} chosen={['gallica', 'mdz']} onChange={onChange} onCustomize={vi.fn()} />);
+    render(<SearchScopeSelect providers={PROVIDERS} chosen={['gallica', 'mdz']} query="" onChange={onChange} onCustomize={vi.fn()} />);
     const select = screen.getByRole('combobox', { name: 'federation.scope.label' });
 
     expect(select).toHaveValue('all');
@@ -36,10 +39,43 @@ describe('SearchScopeSelect', () => {
 
   it('la scelta personalizzata apre i criteri', () => {
     const onCustomize = vi.fn();
-    render(<SearchScopeSelect providers={PROVIDERS} chosen={['gallica']} onChange={vi.fn()} onCustomize={onCustomize} />);
+    render(<SearchScopeSelect providers={PROVIDERS} chosen={['gallica']} query="" onChange={vi.fn()} onCustomize={onCustomize} />);
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'custom' } });
     expect(onCustomize).toHaveBeenCalledOnce();
+  });
+});
+
+describe('SearchScopeSelect — libraries only on their website', () => {
+  const WITH_SITES = [
+    ...PROVIDERS,
+    provider('harvard', 'library', false, 'https://id.lib.harvard.edu/search?q={query}'),
+    provider('generic', 'library', false, ''),
+  ];
+
+  it('lists them in a separate group, without the ones lacking a site address', () => {
+    render(<SearchScopeSelect providers={WITH_SITES} chosen={['gallica', 'mdz']} query="" onChange={vi.fn()} onCustomize={vi.fn()} />);
+
+    const group = screen.getByRole('group', { name: 'federation.siteOnly' });
+    expect(group).toHaveTextContent('HARVARD');
+    expect(group).not.toHaveTextContent('GENERIC');
+    expect(group).not.toHaveTextContent('HEIDELBERG');
+  });
+
+  it('opens the website with the typed words and leaves the scope unchanged', () => {
+    const onChange = vi.fn();
+    render(<SearchScopeSelect providers={WITH_SITES} chosen={['gallica', 'mdz']} query="Beatus vir" onChange={onChange} onCustomize={vi.fn()} />);
+    const select = screen.getByRole('combobox', { name: 'federation.scope.label' });
+
+    fireEvent.change(select, { target: { value: 'site:harvard' } });
+
+    expect(openUrl).toHaveBeenCalledWith('https://id.lib.harvard.edu/search?q=Beatus%20vir');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(select).toHaveValue('all');
+  });
+
+  it('keeps them out of «all»', () => {
+    expect(allLibraries(WITH_SITES)).toEqual(['gallica', 'mdz']);
   });
 });
 

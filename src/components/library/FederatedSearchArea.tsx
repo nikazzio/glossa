@@ -13,7 +13,7 @@ import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { dashboardLocation } from '../../navigation/appLocation';
+import { searchLocation } from '../../navigation/appLocation';
 import type { IIIFProvider, SourceCard } from '../../types';
 import { formatDateTime } from '../../utils';
 import { RESULT_ORDERS, orderResults, type ResultOrder } from '../../utils/searchResultOrder';
@@ -59,7 +59,7 @@ interface OpenedWork {
  * i risultati la proposta di aprire direttamente l'opera quando quello che si è
  * scritto è un identificativo o un indirizzo.
  */
-export function FederatedSearchArea({ searchId }: { searchId?: string }) {
+export function FederatedSearchArea({ searchId, query }: { searchId?: string; query?: string }) {
   const { t } = useTranslation();
   const { runs, selected, pages, error, loading, refresh, hasMore, loadMore } = useFederatedSearch(searchId);
   const navigate = useUiStore((s) => s.navigate);
@@ -128,20 +128,38 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
       logger.warn('federation.action.failed', { searchId, code: SEARCH_ERRORS[code] ? code : 'command_failed' });
     } finally { setBusy(false); }
   };
-  const launch = (extension = false, override?: SearchCriteria) => void act(async () => {
+  const launch = (extension = false, override?: SearchCriteria, scope?: string[]) => void act(async () => {
     const criteria = extension && selected ? selected.criteria : override ?? draft.criteria;
     const providerKeys = extension && selected
       ? chosen.filter((key) => providers.some((p) => p.key === key && p.kind === 'aggregator') && !selected.providers.includes(key))
-      : chosen;
+      : scope ?? chosen;
     const request = { criteria, providers: providerKeys, derivedFromId: extension ? selected?.id ?? null : null };
     const signature = JSON.stringify(request);
     if (pending.current?.signature !== signature) pending.current = { signature, id: crypto.randomUUID() };
     const run = await createSearch({ ...request, id: pending.current.id });
     logger.info('federation.search.created', { searchId: run.id, providers: providerKeys.length, extension, derivedFromId: request.derivedFromId });
     pending.current = null;
-    navigate(dashboardLocation({ view: 'search', searchId: run.id }));
+    navigate(searchLocation({ searchId: run.id }));
     setTab('sources');
   });
+  // Le parole arrivate dalla casella della Home valgono come un invio, su tutte
+  // le biblioteche; un indirizzo resta nella casella con la proposta di aprirlo.
+  // Una volta usate escono dalla posizione: tornando qui non ripartono.
+  const handledQuery = useRef<string | null>(null);
+  useEffect(() => {
+    if (!query || providers.length === 0 || handledQuery.current === query) return;
+    handledQuery.current = query;
+    const criteria = { ...EMPTY_SEARCH, query };
+    draft.setCriteria(criteria);
+    if (isAddress(query)) {
+      navigate(searchLocation());
+      return;
+    }
+    const scope = allLibraries(providers);
+    draft.setProviders(scope);
+    launch(false, criteria, scope);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, providers]);
   const openRecognized = async (providerKey: string) => {
     const text = keywords;
     setOpening(providerKey);
@@ -171,7 +189,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     setKeywords('');
     draft.setCriteria(EMPTY_SEARCH);
     setTab('sources');
-    navigate(dashboardLocation({ view: 'search' }));
+    navigate(searchLocation());
   };
 
   const label = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
@@ -256,7 +274,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     <section className="flex min-h-96 min-w-0 flex-col lg:min-h-0">
       <form className={`flex ${HEADER_ROW_HEIGHT} shrink-0 items-center gap-2 border-b border-editorial-border px-3`}
         onSubmit={(event) => { event.preventDefault(); submit(); }}>
-        <SearchScopeSelect providers={providers} chosen={chosen} onChange={draft.setProviders}
+        <SearchScopeSelect providers={providers} chosen={chosen} query={keywords} onChange={draft.setProviders}
           onCustomize={() => setTab('criteria')} />
         <input value={keywords} onChange={(event) => setKeywords(event.target.value)}
           aria-label={t('federation.fields.query')} placeholder={t('federation.queryPlaceholder')}
@@ -292,9 +310,13 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
             {summary.unknown > 0 && <Hint label={t('federation.unknownHint')}>
               <span className="text-editorial-warning">{t('federation.unknownShort', { count: summary.unknown })}</span>
             </Hint>}
-            {failed.length > 0 && <Hint label={`${t('federation.failedHint')} — ${failed.map((execution) => label(execution.providerKey)).join(' · ')}`}>
-              <span className="text-editorial-danger">{t('federation.failedSources', { count: failed.length })}</span>
-            </Hint>}
+            {failed.length > 0 && <span className="flex items-center gap-1">
+              <Hint label={`${t('federation.failedHint')} — ${failed.map((execution) => label(execution.providerKey)).join(' · ')}`}>
+                <span className="text-editorial-danger">{t('federation.failedSources', { count: failed.length })}</span>
+              </Hint>
+              {/* Porta alle righe di quelle biblioteche, dove c'è il loro sito. */}
+              <IconButton size="xs" title={t('federation.showSources')} onClick={() => setTab('sources')}><Activity size={12} /></IconButton>
+            </span>}
           </span>
           <span className="ml-auto flex items-center gap-1" role="group" aria-label={t('federation.filterLabel')}>
             {providerFilter !== 'all' && <IconButton size="sm" tone="accent" title={t('federation.allSources')}
@@ -308,16 +330,14 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
           </span>
         </div>
         <div ref={scroll} className="min-h-0 flex-1 overflow-auto custom-scrollbar">
-          {/* Nessun risultato è il momento in cui serve uscire: le biblioteche
-              interrogate si riaprono sul loro sito, con le stesse parole. */}
-          {visible.length === 0 && <div className="flex flex-col items-center gap-3 py-2">
+          {/* Nessun risultato è il momento in cui serve uscire: il sito di ogni
+              biblioteca sta, con il suo nome, nella colonna Fonti. */}
+          {visible.length === 0 && <div className="flex flex-col items-center gap-1 py-2">
             <EmptyState icon={<Search size={20} />} message={t('federation.noVisible')} />
-            <div className="flex flex-wrap items-center justify-center gap-1">
-              {providers.filter((provider) => (providerFilter === 'all'
-                ? selected.providers.includes(provider.key)
-                : provider.key === providerFilter))
-                .map((provider) => <ProviderSiteLink key={provider.key} provider={provider}
-                  query={selected.criteria.query} />)}
+            <div className="flex items-center gap-1">
+              <p className="text-xs text-editorial-muted">{t('federation.tryProviderSites')}</p>
+              {tab !== 'sources' && <IconButton size="xs" title={t('federation.showSources')}
+                onClick={() => setTab('sources')}><Activity size={12} /></IconButton>}
             </div>
           </div>}
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
@@ -359,7 +379,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         {tab === 'history' && <div className="divide-y divide-editorial-border p-3">
           {runs.map((run) => <div key={run.id} className="flex flex-col py-2">
             <PopoverItem label={`${run.criteria.query || [run.criteria.title, run.criteria.author].filter(Boolean).join(' · ')} · ${t(`jobs.status.${searchStatus(run)}`)}`}
-              onSelect={() => { navigate(dashboardLocation({ view: 'search', searchId: run.id })); setTab('sources'); }} />
+              onSelect={() => { navigate(searchLocation({ searchId: run.id })); setTab('sources'); }} />
             <span className="px-3 text-xs text-editorial-muted">{formatDateTime(run.createdAt)} · {t('federation.selectedCount', { count: run.providers.length })}</span>
           </div>)}
           {hasMore && <IconButton title={t('dashboard.discovery.loadMore')} disabled={loading} onClick={loadMore}><ArrowDown size={16} /></IconButton>}

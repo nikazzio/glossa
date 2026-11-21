@@ -414,8 +414,8 @@ function LocationLabel({ data }: { data: ReturnType<typeof useStatusBarData> }) 
     );
   }
 
-  if (location.area === 'dashboard') {
-    return <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>;
+  if (location.area === 'home' || location.area === 'search') {
+    return <span className="truncate font-medium text-editorial-ink">{t(location.area === 'home' ? 'dashboard.title' : 'federation.title')}</span>;
   }
 
   if (location.area === 'workspace') {

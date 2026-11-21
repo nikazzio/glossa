@@ -49,7 +49,7 @@ describe('useStatusBarData', () => {
   beforeEach(() => {
     useProjectStore.setState({ currentProjectId: null, projects: [], pipelines: [], activePipelineId: null, saveState: 'idle' });
     useWorkspaceStore.setState({ activeWorkspace: null });
-    useUiStore.setState({ location: { area: 'dashboard' } });
+    useUiStore.setState({ location: { area: 'home' } });
     useChunksStore.setState({ chunks: [] });
     usePipelineStore.setState((s) => ({ runStatus: 'idle', config: { ...s.config, pipelineId: '' } }));
   });

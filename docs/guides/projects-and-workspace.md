@@ -96,9 +96,9 @@ istante dall’ultima modifica può perderla.
 
 ## Barra di sinistra
 
-La barra di sinistra raccoglie la navigazione: in alto la Dashboard con
-Panoramica e Ricerca, poi le aree nell’ordine del lavoro (Biblioteca,
-Trascrizioni, Traduzioni, Analisi) e infine i workspace, con il più per
+La barra di sinistra raccoglie la navigazione: in alto Home e Ricerca, poi le
+aree nell’ordine del lavoro (Biblioteca, Trascrizioni, Traduzioni, Analisi, con
+sotto la voce Statistiche) e infine i workspace, con il più per
 crearne uno. Ogni gruppo è separato da un filetto; la spiegazione di una voce
 compare passando il puntatore.
 
@@ -122,28 +122,29 @@ cautele, l'oro i lavori in corso.
 
 Finestre e menu condividono lo stesso fondo; pannelli, campi e righe evidenziate mantengono colori coerenti fra le schermate.
 
-## Dashboard
+## Home
 
-La Dashboard comprende una panoramica, le statistiche, la ricerca su più fonti e
-la ricerca singola o per identificativo. Solo la scheda visibile viene montata
-nell’interfaccia; i lavori già avviati sono gestiti separatamente dal backend.
+Glossa si apre sulla Home. In cima c'è la casella di ricerca: alla conferma si
+apre la [Ricerca](./source-search) con i risultati, che nella Home non
+compaiono. Le ricerche fatte si riaprono dalla scheda Ricerche della Ricerca.
 
-La panoramica mostra i lavori a metà con quanto manca, opere, trascrizioni e
+La Home mostra i lavori a metà con quanto manca, opere, trascrizioni e
 traduzioni recenti, elementi da controllare (anche i job falliti), lavori per
-stato, ricerche recenti e una riga con il lavoro del mese. L’apertura dei riquadri viene ricordata.
-Il filtro workspace si applica ai riepiloghi pertinenti; lavori e ricerche
-mantengono ambito globale. Se una sezione non può caricare i dati, mostra un
+stato e una riga con il lavoro del mese; il comando accanto apre le Statistiche. L’apertura dei riquadri viene ricordata.
+Il filtro workspace si applica ai riepiloghi pertinenti; i lavori mantengono
+ambito globale. Se una sezione non può caricare i dati, mostra un
 errore anziché un conteggio pari a zero.
 
 I riquadri si dispongono come serve: la maniglia a sinistra del titolo permette
 di trascinare un riquadro più in alto, più in basso o nell’altra colonna, e la
-disposizione scelta viene ricordata. A destra della panoramica sta l’elenco
+disposizione scelta viene ricordata. A destra della Home sta l’elenco
 completo dei jobs, diviso per giorno, in una colonna ridimensionabile e
 richiudibile.
 
-### Statistiche
+## Analisi: Statistiche
 
-In alto scegli il periodo (30 giorni, 6 mesi, tutto) e il workspace.
+Analisi apre le Statistiche; la stessa voce sta sotto Analisi nella barra di
+sinistra. In alto scegli il periodo (30 giorni, 6 mesi, tutto) e il workspace.
 
 - **Previsioni**: quante giornate di lavoro mancano per finire ogni lavoro, e
   per le traduzioni quanto costa finire.

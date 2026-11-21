@@ -11,14 +11,12 @@ import { summarizeSpend } from '../../utils/dashboardStats';
 import { formatUsd } from '../../utils/operationLogStats';
 import { listProjectsNeedingAttention, listRecentProjectsAllWorkspaces } from '../../services/projectService';
 import { useDashboardResource } from '../../hooks/useDashboardResource';
-import { useFederatedSearch } from '../../hooks/useFederatedSearch';
-import { searchStatus } from '../../services/federatedSearchService';
 import { isTerminal } from '../../services/jobsService';
 import { useJobsStore } from '../../stores/jobsStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { dashboardLocation, libraryLocation, transcriptionsLocation, translationsLocation, workspaceLocation } from '../../navigation/appLocation';
+import { analysisLocation, libraryLocation, searchLocation, transcriptionsLocation, translationsLocation, workspaceLocation } from '../../navigation/appLocation';
 import { formatDateTime } from '../../utils';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
@@ -37,7 +35,19 @@ const OVERVIEW_MIN = 420;
 const recentProjects = (id: string | null) => listRecentProjectsAllWorkspaces(5, id);
 const attentionProjects = (id: string | null) => listProjectsNeedingAttention(8, id);
 const monthSummary = (id: string | null) => loadMonthSummary(id);
-const RECENT_SEARCHES = 5;
+
+/** La porta d'ingresso alla ricerca: i risultati si aprono nella pagina Ricerca, mai qui. */
+function HomeSearchBox({ onSearch }: { onSearch: (query: string) => void }) {
+  const { t } = useTranslation();
+  const [text, setText] = useState('');
+  return <form className="flex min-w-0 flex-1 items-center gap-1"
+    onSubmit={(event) => { event.preventDefault(); if (text.trim()) onSearch(text.trim()); }}>
+    <IconButton type="submit" title={t('federation.launch')}><Search size={16} /></IconButton>
+    <input value={text} onChange={(event) => setText(event.target.value)}
+      aria-label={t('federation.fields.query')} placeholder={t('federation.queryPlaceholder')}
+      className="min-w-0 flex-1 bg-transparent px-2 py-2 font-display text-xl italic text-editorial-ink outline-none placeholder:text-editorial-muted/70 focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+  </form>;
+}
 
 export function AppDashboard() {
   const { t } = useTranslation();
@@ -64,9 +74,6 @@ export function AppDashboard() {
   const failures = useDashboardResource(failedJobsLoader, null, revision);
   const failedJobs = failures.data ?? 0;
   const monthSpend = month.data ? summarizeSpend(month.data.usage, pricing) : null;
-  // Il riquadro ne mostra cinque: chiederne cinquanta a ogni evento dei lavori
-  // sarebbe dieci volte il lavoro per lo stesso schermo.
-  const searches = useFederatedSearch(undefined, RECENT_SEARCHES);
   const columns = useUiStore((s) => s.dashboardSectionColumns);
   const setColumns = useUiStore((s) => s.setDashboardSectionColumns);
   const jobsWidth = useUiStore((s) => s.dashboardJobsWidth);
@@ -118,12 +125,12 @@ export function AppDashboard() {
   return <Group orientation="horizontal" className="flex h-full min-h-0 w-full min-w-0 flex-1" onLayoutChanged={persistJobsLayout}>
     <Panel id="dashboard-overview" minSize={OVERVIEW_MIN} className="flex min-w-0 flex-col">
     <main className="h-full min-h-0 overflow-y-auto bg-editorial-bg px-5 py-5 custom-scrollbar md:px-6">
-    <header className="flex flex-wrap items-center justify-end gap-3">
+    <header className="flex flex-wrap items-center justify-between gap-3">
+      <HomeSearchBox onSearch={(query) => navigate(searchLocation({ query }))} />
       <div className="flex items-center gap-2">
         <Select value={scope ?? ''} onChange={(value) => setScope(value || null)} ariaLabel={t('overview.scope')}
           options={[{ value: '', label: t('overview.global') }, ...workspaces.map((w) => ({ value: w.id, label: w.name }))]} />
-        <IconButton title={t('dashboard.refresh')} onClick={() => { setRevision((v) => v + 1); searches.refresh(); }}><RefreshCw size={16} /></IconButton>
-        <IconButton title={t('federation.launch')} onClick={() => navigate(dashboardLocation({ view: 'search' }))}><Search size={18} /></IconButton>
+        <IconButton title={t('dashboard.refresh')} onClick={() => setRevision((v) => v + 1)}><RefreshCw size={16} /></IconButton>
       </div>
     </header>
 
@@ -145,7 +152,7 @@ export function AppDashboard() {
           cost: monthSpend?.unpricedCalls ? t('overview.costUnavailable') : formatUsd(monthSpend?.total ?? 0),
         })}
       </p>
-      <IconButton size="sm" title={t('overview.openStats')} onClick={() => navigate(dashboardLocation({ view: 'stats' }))}><TrendingUp size={16} /></IconButton>
+      <IconButton size="sm" title={t('overview.openStats')} onClick={() => navigate(analysisLocation())}><TrendingUp size={16} /></IconButton>
     </div>}
 
     <DashboardBoard columns={columns} onColumnsChange={setColumns} sections={[
@@ -176,22 +183,6 @@ export function AppDashboard() {
           {(sources.data?.length ?? 0) === 0 && (projects.data?.length ?? 0) === 0 && (transcriptions.data?.length ?? 0) === 0 &&
             !sources.loading && !projects.loading && !transcriptions.loading && !sources.error && !projects.error && !transcriptions.error &&
             <EmptyState icon={<BookOpenText size={18} />} message={t('dashboard.resumeEmpty')} className={EMPTY_CLASSNAME} />}
-        </DashboardSection> },
-      { id: 'searches', node: <DashboardSection id="searches" icon={Search} label={t('federation.history')} hint={t('overview.searchGlobal')}>
-          {searches.error
-            ? <p role="alert" className="text-xs text-editorial-danger">{t('federation.readFailed')}</p>
-            : searches.loading && !searches.runs.length
-              ? <Spinner size={16} />
-              : searches.runs.length
-                ? <>
-                  {searches.runs.slice(0, RECENT_SEARCHES).map((run) => <DashboardRow key={run.id} title={run.criteria.query}
-                    detail={`${t('jobs.status.' + searchStatus(run))} · ${formatDateTime(run.createdAt)}`}
-                    label={t('federation.open')} onOpen={() => navigate(dashboardLocation({ view: 'search', searchId: run.id }))} />)}
-                  <div className="flex justify-end pt-1">
-                    <IconButton size="sm" title={t('federation.viewAll')} onClick={() => navigate(dashboardLocation({ view: 'search' }))}><ArrowRight size={16} /></IconButton>
-                  </div>
-                </>
-                : <EmptyState icon={<Search size={18} />} message={t('federation.empty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection> },
       { id: 'attention', node: <DashboardSection id="attention" icon={AlertTriangle} label={t('dashboard.attentionTitle')} hint={t('overview.attentionHint')}>
           {sectionState(failures)}

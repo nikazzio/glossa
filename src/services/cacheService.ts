@@ -104,8 +104,15 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
   // Le ricerche non sono immagini: non passano dalla corsia del visore.
   if (request.kind === 'search') return load();
 
-  // Una richiesta remota può finire nel deposito o in cache senza toccare la
-  // rete: si conta lo stesso, perché è comunque il tempo che l'utente aspetta.
+  // Quello che è già sul computer non prende posto in coda: i posti servono a
+  // chi deve andare in rete, e una miniatura locale non deve aspettare dietro
+  // richieste ferme verso una biblioteca in pausa.
+  const local = await localImage(request);
+  if (local) return local;
+  options.signal?.throwIfAborted();
+
+  // Da qui l'immagine non è sul computer, salvo che ci arrivi nel frattempo:
+  // si conta, perché è il tempo che l'utente aspetta.
   const priority = options.priority ?? 'normal';
   const host = request.kind === 'remote' ? request.url : (request.remoteUrl ?? '');
   useNetworkActivity.getState().queue(priority);
@@ -151,6 +158,17 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
     // `watched` non è mai partita e nessuno l'ha già tolto.
     if (!started) useNetworkActivity.getState().drop(priority);
     throw error;
+  }
+}
+
+/** L'immagine dal deposito o dalla memoria di lavoro, o `null` se va chiesta alla rete. */
+async function localImage(request: CacheRequest): Promise<Uint8Array | null> {
+  try {
+    return new Uint8Array(await invoke<ArrayBuffer>('local_cached_image', { request }));
+  } catch {
+    // Non è sul computer, o il deposito non si legge: decide la strada normale,
+    // che riprova il deposito e poi va in rete, e che un errore lo riporta.
+    return null;
   }
 }
 

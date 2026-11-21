@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { JobsPanel } from './JobsPanel';
 import { useJobsStore } from '../../stores/jobsStore';
 import type { Job } from '../../services/jobsService';
+import { useUiStore } from '../../stores/uiStore';
 
 vi.mock('../../services/jobsService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/jobsService')>();
@@ -331,5 +332,14 @@ describe('attesa per i limiti della biblioteca', () => {
     renderPanel([job({ status: 'running', message: 'Beatus', detail: 'non è json' })]);
 
     expect(screen.getByText('Beatus')).toBeInTheDocument();
+  });
+
+  it('apre la ricerca di un lavoro di ricerca nella pagina Ricerca', async () => {
+    useUiStore.setState({ location: { area: 'home' } });
+    renderPanel([job({ jobType: 'provider_search', config: JSON.stringify({ searchId: 's1' }) })]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'federation.open' }));
+
+    expect(useUiStore.getState().location).toEqual({ area: 'search', searchId: 's1' });
   });
 });

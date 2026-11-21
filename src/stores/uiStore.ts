@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DocumentLayoutPreference } from '../types';
-import { dashboardLocation, locationsEqual, type AppLocation } from '../navigation/appLocation';
+import { homeLocation, locationsEqual, type AppLocation } from '../navigation/appLocation';
 import type { LogFilterKey } from '../components/console/logAreas';
 import type { LogLevel } from '../services/appLogService';
 import type { LibraryGrouping } from '../utils/libraryGrouping';
@@ -425,7 +425,7 @@ export const useUiStore = create<UiState>()(
       libraryOpenedAt: {},
       librarySourceGroups: {},
       dashboardSectionColumns: {
-        left: ['progress', 'resume', 'searches'],
+        left: ['progress', 'resume'],
         right: ['attention', 'jobs'],
       },
       statsSectionColumns: {
@@ -436,7 +436,7 @@ export const useUiStore = create<UiState>()(
       dashboardJobsWidth: 380,
       dashboardJobsCollapsed: false,
       pendingAnnotationAnchor: null,
-      location: dashboardLocation(),
+      location: homeLocation(),
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
