@@ -1,0 +1,30 @@
+schema: spec-driven
+
+context: |
+  Language: it
+  All artifacts must be written in it.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Glossa è un'app desktop (Tauri v2, React, Rust, SQLite) per studiosi di testi
+  storici: Biblioteca → Trascrizioni → Traduzioni → Export, più Analisi.
+  Stack, comandi, invarianti e regole UI sono in CLAUDE.md: leggerlo, non copiarlo.
+
+  Beta privata: il numero di versione non misura la completezza. Finché non c'è
+  una distribuzione a utenti esterni, i cambi di schema si possono consolidare
+  nella baseline, solo su richiesta esplicita del maintainer e con backup dei dati.
+
+  Il maintainer non legge codice: proposte e specifiche descrivono comportamento
+  visibile (cosa vede, clicca, ottiene), non nomi di file o funzioni.
+
+rules:
+  proposal:
+    - Cita l'issue GitHub di origine, se esiste; l'issue resta breve, il dettaglio sta qui.
+    - Dichiara cosa resta fuori dal perimetro.
+    - Non decidere da soli forma, nomi, testi o layout dell'interfaccia; elencare le scelte aperte.
+  specs:
+    - Una specifica per area di prodotto (es. library, search, transcription, translation, prompts, corpus, backup, export, dashboard, database).
+    - Requisiti e scenari descrivono comportamento visibile e limiti reali, mai la storia dello sviluppo.
+  design:
+    - Rispetta gli invarianti di CLAUDE.md (ordine dei blocchi del prompt, migrazioni, corpus, lingue).
+  tasks:
+    - Includi l'aggiornamento della guida in-app e della documentazione pubblica quando cambia il comportamento visibile.
