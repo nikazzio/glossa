@@ -131,7 +131,9 @@ OCR, where you can also load one from the prompt library. To reuse a prompt in
 another document, save it to the library from the edit command, then load it
 there. The reset command brings the document back to the workspace prompt.
 
-The model receives the page image and the prompt, without the page number: the
+The model receives the page image and the prompt, nothing else: Glossa adds no
+instructions of its own, so the prompt decides the text format (line breaks,
+comments, page markers). The page number is not sent: the
 library's printed numbering rarely matches the position in the scan and would
 only confuse the reading.
 
@@ -169,8 +171,10 @@ Open the bottom panel and choose **Transcription log** — it only shows up
 here, inside a transcription document, mirroring the Translation log you see
 inside a project. Every reading leaves four rows: the start with provider and
 model, the image that was sent with its real size, weight and origin (downloaded book, cache or library), the full prompt that
-was sent (expandable row by row), and the outcome with duration, tokens,
-estimated cost and the number of the revision created. On top there are
+was sent (expandable row by row), and the outcome with duration, tokens sent
+(and how many came from the cache), tokens received, estimated cost and the
+number of the revision created. Each row states these items in words, on a
+single line. On top there are
 search, filters by row type and by level, and grouping by page.
 
 ## History and summary
@@ -190,10 +194,20 @@ cleanup. The current and verified versions cannot be deleted: the command stays 
 and its tooltip says why. Deleting a
 version removes the ability to restore its text.
 
-The **Summary** starts from the open page — number, the library's page label
-if any, status and saved versions — then the document: pages with text, word
-count, verified pages and progress, completed OCR readings, tokens and
-estimated cost.
+The **Summary** has three sections:
+
+- **open page:** number, the library's page label if any, status, saved
+  versions split between automatic reading and by hand; if the page was read
+  automatically, how many times with the time of the last one and the page cost;
+- **document:** transcribed and verified pages out of the total, progress, words
+  and characters;
+- **automatic reading:** completed readings and errors, pages read and how many
+  were read again, tokens sent with the share taken from the cache, tokens
+  received, estimated cost in total and per page read, average time per reading
+  and models used.
+
+The cost is an estimate from the model catalog's price list, with the discount
+for cached tokens where that price is known.
 
 ## Current limits
 

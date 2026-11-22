@@ -14,7 +14,9 @@ use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::llm::pipeline::resolve_provider;
 use crate::llm::prompts::build_ocr_prompt;
 use crate::llm::provider::LlmRequest;
-use crate::llm::types::{ImageAttachment, StructuredPrompt};
+use crate::llm::types::{
+    AnthropicConfig, GeminiCacheConfig, ImageAttachment, ProviderRuntimeConfig, StructuredPrompt,
+};
 use crate::ocr::log::{write_ocr_log, OcrLogEntry, OcrPhase};
 use crate::ocr::revisions::write_ocr_revision;
 
@@ -266,13 +268,14 @@ impl OcrJobHandler {
         )
         .await?;
 
+        let provider_options = ocr_provider_options();
         let request = LlmRequest {
             model: &page.model,
             structured: &structured,
             api_key: &api_key,
             json_mode: false,
             json_schema_strict: false,
-            provider_options: None,
+            provider_options: Some(&provider_options),
         };
 
         let client = match provider.http_client() {
@@ -511,6 +514,35 @@ impl Default for LogRow {
     }
 }
 
+/// Impostazioni di cache di ogni lettura OCR (#501). Anthropic: cache attiva
+/// con durata di 1 ora, perché fra una pagina e l'altra c'è il controllo a vista
+/// e possono passare 20-30 minuti; ogni lettura rinnova la durata gratis.
+/// OpenAI/DeepSeek non chiedono nulla: la chiave deriva dal blocco cacheable del
+/// prompt, quindi è per documento, come nella traduzione. Gemini: la cache
+/// esplicita va spenta in modo esplicito, perché senza opzioni il provider la
+/// attiva da sé sopra la soglia di token, e fa pagare la conservazione a ore;
+/// resta la cache implicita del servizio.
+/// L'indirizzo di Ollama passa da `resolve_provider`, non da qui.
+pub(crate) fn ocr_provider_options() -> ProviderRuntimeConfig {
+    ProviderRuntimeConfig {
+        ollama: None,
+        openai: None,
+        deepseek: None,
+        gemini: Some(GeminiCacheConfig {
+            explicit_caching: Some(false),
+            cache_ttl_seconds: None,
+            thinking_budget: None,
+            temperature: None,
+        }),
+        deepl: None,
+        anthropic: Some(AnthropicConfig {
+            temperature: None,
+            enable_caching: Some(true),
+            extended_cache_ttl: Some(true),
+        }),
+    }
+}
+
 /// Il prompt come lo vedrebbe il modello, per la riga di log: blocchi di
 /// sistema nell'ordine in cui partono, poi il messaggio utente. L'immagine non
 /// ci entra — nel log ne resta la riga con misura e peso.
@@ -524,6 +556,23 @@ fn readable_prompt(prompt: &StructuredPrompt) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ocr_calls_enable_the_one_hour_anthropic_cache_and_turn_off_gemini_explicit_cache() {
+        let options = ocr_provider_options();
+        let anthropic = options.anthropic.expect("anthropic options");
+        assert_eq!(anthropic.enable_caching, Some(true));
+        assert_eq!(anthropic.extended_cache_ttl, Some(true));
+        assert_eq!(anthropic.temperature, None);
+        assert!(options.openai.is_none());
+        assert!(options.deepseek.is_none());
+        let gemini = options.gemini.expect("gemini options");
+        assert_eq!(gemini.explicit_caching, Some(false));
+        assert_eq!(gemini.cache_ttl_seconds, None);
+        assert_eq!(gemini.thinking_budget, None);
+        assert_eq!(gemini.temperature, None);
+        assert!(options.ollama.is_none());
+    }
 
     #[test]
     fn a_rate_limit_is_retryable_and_a_bad_key_is_not() {

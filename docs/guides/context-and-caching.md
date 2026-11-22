@@ -49,14 +49,20 @@ modello; non sono deducibili dal solo nome della famiglia di modelli.
 
 ## Riconoscimento automatico della pagina (OCR)
 
-Lo stesso principio vale per la lettura automatica delle pagine di
-trascrizione: l'immagine della pagina e il suo identificativo stanno
-**sempre** nel messaggio utente, mai in un blocco di sistema. Persona e
-regole di trascrizione restano un blocco statico cacheable, identico per
-ogni pagina letta — lo stesso beneficio di cache descritto sopra per la
-traduzione si applica quindi a una sequenza di letture consecutive dello
-stesso documento, senza che l'immagine ne comprometta il prefisso
-riutilizzabile.
+Nella lettura automatica delle pagine di trascrizione l'unica istruzione è il
+prompt del documento: Glossa non aggiunge regole proprie. Il prompt è la parte
+tenuta in cache, uguale per tutte le pagine dello stesso documento; l'immagine
+della pagina sta **sempre** nel messaggio utente, fuori dalla cache, e si paga
+ogni volta al prezzo normale.
+
+- **Anthropic:** cache attiva con durata di 1 ora. Fra una pagina e l'altra c'è
+  il tempo del controllo a vista, e ogni lettura rinnova la durata.
+- **OpenAI:** la stessa cache della traduzione, con una chiave per documento.
+- **Gemini:** la cache implicita del servizio.
+
+La cache scatta solo sopra una lunghezza minima del prompt, diversa per servizio
+e modello: un prompt breve non viene messo in cache, senza errori. I token letti
+dalla cache compaiono nel Log trascrizione, nella riga di esito di ogni lettura.
 
 ## Configurazione e verifica
 
@@ -71,5 +77,12 @@ Un prefisso identico non garantisce una lettura dalla cache: dimensione,
 modello, scadenza e politiche del servizio possono influire. Usa l’anteprima
 del frammento per controllare i messaggi e la console per ispezionare le
 richieste eseguite.
+
+Il costo stimato addebita i token letti dalla cache al loro prezzo ridotto, dove
+il listino ufficiale è noto: OpenAI GPT-5.4 e GPT-5.6, modelli Anthropic e
+DeepSeek del catalogo. Per Gemini la stima non applica sconti. Per Anthropic il
+sovrapprezzo della scrittura in cache non entra nella stima, perché quei token
+non vengono registrati: il costo reale di una chiamata che scrive la cache è un
+po' più alto.
 
 La cache dei prompt è distinta dalla [cache di rete della Biblioteca](./storage-and-jobs).

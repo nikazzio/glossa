@@ -760,3 +760,55 @@ mod temperature_tests {
         assert!(!custom_endpoint("https://example.test".to_string()).supports_json_schema());
     }
 }
+
+#[cfg(test)]
+mod ocr_cache_key_tests {
+    use super::*;
+    use crate::llm::types::ImageAttachment;
+
+    /// Cache fields OpenAI receives for an OCR call with `document_prompt`.
+    fn ocr_cache_fields(document_prompt: &str) -> Value {
+        let structured = crate::llm::prompts::build_ocr_prompt(
+            document_prompt,
+            ImageAttachment {
+                bytes: vec![0xFF, 0xD8, 0xFF],
+                media_type: "image/jpeg".to_string(),
+            },
+        );
+        let options = crate::ocr::handler::ocr_provider_options();
+        let req = LlmRequest {
+            model: "gpt-5.6-terra",
+            structured: &structured,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: Some(&options),
+        };
+        let mut body = serde_json::json!({});
+        openai().apply_cache_fields(&req, &mut body);
+        body
+    }
+
+    #[test]
+    fn ocr_cache_key_is_stable_for_the_same_document_prompt() {
+        assert_eq!(
+            ocr_cache_fields("Prompt A")["prompt_cache_key"],
+            ocr_cache_fields("Prompt A")["prompt_cache_key"]
+        );
+    }
+
+    #[test]
+    fn ocr_cache_key_differs_between_document_prompts() {
+        assert_ne!(
+            ocr_cache_fields("Prompt A")["prompt_cache_key"],
+            ocr_cache_fields("Prompt B")["prompt_cache_key"]
+        );
+    }
+
+    #[test]
+    fn ocr_requests_send_no_retention_override() {
+        assert!(ocr_cache_fields("Prompt A")
+            .get("prompt_cache_retention")
+            .is_none());
+    }
+}

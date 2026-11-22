@@ -508,3 +508,31 @@ mod temperature_tests {
         assert_eq!(config["responseFormat"]["text"]["schema"]["type"], "object");
     }
 }
+
+#[cfg(test)]
+mod ocr_cache_tests {
+    use super::*;
+    use crate::llm::types::ImageAttachment;
+
+    #[test]
+    fn ocr_requests_never_create_an_explicit_gemini_cache() {
+        let long_prompt = "Transcribe the page faithfully. ".repeat(2_000);
+        let structured = crate::llm::prompts::build_ocr_prompt(
+            &long_prompt,
+            ImageAttachment {
+                bytes: vec![0xFF, 0xD8, 0xFF],
+                media_type: "image/jpeg".to_string(),
+            },
+        );
+        let options = crate::ocr::handler::ocr_provider_options();
+        let req = LlmRequest {
+            model: "gemini-2.5-flash",
+            structured: &structured,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: Some(&options),
+        };
+        assert!(!gemini_explicit_caching_enabled(&req));
+    }
+}

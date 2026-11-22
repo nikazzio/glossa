@@ -6,6 +6,7 @@ import {
   inPeriod,
   monthProjection,
   periodStart,
+  rowCost,
   summarizeModels,
   summarizeOcrPrecision,
   summarizeQuality,
@@ -107,4 +108,14 @@ describe('dashboard statistics', () => {
     expect(result[0]).toMatchObject({ calls: 0, attempts: 1, failures: 1, failureRate: 1 });
   });
 
+});
+
+describe('rowCost', () => {
+  it('discounts cached input when the OCR cost was not frozen at write time', () => {
+    const cost = rowCost(row({
+      scope: 'ocr', model: 'gpt-5.6-terra', cost_usd: null,
+      input_tokens: 4441, cached_input_tokens: 1930, output_tokens: 2738,
+    }), {});
+    expect(cost).toBeCloseTo(((4441 - 1930) * 2.5 + 1930 * 0.25 + 2738 * 15) / 1_000_000, 10);
+  });
 });

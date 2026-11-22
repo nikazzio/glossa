@@ -1254,16 +1254,34 @@
     },
     "summary": {
       "pagesWithText": "Transcribed pages",
-      "words": "Transcribed words",
       "verifiedPages": "Verified pages",
       "progress": "Progress",
       "ocr": "Automatic recognition",
-      "runs": "Completed readings",
+      "runs": "Readings",
       "loadFailed": "Could not load the summary",
       "documentTitle": "Document summary",
       "pageSection": "Page",
       "pageVersions": "Saved versions",
-      "retry": "Retry"
+      "retry": "Retry",
+      "wordsAndCharacters": "Words · characters",
+      "versionsSplit": "{{total}} ({{ocr}} automatic reading, {{manual}} by hand)",
+      "versionsSplitImported": "{{total}} ({{ocr}} automatic reading, {{manual}} by hand, {{imported}} imported)",
+      "pageReads": "Automatic readings",
+      "pageReadsLast_one": "{{count}} · at {{time}}",
+      "pageReadsLast_other": "{{count}} · last at {{time}}",
+      "pageCost": "Page cost",
+      "runsValue_one": "{{runs}} completed · {{errors}} error",
+      "runsValue_other": "{{runs}} completed · {{errors}} errors",
+      "pagesRead": "Pages read",
+      "pagesReadValue_one": "{{pages}} ({{rereads}} read again)",
+      "pagesReadValue_other": "{{pages}} ({{rereads}} read again)",
+      "tokensSent": "Tokens sent",
+      "tokensSentValue": "{{tokens}} · {{share}}% from cache",
+      "tokensReceived": "Tokens received",
+      "costValue": "≈ {{total}} · ≈ {{perPage}} per page",
+      "averageTime": "Average time",
+      "averageTimeValue": "{{time}} per reading",
+      "models": "Models"
     },
     "authorLabels": {
       "user": "Manual correction",
@@ -1296,7 +1314,9 @@
     "log": {
       "title": "Transcription log",
       "empty": "No reading yet.",
-      "cachedTokens": "{{count}} tokens from cache",
+      "sentTokens": "sent {{sent}} tokens",
+      "sentTokensCached": "sent {{sent}} tokens ({{cached}} from cache)",
+      "receivedTokens": "received {{received}}",
       "emptyFiltered": "No rows match these filters.",
       "unknownPage": "Page not recorded",
       "pageGroup": "Page {{page}}",
@@ -2472,11 +2492,11 @@
               "In the \"OCR\" tab, on the right, you can have the open page read by a connected AI model — the same mechanism already used for translation, with the providers and keys you already configured.",
               "The command stays disabled until the conditions are met: the page must belong to a digitization linked to the document, and you need a provider and a model that can read images, chosen for the document or inherited from the workspace settings. The reason a command is disabled is in its own tooltip.",
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
-              "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt.",
+              "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt. The prompt is the only instruction the model receives, together with the image: it decides line breaks, comments and page markers.",
               "After the prompt, the Image for OCR section shows the active choice beside the two selectors: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
               "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a gold label in the top row names the page being read.",
               "Reading is queued like a download: you find it in the jobs panel while it runs, and you can pause or cancel it the same way. A passing problem is retried on its own; a wrong key or an empty answer is not, because retrying would give the same answer. An empty answer usually means the model found no text on the page.",
-              "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens, estimated cost and the number of the revision created. On top there are search, filters by row type and by level, and grouping by page."
+              "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens sent (and how many came from the cache), tokens received, estimated cost and the number of the revision created. On top there are search, filters by row type and by level, and grouping by page."
             ]
           },
           {
@@ -2487,7 +2507,7 @@
               "The command on each version brings its text back as a new save, without overwriting earlier versions. Changing page changes the history shown, too.",
               "You can consolidate a version and give it an editable name: it appears in the upper section without duplicating the text. Remove the name to return it to ordinary history.",
               "You can delete an older version individually after confirmation, or clear the page's ordinary history. Cleanup keeps consolidated, current, and verified versions. The last two cannot be deleted, and the disabled command says why; deleting a version removes the ability to restore its text.",
-              "The Summary starts from the open page — number, the library's page label if any, status and saved versions — then the document: pages with text, word count, verified pages and progress, completed OCR readings, tokens and estimated cost."
+              "The Summary has three sections. Open page: number, the library's page label if any, status, versions split between automatic reading and by hand and, if it was read, how many readings, the time of the last one and the cost. Document: transcribed and verified pages, progress, words and characters. Automatic reading: completed readings and errors, pages read and read again, tokens sent with the share from the cache, tokens received, estimated cost in total and per page, average time and models used."
             ]
           }
         ]
@@ -2753,7 +2773,7 @@
             "paragraphs": [
               "Some services can reuse repeated request content through a cache. Savings depend on the service, model and actual reuse; they are not guaranteed.",
               "Anthropic caching is off by default. You can enable it in the pipeline and choose extended retention, considering how often you reuse the same instructions.",
-              "Statistics show tokens, cache usage and calculated costs when those data are available. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead.",
+              "Statistics show tokens, cache usage and calculated costs when those data are available. In the cost, tokens read from the cache count at their reduced price when the model's price list is known. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead.",
               "In the Tools column, under the commands, one line shows the next run estimate and what was spent on the open segment; a click opens the cost panel, with a per-stage table for each. Spent also counts model calls: a re-translated segment or a review loop adds calls, so they are not runs."
             ]
           }

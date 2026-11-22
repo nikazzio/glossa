@@ -51,7 +51,7 @@ export const OCR_IMAGE_EDGES = [1500, 2000, 2500, 3000] as const;
 export const DEFAULT_OCR_IMAGE_EDGE = 2000;
 
 // Derived from MODEL_CATALOG — edit catalog.ts to update prices
-export const MODEL_PRICING: Record<string, { input: number; output: number }> = Object.fromEntries(
+export const MODEL_PRICING: Record<string, { input: number; output: number; cachedInputRatio?: number }> = Object.fromEntries(
   MODEL_CATALOG
     .filter((e) => e.pricing)
     .map((e) => [`${e.provider}/${e.id}`, e.pricing!]),

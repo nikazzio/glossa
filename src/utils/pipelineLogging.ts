@@ -38,7 +38,13 @@ function usageFields(ref: ProviderRef, usage?: TokenUsage): UsageFields {
   const costUsd = isFree
     ? 0
     : costForEntry(
-        { provider: ref.provider, model: ref.model, inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens },
+        {
+          provider: ref.provider,
+          model: ref.model,
+          inputTokens: usage?.inputTokens,
+          outputTokens: usage?.outputTokens,
+          cachedInputTokens: usage?.cachedInputTokens,
+        },
         pricingOverrides,
       );
   return {

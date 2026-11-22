@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   aggregateEntries,
+  costForEntry,
+  sentInputTokens,
   formatCacheHitRate,
   formatDurationMs,
   formatUsd,
@@ -322,5 +324,52 @@ describe('formatting helpers', () => {
     expect(summary.scopeBreakdown).toHaveLength(1);
     expect(summary.scopeBreakdown[0]?.calls).toBe(2);
     expect(summary.total.totalInput).toBe(20);
+  });
+});
+
+describe('costForEntry with cached input', () => {
+  it('bills OpenAI cached tokens at the catalog ratio, out of the input total', () => {
+    const cost = costForEntry({
+      provider: 'openai', model: 'gpt-5.6-terra',
+      inputTokens: 4441, cachedInputTokens: 1930, outputTokens: 2738,
+    }, {});
+    const expected = ((4441 - 1930) * 2.5 + 1930 * 2.5 * 0.1 + 2738 * 15) / 1_000_000;
+    expect(cost).toBeCloseTo(expected, 10);
+  });
+
+  it('adds Anthropic cache reads on top of the input, which excludes them', () => {
+    const cost = costForEntry({
+      provider: 'anthropic', model: 'claude-sonnet-5',
+      inputTokens: 2500, cachedInputTokens: 2000, outputTokens: 100,
+    }, {});
+    const expected = (2500 * 3 + 2000 * 3 * 0.1 + 100 * 15) / 1_000_000;
+    expect(cost).toBeCloseTo(expected, 10);
+  });
+
+  it('applies no discount to a model without a known cached price', () => {
+    const cost = costForEntry({
+      provider: 'gemini', model: 'gemini-2.5-flash',
+      inputTokens: 1000, cachedInputTokens: 800, outputTokens: 0,
+    }, {});
+    const plain = costForEntry({ provider: 'gemini', model: 'gemini-2.5-flash', inputTokens: 1000, outputTokens: 0 }, {});
+    expect(cost).toBe(plain);
+  });
+
+  it('keeps the catalog ratio when the input price is overridden', () => {
+    const cost = costForEntry({
+      provider: 'openai', model: 'gpt-5.6-terra',
+      inputTokens: 1000, cachedInputTokens: 1000, outputTokens: 0,
+    }, { 'openai/gpt-5.6-terra': { input: 2, output: 12 } });
+    expect(cost).toBeCloseTo((1000 * 2 * 0.1) / 1_000_000, 10);
+  });
+});
+
+describe('sentInputTokens', () => {
+  it('adds Anthropic cache reads, which the input excludes', () => {
+    expect(sentInputTokens({ provider: 'anthropic', inputTokens: 500, cachedInputTokens: 2000 })).toBe(2500);
+  });
+
+  it('keeps the input of providers that already include cached tokens', () => {
+    expect(sentInputTokens({ provider: 'openai', inputTokens: 4441, cachedInputTokens: 1930 })).toBe(4441);
   });
 });

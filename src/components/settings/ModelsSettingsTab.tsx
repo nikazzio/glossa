@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DollarSign, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { MODEL_PROVIDER_ORDER, PROVIDER_LABELS } from '../../models/catalog';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import type { ModelProvider } from '../../types';
 import { ProviderLogo } from '../common';
@@ -12,15 +12,6 @@ import { PricingOverridesSection } from './PricingOverridesSection';
 import { ProviderModelsSection } from './ProviderModelsSection';
 import { SettingsSubTabs } from './SettingsSubTabs';
 
-const PROVIDER_LABELS: Record<ModelProvider, string> = {
-  gemini: 'Gemini',
-  openai: 'OpenAI',
-  anthropic: 'Anthropic',
-  deepseek: 'DeepSeek',
-  deepl: 'DeepL',
-  ollama: 'Ollama',
-  custom: 'Custom',
-};
 
 type ModelsSubTab = ModelProvider | 'pricing';
 

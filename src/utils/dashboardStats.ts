@@ -50,6 +50,7 @@ export function rowCost(row: UsageRow, pricing: Pricing): number | null {
     model: row.model ?? undefined,
     inputTokens: row.input_tokens ?? undefined,
     outputTokens: row.output_tokens ?? undefined,
+    cachedInputTokens: row.cached_input_tokens ?? undefined,
   }, pricing);
 }
 

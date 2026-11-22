@@ -3,7 +3,6 @@ import { contentHash, recordFact } from './provenanceService';
 import { logger } from '../utils/logger';
 import { DEFAULT_OCR_PROMPT } from '../constants';
 import type { ModelProvider, Workspace } from '../types';
-import { costForEntry, type Pricing } from '../utils/operationLogStats';
 
 /**
  * Il documento di trascrizione: contenuto per pagina/segmento, stato
@@ -270,55 +269,6 @@ export async function listRevisions(segmentId: string): Promise<TranscriptionRev
     `SELECT * FROM transcription_revisions WHERE segment_id = $1 ORDER BY revision_number DESC`,
     [segmentId],
   );
-}
-
-export interface TranscriptionSummary {
-  pagesWithText: number;
-  verifiedPages: number;
-  words: number;
-  ocrRuns: number;
-  inputTokens: number;
-  outputTokens: number;
-  costUsd: number | null;
-}
-
-/** Stato del documento, calcolato dalle ultime revisioni di ciascuna pagina. */
-export async function getTranscriptionSummary(documentId: string, pricing: Pricing): Promise<TranscriptionSummary> {
-  const pages = await select<{ text: string | null; approved_revision_id: string | null }>(
-    `SELECT r.text, s.approved_revision_id
-       FROM transcription_segments s
-       LEFT JOIN transcription_revisions r ON r.id = (
-         SELECT id FROM transcription_revisions
-          WHERE segment_id = s.id ORDER BY revision_number DESC LIMIT 1
-       )
-      WHERE s.document_id = $1`,
-    [documentId],
-  );
-  const usage = await select<{
-    provider: string | null; model: string | null;
-    input_tokens: number | null; output_tokens: number | null; cost_usd: number | null;
-  }>(
-    `SELECT provider, model, input_tokens, output_tokens, cost_usd
-       FROM operation_logs
-      WHERE transcription_document_id = $1 AND phase = 'end' AND level IN ('success', 'warn')`,
-    [documentId],
-  );
-  const textPages = pages.filter((page) => Boolean(page.text?.trim()));
-  const costs = usage.map((row) => row.cost_usd ?? costForEntry({
-    provider: row.provider ?? undefined,
-    model: row.model ?? undefined,
-    inputTokens: row.input_tokens ?? undefined,
-    outputTokens: row.output_tokens ?? undefined,
-  }, pricing));
-  return {
-    pagesWithText: textPages.length,
-    verifiedPages: textPages.filter((page) => page.approved_revision_id !== null).length,
-    words: textPages.reduce((total, page) => total + (page.text?.trim().match(/\S+/gu)?.length ?? 0), 0),
-    ocrRuns: usage.length,
-    inputTokens: usage.reduce((total, row) => total + (row.input_tokens ?? 0), 0),
-    outputTokens: usage.reduce((total, row) => total + (row.output_tokens ?? 0), 0),
-    costUsd: costs.some((cost) => cost === null) ? null : costs.reduce<number>((total, cost) => total + (cost ?? 0), 0),
-  };
 }
 
 async function insertRevision(
