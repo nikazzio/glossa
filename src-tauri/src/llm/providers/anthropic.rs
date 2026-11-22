@@ -526,6 +526,33 @@ mod tests {
     }
 
     #[test]
+    fn ocr_request_caches_the_document_prompt_for_one_hour_and_leaves_the_image_out() {
+        let structured = crate::llm::prompts::build_ocr_prompt(
+            "Document prompt",
+            crate::llm::types::ImageAttachment {
+                bytes: vec![0xFF, 0xD8, 0xFF],
+                media_type: "image/jpeg".to_string(),
+            },
+        );
+        let options = crate::ocr::handler::ocr_provider_options();
+        let req = LlmRequest {
+            model: "claude-test",
+            structured: &structured,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: Some(&options),
+        };
+        let system = build_anthropic_system(&req, false);
+        assert_eq!(system.as_array().map(Vec::len), Some(1));
+        assert_eq!(system[0]["text"], "Document prompt");
+        assert_eq!(
+            system[0]["cache_control"],
+            serde_json::json!({ "type": "ephemeral", "ttl": "1h" })
+        );
+    }
+
+    #[test]
     fn non_cacheable_blocks_never_get_cache_control_even_when_caching_enabled() {
         let req = request_with_system_and_anthropic_config(
             vec![PromptBlock {

@@ -1254,16 +1254,34 @@
     },
     "summary": {
       "pagesWithText": "Pagine trascritte",
-      "words": "Parole trascritte",
       "verifiedPages": "Pagine verificate",
       "progress": "Avanzamento",
       "ocr": "Riconoscimento automatico",
-      "runs": "Letture completate",
+      "runs": "Letture",
       "loadFailed": "Impossibile caricare il riepilogo",
       "documentTitle": "Riepilogo documento",
       "pageSection": "Pagina",
       "pageVersions": "Versioni salvate",
-      "retry": "Riprova"
+      "retry": "Riprova",
+      "wordsAndCharacters": "Parole · caratteri",
+      "versionsSplit": "{{total}} ({{ocr}} lettura automatica, {{manual}} a mano)",
+      "versionsSplitImported": "{{total}} ({{ocr}} lettura automatica, {{manual}} a mano, {{imported}} importate)",
+      "pageReads": "Letture automatiche",
+      "pageReadsLast_one": "{{count}} · alle {{time}}",
+      "pageReadsLast_other": "{{count}} · ultima alle {{time}}",
+      "pageCost": "Costo della pagina",
+      "runsValue_one": "{{runs}} riuscite · {{errors}} errore",
+      "runsValue_other": "{{runs}} riuscite · {{errors}} errori",
+      "pagesRead": "Pagine lette",
+      "pagesReadValue_one": "{{pages}} ({{rereads}} riletta)",
+      "pagesReadValue_other": "{{pages}} ({{rereads}} rilette)",
+      "tokensSent": "Token inviati",
+      "tokensSentValue": "{{tokens}} · {{share}}% dalla cache",
+      "tokensReceived": "Token ricevuti",
+      "costValue": "≈ {{total}} · ≈ {{perPage}} a pagina",
+      "averageTime": "Tempo medio",
+      "averageTimeValue": "{{time}} a lettura",
+      "models": "Modelli"
     },
     "authorLabels": {
       "user": "Correzione manuale",
@@ -1296,7 +1314,9 @@
     "log": {
       "title": "Log trascrizione",
       "empty": "Nessuna lettura ancora.",
-      "cachedTokens": "{{count}} token dalla cache",
+      "sentTokens": "inviati {{sent}} token",
+      "sentTokensCached": "inviati {{sent}} token ({{cached}} dalla cache)",
+      "receivedTokens": "ricevuti {{received}}",
       "emptyFiltered": "Nessuna riga con questi filtri.",
       "unknownPage": "Pagina non indicata",
       "pageGroup": "Pagina {{page}}",
@@ -2472,11 +2492,11 @@
               "Nella scheda \"OCR\", a destra, puoi far leggere il testo della pagina aperta a un modello di intelligenza artificiale collegato — lo stesso meccanismo già usato per la traduzione, con chiavi e fornitori già configurati.",
               "Il comando compare disattivato finché mancano le condizioni: la pagina deve appartenere a una digitalizzazione collegata al documento, e serve un fornitore e un modello che sappiano leggere le immagini, scelti per il documento o ereditati dalle impostazioni del workspace. Il motivo di un comando disattivato è nel suo stesso suggerimento.",
               "Il testo letto entra nello storico come una revisione normale, marcata \"Riconoscimento automatico\": non sovrascrive mai quello che c'è, resta modificabile come qualunque altra versione, e una correzione manuale successiva crea semplicemente la revisione dopo.",
-              "Il prompt che guida la lettura appartiene al documento: lo modifichi da una pagina qualsiasi e vale per tutte le sue pagine, non per gli altri documenti. Un documento nuovo parte dal prompt del workspace, scelto nelle impostazioni alla voce OCR, anche dalla libreria. Per riusarlo altrove salvalo nella libreria dal comando di modifica; il ripristino riporta il documento al prompt del workspace.",
+              "Il prompt che guida la lettura appartiene al documento: lo modifichi da una pagina qualsiasi e vale per tutte le sue pagine, non per gli altri documenti. Un documento nuovo parte dal prompt del workspace, scelto nelle impostazioni alla voce OCR, anche dalla libreria. Per riusarlo altrove salvalo nella libreria dal comando di modifica; il ripristino riporta il documento al prompt del workspace. Il prompt è l’unica istruzione che riceve il modello, insieme all’immagine: a capo, commenti e segni di pagina li decide lui.",
               "Dopo il prompt, la sezione «Immagine per l’OCR» mostra la scelta attiva accanto ai due selettori: ottimizzata (ridotta alla misura delle Impostazioni, scheda Trascrizioni, e ricompressa) o copia sul computer così com'è, la stessa del visore; se la copia manca parte l'ottimizzata. Si scelgono anche con le frecce della tastiera. La scelta di partenza sta nelle Impostazioni, qui vale per la sessione. Con il pannello chiuso il comando di lettura resta visibile.",
               "Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura, anche dopo che chiedi di annullare il lavoro, finché la lettura si ferma davvero. Il testo che stai ancora modificando su un'altra pagina non viene rimpiazzato quando il lavoro finisce; nella riga in alto una scritta color oro dice quale pagina è in lettura.",
               "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo. Un intoppo passeggero viene ritentato da solo; una chiave sbagliata o una risposta vuota no, perché riprovare darebbe la stessa risposta. Una risposta vuota di solito vuol dire che il modello non ha trovato testo sulla pagina.",
-              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura reale, peso e provenienza, prompt inviato per intero, esito con durata, token, costo stimato e numero della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
+              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura reale, peso e provenienza, prompt inviato per intero, esito con durata, token inviati (e quanti dalla cache), token ricevuti, costo stimato e numero della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
             ]
           },
           {
@@ -2487,7 +2507,7 @@
               "Il comando su ogni versione riporta il suo testo come nuovo salvataggio, senza sovrascrivere le versioni precedenti. Cambiando pagina, lo storico mostrato cambia con lei.",
               "Puoi consolidare una versione e darle un nome modificabile: compare nella sezione in alto senza duplicare il testo. Togliendo il nome torna nello storico ordinario.",
               "Puoi eliminare una vecchia versione singolarmente dopo conferma, oppure svuotare lo storico ordinario della pagina. La pulizia conserva le versioni consolidate, quella corrente e quella verificata. Queste ultime due non si possono eliminare, e il comando spento dice perché; eliminando una versione perdi la possibilità di ripristinarne il testo.",
-              "Il Riepilogo parte dalla pagina aperta — numero, etichetta della biblioteca se c'è, stato e versioni salvate — poi il documento: pagine con testo, parole, pagine verificate e avanzamento, letture OCR completate, token e costo stimato."
+              "Il Riepilogo ha tre sezioni. Pagina aperta: numero, etichetta della biblioteca se c'è, stato, versioni divise fra lettura automatica e mano e, se è stata letta, quante letture, l'ora dell'ultima e il costo. Documento: pagine trascritte e verificate, avanzamento, parole e caratteri. Lettura automatica: letture riuscite ed errori, pagine lette e rilette, token inviati con la quota dalla cache, token ricevuti, costo stimato totale e per pagina, tempo medio e modelli usati."
             ]
           }
         ]
@@ -2753,7 +2773,7 @@
             "paragraphs": [
               "Alcuni servizi possono riutilizzare parti ripetute delle richieste tramite una cache. Il risparmio dipende dal servizio, dal modello e dal riuso effettivo: non è garantito.",
               "La cache Anthropic è disattivata per impostazione predefinita. Puoi abilitarla nella pipeline e scegliere una durata estesa, valutando quanto spesso riusi le stesse istruzioni.",
-              "Le statistiche mostrano token, cache e costi calcolati quando questi dati sono disponibili. Un token è un’unità di testo usata dal modello, non necessariamente una parola. DeepL misura invece i caratteri fatturati.",
+              "Le statistiche mostrano token, cache e costi calcolati quando questi dati sono disponibili. Nel costo i token letti dalla cache valgono il loro prezzo ridotto, quando il listino del modello è noto. Un token è un’unità di testo usata dal modello, non necessariamente una parola. DeepL misura invece i caratteri fatturati.",
               "Nella colonna Strumenti, sotto i comandi, una riga riporta stima del prossimo lancio e speso sul frammento aperto; un clic apre il pannello dei costi, con una tabella per fase per ciascuno. Lo speso conta anche le chiamate al modello: un frammento ritradotto o un ciclo di revisione ne aggiungono, quindi non sono esecuzioni."
             ]
           }

@@ -711,8 +711,13 @@ alla bozza corrente. Una chiusura forzata può perdere il testo in attesa.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
 opera, con schede OCR (#220 — vedi sezione dedicata), Storico, Riepilogo e
-Metadati. Il Riepilogo usa le ultime revisioni di tutte le pagine e le righe
-di esito OCR del documento; segue il layout del riepilogo traduzioni.
+Metadati. Il Riepilogo (`transcriptionSummaryService.getTranscriptionSummary`)
+usa le ultime revisioni di tutte le pagine e tutte le righe di esito OCR del
+documento (`phase = 'end'`: `success` e `warn` sono letture pagate, `error` gli
+errori); le stesse righe filtrate per segmento danno i dati della pagina aperta,
+le revisioni passate allo Studio la divisione fra lettura automatica e mano.
+Pagine rilette = letture riuscite − segmenti distinti. Segue il layout del
+riepilogo traduzioni (`PanelSection`, `StatRow`).
 La scheda Metadati mostra i campi grezzi che il segmento porta oggi
 (posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
 finché non si decide una presentazione definitiva. Il log dei costi OCR vive
@@ -811,9 +816,16 @@ Anthropic blocco `type: "base64"`, OpenAI `image_url` con data-URL (sia
 Responses sia Chat Completions), Gemini `inline_data`, Ollama campo
 `images` (base64 nudo, senza prefisso data-URL). Nessuna immagine ⇒ stesso
 corpo di richiesta di prima, byte per byte — invariante coperto da test in
-ogni provider. `llm/prompts.rs::build_ocr_prompt` compone persona OCR
-(cacheable), prompt del documento (non cacheable) e messaggio utente con
-immagine + testo fisso (`OCR_USER_MESSAGE`). **Nessun numero di pagina al
+ogni provider. `llm/prompts.rs::build_ocr_prompt` compone un solo blocco di
+sistema, cacheable: il prompt in vigore così com'è, senza persona né istruzioni
+aggiunte da Glossa (#501), così che un metodo editoriale non venga contraddetto.
+La cache segue da lì: `ocr::handler::ocr_provider_options` attiva la cache
+Anthropic con durata di 1 ora (fra una pagina e l'altra c'è il controllo a vista,
+e ogni lettura rinnova la durata gratis); OpenAI/DeepSeek ricavano
+`prompt_cache_key` dal blocco, quindi una chiave per documento, come nella
+traduzione; Gemini resta sulla cache implicita del servizio.
+Il messaggio utente porta immagine + testo fisso e neutro (`OCR_USER_MESSAGE`:
+alcuni provider rifiutano un messaggio senza testo). **Nessun numero di pagina al
 modello**: l'etichetta del manifesto è la numerazione stampata della
 biblioteca («3» per la nona carta), non aiuta a trascrivere e confonde.
 
@@ -939,6 +951,18 @@ non conosce il listino prezzi (vive nel catalogo modelli, in TypeScript):
 `cost_usd` resta `NULL` e la console applica `costForEntry` in lettura, la
 stessa funzione dei riepiloghi di traduzione. Duplicare i prezzi in Rust
 significherebbe due listini da tenere allineati a mano.
+
+**Token in cache nel costo (#501).** `ModelEntry.pricing.cachedInputRatio`
+(facoltativo, solo dove il listino ufficiale è verificato; oggi OpenAI GPT-5.4
+nano e GPT-5.6, Anthropic e DeepSeek del catalogo, non Gemini) è il prezzo dei
+token letti dalla cache come frazione dell'input. `costForEntry` lo prende
+sempre dal catalogo, anche con un prezzo personalizzato. Semantica per servizio:
+OpenAI, DeepSeek e Gemini includono i token in cache in `input_tokens`,
+Anthropic no, quindi lì si sommano. Tutti i chiamanti passano
+`cachedInputTokens`: log della traduzione alla scrittura, statistiche, Riepilogo
+e log della trascrizione. Limite: i token di scrittura in cache di Anthropic
+(`cache_creation_input_tokens`) non sono registrati, quindi il loro sovrapprezzo
+non entra nella stima.
 Una scrittura del log fallita restituisce `Storage` al gestore: il lavoro non
 può risultare completato senza lasciare la riga di costo e di audit. Il
 dettaglio conserva fino a 500.000 byte, come il log TypeScript.
@@ -1401,8 +1425,7 @@ registrati e calcolato nel frontend.
   - *Spesa a fine mese*: spesa del mese / frazione di mese trascorsa, dal quarto
     giorno. Costo di una chiamata = `cost_usd` fissato alla scrittura, altrimenti
     `costForEntry` con il listino attuale; le chiamate senza prezzo noto escono
-    dai totali e si contano a parte. La cache si mostra come quota dell'input:
-    il listino non ha un prezzo per i token in cache.
+    dai totali e si contano a parte. La cache si mostra come quota dell'input.
 - Il periodo filtra in memoria lo storico delle chiamate, letto intero una volta
   (serve anche alle previsioni); memoria, lingue, glossari e calendario (sempre
   26 settimane) non dipendono dal periodo.

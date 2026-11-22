@@ -48,12 +48,20 @@ from a model family name alone.
 
 ## Automatic page reading (OCR)
 
-The same principle applies to automatic reading of transcription pages: the
-page image and its identifier always live in the user message, never in a
-system block. Persona and transcription rules stay a static, cacheable
-block, identical for every page read — the same caching benefit described
-above for translation applies to a sequence of consecutive readings of the
-same document, without the image ever breaking the reusable prefix.
+In automatic reading of transcription pages the document prompt is the only
+instruction: Glossa adds no rules of its own. The prompt is the cached part,
+identical for every page of the same document; the page image **always** lives
+in the user message, outside the cache, and is billed at the normal price each
+time.
+
+- **Anthropic:** caching on, with a 1-hour lifetime. Each page is checked by eye
+  before the next one, and every reading renews the lifetime.
+- **OpenAI:** the same cache as translation, with one key per document.
+- **Gemini:** the provider's implicit cache.
+
+Caching only starts above a minimum prompt length that differs by provider and
+model: a short prompt is simply not cached, with no error. Tokens read from the
+cache appear in the Transcription log, on the outcome row of each reading.
 
 ## Configuration and inspection
 
@@ -67,5 +75,12 @@ Statistics display usage data returned by providers. An identical prefix does
 not guarantee a cache hit: size, model, expiry and service policies may affect
 reuse. Use the segment preview to inspect messages and the console to review
 requests that have been executed.
+
+The estimated cost bills tokens read from the cache at their reduced price where
+the official price list is known: OpenAI GPT-5.4 and GPT-5.6, and the Anthropic
+and DeepSeek models in the catalog. For Gemini the estimate applies no discount.
+For Anthropic the cache-write surcharge is not part of the estimate, because
+those tokens are not recorded: the real cost of a call that writes the cache is
+slightly higher.
 
 Prompt caching is separate from the [Library’s network cache](./storage-and-jobs).

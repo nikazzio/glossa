@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { execute, select, runInTransaction } from './dbService';
 import {
   ensureSegment,
-  getTranscriptionSummary,
   deleteTranscriptionRevision,
   nameTranscriptionRevision,
   clearTranscriptionHistory,
@@ -217,33 +216,6 @@ describe('storico delle trascrizioni', () => {
     expect(query).toContain('ORDER BY revision_number DESC LIMIT 1');
     expect(query).toContain('approved_revision_id');
     expect(writeMatching('DELETE FROM transcription_revisions')?.params).toEqual(['seg1']);
-  });
-});
-
-describe('riepilogo della trascrizione', () => {
-  it('conta solo il testo corrente di ogni pagina e le letture OCR riuscite', async () => {
-    selectMock.mockReset()
-      .mockResolvedValueOnce([
-        { text: 'Una pagina scritta', approved_revision_id: 'r1' },
-        { text: 'Altre due parole qui', approved_revision_id: null },
-        { text: null, approved_revision_id: null },
-      ])
-      .mockResolvedValueOnce([
-        { provider: 'openai', model: 'model', input_tokens: 100, output_tokens: 20, cost_usd: 0.01 },
-        { provider: 'openai', model: 'model', input_tokens: 20, output_tokens: 10, cost_usd: 0.01 },
-      ]);
-
-    await expect(getTranscriptionSummary('td1', {})).resolves.toEqual({
-      pagesWithText: 2,
-      verifiedPages: 1,
-      words: 7,
-      ocrRuns: 2,
-      inputTokens: 120,
-      outputTokens: 30,
-      costUsd: 0.02,
-    });
-    expect(selectMock.mock.calls[0][0]).toContain('ORDER BY revision_number DESC LIMIT 1');
-    expect(selectMock.mock.calls[1][1]).toEqual(['td1']);
   });
 });
 

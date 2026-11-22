@@ -9,6 +9,7 @@ import { ConsoleChrome } from '../console/ConsoleChrome';
 import { ConsoleToolbar } from '../console/ConsoleToolbar';
 import { usePricingStore } from '../../stores/pricingStore';
 import { costForEntry, formatDurationMs, formatUsd } from '../../utils/operationLogStats';
+import { providerLabel } from '../../models/catalog';
 
 const LEVEL_COLOR: Record<string, string> = {
   error: 'text-terminal-error',
@@ -243,7 +244,7 @@ export function TranscriptionLogTab({
 
 /** Una riga: intestazione tecnica sopra, messaggio sotto, e — quando c'è — il
  *  testo lungo (il prompt inviato, l'errore esatto) aperto su richiesta. */
-function LogRow({
+export function LogRow({
   entry,
   pricingOverrides,
 }: {
@@ -257,30 +258,30 @@ function LogRow({
   const cost = entry.costUsd ?? costForEntry(entry, pricingOverrides);
   const hasTokens = entry.inputTokens != null || entry.outputTokens != null;
 
+  const cached = entry.cachedInputTokens ?? 0;
+  const facts = [
+    entry.provider ? `${providerLabel(entry.provider)}${entry.model ? ` ${entry.model}` : ''}` : null,
+    entry.durationMs != null ? formatDurationMs(entry.durationMs) : null,
+    hasTokens
+      ? t(cached > 0 ? 'transcription.log.sentTokensCached' : 'transcription.log.sentTokens', {
+          sent: (entry.inputTokens ?? 0).toLocaleString(i18n.language),
+          cached: cached.toLocaleString(i18n.language),
+        })
+      : null,
+    hasTokens
+      ? t('transcription.log.receivedTokens', { received: (entry.outputTokens ?? 0).toLocaleString(i18n.language) })
+      : null,
+    cost != null ? `≈ ${formatUsd(cost)}` : null,
+  ].filter((fact): fact is string => fact !== null);
+
   return (
     <div className="py-1">
       <div className="flex flex-wrap items-baseline gap-2 text-xs">
         <span className="select-none text-terminal-dim">$</span>
         <span className="tabular-nums text-terminal-secondary">{formatLogTime(entry.at, i18n.language)}</span>
-        {entry.provider && (
-          <span className="text-terminal-secondary">
-            {entry.provider}{entry.model ? `:${entry.model}` : ''}
-          </span>
+        {facts.length > 0 && (
+          <span className="tabular-nums text-terminal-muted">{facts.join(' · ')}</span>
         )}
-        {entry.durationMs != null && (
-          <span className="text-terminal-muted">{formatDurationMs(entry.durationMs)}</span>
-        )}
-        {hasTokens && (
-          <span className="text-terminal-muted tabular-nums">
-            {(entry.inputTokens ?? 0).toLocaleString()}→{(entry.outputTokens ?? 0).toLocaleString()}
-          </span>
-        )}
-        {entry.cachedInputTokens != null && entry.cachedInputTokens > 0 && (
-          <span className="text-terminal-muted">
-            {t('transcription.log.cachedTokens', { count: entry.cachedInputTokens })}
-          </span>
-        )}
-        {cost != null && <span className="text-terminal-muted">{formatUsd(cost)}</span>}
       </div>
       <p className={`mt-0.5 pl-4 leading-relaxed ${LEVEL_COLOR[entry.level] ?? 'text-terminal-ink'}`}>
         {entry.message}

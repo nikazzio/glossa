@@ -1451,3 +1451,22 @@ fn judge_response_parsed_from_raw_llm_output() {
         Some("Rephrase slightly")
     );
 }
+
+#[test]
+fn ocr_prompt_sends_only_the_document_prompt_as_one_cacheable_block() {
+    let document_prompt = "Transcribe as a minute transcription.\nKeep {COMMENT: ...} markers.";
+    let prompt = crate::llm::prompts::build_ocr_prompt(
+        document_prompt,
+        crate::llm::types::ImageAttachment {
+            bytes: vec![0xFF, 0xD8, 0xFF],
+            media_type: "image/jpeg".to_string(),
+        },
+    );
+
+    assert_eq!(prompt.system.len(), 1);
+    assert_eq!(prompt.system[0].text, document_prompt);
+    assert!(prompt.system[0].cacheable);
+    assert_eq!(prompt.user, "Transcribe the page in the attached image.");
+    assert_eq!(prompt.images.len(), 1);
+    assert_eq!(prompt.images[0].media_type, "image/jpeg");
+}

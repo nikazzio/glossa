@@ -132,7 +132,14 @@ export function costForEntry(usage: EntryUsage, pricingOverrides: Pricing): numb
   if (!pricing) return null;
   const input = usage.inputTokens ?? 0;
   const output = usage.outputTokens ?? 0;
-  return (input * pricing.input + output * pricing.output) / 1_000_000;
+  // Il rapporto viene sempre dal catalogo, anche con un prezzo personalizzato:
+  // è una regola del listino, non un prezzo. Anthropic esclude dall'input i
+  // token letti dalla cache; gli altri servizi li includono.
+  const ratio = MODEL_PRICING[key]?.cachedInputRatio;
+  const cached = ratio === undefined ? 0 : usage.cachedInputTokens ?? 0;
+  const fullPriceInput = usage.provider === 'anthropic' ? input : Math.max(input - cached, 0);
+  const inputCost = fullPriceInput * pricing.input + cached * pricing.input * (ratio ?? 0);
+  return (inputCost + output * pricing.output) / 1_000_000;
 }
 
 function emptyStats(): MutableStats {

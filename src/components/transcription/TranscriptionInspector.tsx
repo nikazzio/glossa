@@ -140,11 +140,12 @@ export function TranscriptionInspector({
       ) : activeTab === 'summary' ? (
         <TranscriptionSummaryTab
           documentId={document?.id ?? null}
+          segmentId={segment?.id ?? null}
           displayIndex={displayIndex}
           pageLabel={pageLabel}
           pageTotal={pageTotal}
           verified={verified}
-          revisionCount={revisions.length}
+          revisions={revisions}
         />
       ) : null}
     </InspectorShell>

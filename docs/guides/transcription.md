@@ -134,8 +134,9 @@ prompt. Per riusare un prompt in un altro documento salvalo nella libreria dal
 comando di modifica, poi caricalo di là. Il comando di ripristino riporta il
 documento al prompt del workspace.
 
-Al modello partono l'immagine della pagina e il prompt, senza il numero di
-pagina: la numerazione stampata dalla biblioteca raramente coincide con la
+Al modello partono l'immagine della pagina e il prompt, nient'altro: Glossa non
+aggiunge istruzioni proprie, quindi il formato del testo (a capo, commenti, segni
+di pagina) lo decide il prompt. Il numero di pagina non viene inviato: la numerazione stampata dalla biblioteca raramente coincide con la
 posizione nella scansione e confonderebbe solo la lettura.
 
 Dopo il prompt, la sezione **Immagine per l’OCR** mostra il nome della scelta
@@ -175,8 +176,9 @@ Apri il pannello in basso e scegli **Log trascrizione** — compare solo qui,
 dentro un documento di trascrizione, speculare al Log traduzione che vedi
 dentro un progetto. Ogni lettura lascia quattro righe: l'avvio con fornitore e
 modello, l'immagine inviata con misura reale, peso e provenienza (libro scaricato, cache o biblioteca), il prompt inviato per intero
-(apribile riga per riga), e l'esito con durata, token, costo stimato e numero
-della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per
+(apribile riga per riga), e l'esito con durata, token inviati (e quanti presi
+dalla cache), token ricevuti, costo stimato e numero della revisione creata. Ogni
+riga dice queste voci in parole, su una sola linea. In testa ci sono ricerca, filtri per tipo di riga e per
 livello, e il raggruppamento per pagina.
 
 ## Storico e riepilogo
@@ -199,10 +201,19 @@ la pulizia. La versione corrente e quella verificata non si possono eliminare: i
 resta spento e il suggerimento dice perché.
 L'eliminazione di una versione toglie la possibilità di ripristinarne il testo.
 
-Il **Riepilogo** parte dalla pagina aperta — numero, etichetta della
-biblioteca se c'è, stato e versioni salvate — e prosegue con il documento:
-pagine con testo, parole, pagine verificate e avanzamento, letture OCR
-completate, token e costo stimato.
+Il **Riepilogo** ha tre sezioni:
+
+- **pagina aperta:** numero, etichetta della biblioteca se c'è, stato, versioni
+  salvate divise fra lettura automatica e mano; se la pagina è stata letta
+  automaticamente, quante volte con l'ora dell'ultima e il costo della pagina;
+- **documento:** pagine trascritte e verificate sul totale, avanzamento, parole
+  e caratteri;
+- **lettura automatica:** letture riuscite ed errori, pagine lette e quante
+  rilette, token inviati con la quota presa dalla cache, token ricevuti, costo
+  stimato totale e per pagina letta, tempo medio per lettura e modelli usati.
+
+Il costo è una stima dal listino del catalogo modelli, con lo sconto dei token in
+cache dove il listino è noto.
 
 ## Limiti attuali
 
