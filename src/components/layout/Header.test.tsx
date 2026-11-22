@@ -24,10 +24,10 @@ describe('Header', () => {
     useChunksStore.setState({
       isProcessing: false,
     });
-    useUiStore.setState({ location: { area: 'dashboard' } });
+    useUiStore.setState({ location: { area: 'home' } });
   });
 
-  it('hides the workspace breadcrumb on the app dashboard', () => {
+  it('hides the workspace breadcrumb on Home', () => {
     useWorkspaceStore.setState({
       activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
       workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
@@ -36,6 +36,15 @@ describe('Header', () => {
     render(<Header />);
 
     expect(screen.queryByText('Scholars')).not.toBeInTheDocument();
+  });
+
+  it('shows Search in the breadcrumb and starts a new search from it', () => {
+    useUiStore.setState({ location: { area: 'search', searchId: 's1' } });
+
+    render(<Header />);
+    fireEvent.click(screen.getByText('federation.title'));
+
+    expect(useUiStore.getState().location).toEqual({ area: 'search' });
   });
 
   it('shows the translations area in the breadcrumb', () => {

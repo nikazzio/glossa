@@ -10,7 +10,7 @@ import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import {
   analysisLocation,
-  dashboardLocation,
+  searchLocation,
   isGlobalArea,
   libraryLocation,
   transcriptionsLocation,
@@ -98,17 +98,16 @@ export function Header() {
       ? 'translations'
       : null;
   const isGlobalAreaContext = globalArea !== null;
-  // La Dashboard ha tre schede: dentro una scheda il nome dell'area torna
-  // visibile e riporta alla panoramica, perché «Glossa // Ricerca federata»
-  // salterebbe il passaggio che c'è davvero.
-  const dashboardSection = location.area === 'dashboard' ? location.view : undefined;
+  // La Ricerca è una sezione a sé, fuori dalle aree: nel breadcrumb ha il
+  // suo nome e riporta a una ricerca nuova.
+  const isSearch = location.area === 'search';
   const contextLabel = globalArea
     ? t(GLOBAL_AREA_LABEL_KEYS[globalArea])
-    : dashboardSection
-      ? t('dashboard.title')
+    : isSearch
+      ? t('federation.title')
       : workspaceLabel;
   const showContextBreadcrumb = Boolean(
-    currentProjectId || location.area !== 'dashboard' || dashboardSection,
+    currentProjectId || location.area !== 'home',
   );
   // Aprendo un'opera della Biblioteca, il titolo resta in vista nel
   // breadcrumb: cambiando tab nella colonna informazioni non si perde il
@@ -124,11 +123,10 @@ export function Header() {
     location.area === 'transcriptions' && location.documentId && transcriptionDetail?.id === location.documentId
       ? transcriptionDetail.title
       : null;
-  const dashboardTabLabel = dashboardSection === 'search' ? t('federation.title') : null;
   const backToContextLabel = globalArea
     ? t(GLOBAL_AREA_BACK_KEYS[globalArea])
-    : dashboardSection
-      ? t('dashboard.navHint')
+    : isSearch
+      ? t('sidebar.backToSearch')
       : t('sidebar.backToWorkspace');
 
   /**
@@ -143,8 +141,8 @@ export function Header() {
       navigate(GLOBAL_AREA_LOCATIONS[globalArea]());
       return;
     }
-    if (dashboardSection) {
-      navigate(dashboardLocation());
+    if (isSearch) {
+      navigate(searchLocation());
       return;
     }
     if (projectWorkspace) navigate(workspaceLocation(projectWorkspace.id));
@@ -204,22 +202,6 @@ export function Header() {
                     </span>
                     <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
                       {currentProjectName}
-                    </span>
-                  </motion.span>
-                ) : dashboardTabLabel ? (
-                  <motion.span
-                    key="dashboard-section-segment"
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -12 }}
-                    transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
-                    className="flex min-w-0 items-baseline gap-2.5"
-                  >
-                    <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
-                      //
-                    </span>
-                    <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
-                      {dashboardTabLabel}
                     </span>
                   </motion.span>
                 ) : librarySourceTitle ? (

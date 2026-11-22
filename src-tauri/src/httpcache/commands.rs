@@ -316,21 +316,74 @@ pub async fn bytes_and_source_of(
     Ok((source, bytes))
 }
 
+/// L'immagine **solo se è già sul computer**: deposito o memoria di lavoro, mai
+/// la rete.
+///
+/// La finestra lo chiede prima di mettere un'immagine in coda: un posto della
+/// coda verso le biblioteche non va occupato da chi non deve uscire di casa.
+/// Senza, le miniature di un libro scaricato aspettavano dietro richieste
+/// ferme in raffreddamento verso un'altra biblioteca.
+#[tauri::command]
+pub async fn local_cached_image(
+    app: tauri::AppHandle,
+    request: CacheRequest,
+) -> Result<tauri::ipc::Response, String> {
+    match resolve_local_off_thread(&app, &request).await? {
+        Some((source, bytes)) => Ok(served(&app, &request, source, bytes)),
+        None => Err(NOT_LOCAL.to_string()),
+    }
+}
+
+/// `resolve_local` su un thread per il lavoro bloccante: legge file e, per una
+/// miniatura da ricavare, riduce una pagina intera. Fatto sul thread delle
+/// richieste fermerebbe tutte le altre in attesa.
+async fn resolve_local_off_thread(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+) -> Result<Option<(Source, Vec<u8>)>, String> {
+    let app = app.clone();
+    let request = request.clone();
+    tauri::async_runtime::spawn_blocking(move || resolve_local(&app, &request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+/// L'errore di chi rinuncia perché la biblioteca è in raffreddamento: lo stesso
+/// tipo di un rifiuto, che il visore sa già spiegare.
+fn paused_error(host: Option<&str>) -> String {
+    tag_network_error(crate::jobs::JobError::new(
+        crate::jobs::ErrorKind::Throttled,
+        format!("{} in pausa dopo un rifiuto", host.unwrap_or("biblioteca")),
+    ))
+}
+
+/// La risposta di `local_cached_image` quando l'immagine non è sul computer.
+pub const NOT_LOCAL: &str = "not_local";
+
+/// Deposito, cache, deposito a misura più grande: quello che si ha senza
+/// chiedere niente a nessuno.
+fn resolve_local(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+) -> Result<Option<(Source, Vec<u8>)>, String> {
+    if let Some(bytes) = from_vault_exact(app, request)? {
+        return Ok(Some((Source::Vault, bytes)));
+    }
+    // Prima della riduzione dal deposito: è lei che riempie la cache, e
+    // cercarla dopo significherebbe non rileggerla mai.
+    if let Some(bytes) = lookup(app, request) {
+        return Ok(Some((Source::Cache, bytes)));
+    }
+    Ok(from_vault_larger(app, request)?.map(|bytes| (Source::Vault, bytes)))
+}
+
 /// Deposito, cache, deposito a misura più grande, biblioteca: in quest'ordine.
 async fn resolve(
     app: &tauri::AppHandle,
     request: &CacheRequest,
 ) -> Result<(Source, Vec<u8>), String> {
-    if let Some(bytes) = from_vault_exact(app, request)? {
-        return Ok((Source::Vault, bytes));
-    }
-    // Prima della riduzione dal deposito: è lei che riempie la cache, e
-    // cercarla dopo significherebbe non rileggerla mai.
-    if let Some(bytes) = lookup(app, request) {
-        return Ok((Source::Cache, bytes));
-    }
-    if let Some(bytes) = from_vault_larger(app, request)? {
-        return Ok((Source::Vault, bytes));
+    if let Some(found) = resolve_local_off_thread(app, request).await? {
+        return Ok(found);
     }
 
     // Da qui in avanti si va a disturbare una biblioteca: una richiesta per
@@ -364,6 +417,17 @@ async fn resolve(
 
     let provider_key = request.provider_key().unwrap_or_default();
     let host = request.host();
+    // Una biblioteca in raffreddamento non risponde prima della scadenza, che
+    // può essere di dieci minuti: chi guarda lo sa subito, invece di tenere un
+    // posto in coda fino ad allora. Gli scaricamenti invece aspettano.
+    let courtesy = app.state::<Arc<Courtesy>>().inner().clone();
+    let paused = || {
+        host.as_deref()
+            .is_some_and(|host| courtesy.cooling_down(host))
+    };
+    if paused() {
+        return Err(paused_error(host.as_deref()));
+    }
     let read_profile = || {
         crate::storage_config::db_path(app)
             .and_then(|path| crate::db::open_connection(&path))
@@ -388,11 +452,11 @@ async fn resolve(
             )
         }
     };
-    let courtesy = app.state::<Arc<Courtesy>>().inner().clone();
-    let never_stops = || false;
+    // Lo stesso vale per chi è già in fila: se la pausa comincia mentre aspetta
+    // il turno, rinuncia e libera il posto invece di scontarla tutta.
     let waiting = AtomicBool::new(false);
     let signals = Signals {
-        stop: &never_stops,
+        stop: &paused,
         courtesy_wait: &waiting,
     };
     let fetched = fetch::fetch(
@@ -405,8 +469,14 @@ async fn resolve(
         &signals,
     )
     .await
-    .map_err(tag_network_error)?
-    .ok_or_else(|| "Richiesta interrotta.".to_string())?;
+    .map_err(tag_network_error)?;
+    let Some(fetched) = fetched else {
+        return Err(if paused() {
+            paused_error(host.as_deref())
+        } else {
+            "Richiesta interrotta.".to_string()
+        });
+    };
 
     // Prima si prova a tenerla per sempre: se quell'opera ha già una cartella
     // per questa misura, la pagina appena arrivata è una pagina del libro, non

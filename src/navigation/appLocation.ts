@@ -3,20 +3,22 @@
  * `docs-dev/PRODUCT_ARCHITECTURE_2_0.md` §6: posizione, workspace operativo
  * e filtro workspace sono tre concetti distinti, mai dedotti l'uno
  * dall'altro. Nessuna variante ammette un fallback implicito — il default è
- * sempre `dashboardLocation()`, mai un'area o un oggetto "a caso".
+ * sempre `homeLocation()`, mai un'area o un oggetto "a caso".
  */
 export type GlobalArea = 'library' | 'transcriptions' | 'translations' | 'analysis';
 
-/** Viste della Dashboard oltre alla Panoramica, che è quella senza nome. */
-export type DashboardView = 'search' | 'stats';
+/** Viste dell'area Analisi; assente = Statistiche. */
+export type AnalysisView = 'stats';
 
 export type AppLocation =
-  | { area: 'dashboard'; view?: DashboardView; searchId?: string }
+  | { area: 'home' }
+  /** `query`: parole o indirizzo da cercare all'arrivo, poi sostituite da `searchId`. */
+  | { area: 'search'; searchId?: string; query?: string }
   | { area: 'workspace'; workspaceId: string }
   | { area: 'library'; itemId?: string; workspaceFilter?: string }
   | { area: 'transcriptions'; documentId?: string; workspaceFilter?: string }
   | { area: 'translations'; projectId?: string; workspaceFilter?: string }
-  | { area: 'analysis'; workspaceFilter?: string };
+  | { area: 'analysis'; view?: AnalysisView; workspaceFilter?: string };
 
 export const GLOBAL_AREAS: readonly GlobalArea[] = [
   'library',
@@ -25,8 +27,12 @@ export const GLOBAL_AREAS: readonly GlobalArea[] = [
   'analysis',
 ];
 
-export function dashboardLocation(opts?: { view?: DashboardView; searchId?: string }): AppLocation {
-  return { area: 'dashboard', ...opts };
+export function homeLocation(): AppLocation {
+  return { area: 'home' };
+}
+
+export function searchLocation(opts?: { searchId?: string; query?: string }): AppLocation {
+  return { area: 'search', ...opts };
 }
 
 export function workspaceLocation(workspaceId: string): AppLocation {
@@ -45,7 +51,7 @@ export function translationsLocation(opts?: { projectId?: string; workspaceFilte
   return { area: 'translations', ...opts };
 }
 
-export function analysisLocation(opts?: { workspaceFilter?: string }): AppLocation {
+export function analysisLocation(opts?: { view?: AnalysisView; workspaceFilter?: string }): AppLocation {
   return { area: 'analysis', ...opts };
 }
 
@@ -59,7 +65,7 @@ export function getWorkspaceFilter(location: AppLocation): string | undefined {
 
 /**
  * Applica o rimuove (`workspaceFilter: null`) il filtro workspace su un'area
- * globale. No-op sulle posizioni che non ne hanno concetto (dashboard,
+ * globale. No-op sulle posizioni che non ne hanno concetto (home, ricerca,
  * workspace) — restituisce la stessa posizione invariata.
  */
 export function withWorkspaceFilter(location: AppLocation, workspaceFilter: string | null): AppLocation {

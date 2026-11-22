@@ -17,7 +17,7 @@ import { useProjectStore } from '../../../stores/projectStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { dashboardLocation, workspaceLocation, type AppLocation, type DashboardView, type GlobalArea } from '../../../navigation/appLocation';
+import { analysisLocation, workspaceLocation, type AnalysisView, type AppLocation, type GlobalArea } from '../../../navigation/appLocation';
 import type { Workspace } from '../../../types';
 import { AREA_INK_CLASSNAME, IconButton, type InkedArea } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
@@ -40,7 +40,7 @@ const AREA_ITEMS: ReadonlyArray<{ id: GlobalArea; icon: typeof BookOpenText; ena
 
 /**
  * Due misure di cerchietto, uguali a barra aperta e chiusa: le voci principali
- * e, più piccole, le viste della Dashboard.
+ * e, più piccole, le viste di Analisi.
  */
 const MAIN_CIRCLE = 'h-7 w-7';
 const MAIN_ICON = 14;
@@ -70,69 +70,75 @@ function useRailNavigation() {
   return { location, projectOpen, blocked, blockedReason: blocked ? t('document.reasonRunning') : null, go };
 }
 
-/** Dashboard: home dell'applicazione — sopra e fuori dalle aree del workspace. */
-function DashboardItem({ collapsed }: { collapsed: boolean }) {
+/** Home e Ricerca: voci singole, sopra e fuori dalle aree del workspace. */
+const TOP_ITEMS: ReadonlyArray<{ area: 'home' | 'search'; icon: LucideIcon; labelKey: string; hintKey: string }> = [
+  { area: 'home', icon: LayoutDashboard, labelKey: 'dashboard.title', hintKey: 'dashboard.navHint' },
+  { area: 'search', icon: Search, labelKey: 'federation.title', hintKey: 'federation.navHint' },
+];
+
+function TopItems({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
   const { location, projectOpen, blocked, blockedReason, go } = useRailNavigation();
-  const active = !projectOpen && location.area === 'dashboard';
 
   return (
-    <div className="px-2.5 pt-1">
-      <ShellNavItem
-        active={active}
-        disabled={blocked}
-        disabledReason={blockedReason}
-        collapsed={collapsed}
-        labelFont="display"
-        onClick={() => void go(dashboardLocation())}
-        ariaCurrent={active ? 'page' : undefined}
-        icon={
-          // Cerchietto sempre in tinta accent: la home dell'app spicca sulle voci di sezione.
-          <span
-            className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${MAIN_CIRCLE} ${
-              active
-                ? 'border-editorial-accent text-editorial-accent'
-                : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
-            }`}
-          >
-            <LayoutDashboard size={MAIN_ICON} />
-          </span>
-        }
-        label={t('dashboard.title')}
-        hint={t('dashboard.navHint')}
-      />
-      <DashboardViews collapsed={collapsed} />
+    <div className="space-y-0.5 px-2.5 pt-1">
+      {TOP_ITEMS.map(({ area, icon: Icon, labelKey, hintKey }) => {
+        const active = !projectOpen && location.area === area;
+        return (
+          <ShellNavItem
+            key={area}
+            active={active}
+            disabled={blocked}
+            disabledReason={blockedReason}
+            collapsed={collapsed}
+            labelFont="display"
+            onClick={() => void go({ area })}
+            ariaCurrent={active ? 'page' : undefined}
+            icon={
+              <span
+                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${MAIN_CIRCLE} ${
+                  active
+                    ? 'border-editorial-accent text-editorial-accent'
+                    : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
+                }`}
+              >
+                <Icon size={MAIN_ICON} />
+              </span>
+            }
+            label={t(labelKey)}
+            hint={t(hintKey)}
+          />
+        );
+      })}
     </div>
   );
 }
 
 /**
- * Le viste della Dashboard: panoramica, statistiche e ricerca. Stanno qui, sotto la voce a cui appartengono, invece di occupare
- * una riga di linguette dentro la pagina.
+ * Le viste di Analisi. Stanno qui, sotto la voce a cui appartengono, invece di
+ * occupare una riga di linguette dentro la pagina; senza vista vale la prima.
  */
-const DASHBOARD_VIEWS: { view?: DashboardView; labelKey: string; icon: LucideIcon }[] = [
-  { labelKey: 'overview.title', icon: LayoutDashboard },
+const ANALYSIS_VIEWS: { view: AnalysisView; labelKey: string; icon: LucideIcon }[] = [
   { view: 'stats', labelKey: 'dashboardStats.title', icon: TrendingUp },
-  { view: 'search', labelKey: 'federation.title', icon: Search },
 ];
 
-function DashboardViews({ collapsed }: { collapsed: boolean }) {
+function AnalysisViews({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
   const { location, projectOpen, blocked, blockedReason, go } = useRailNavigation();
-  const current = location.area === 'dashboard' ? location.view : undefined;
+  const current = location.area === 'analysis' ? location.view ?? ANALYSIS_VIEWS[0].view : undefined;
 
   return (
     <div className={collapsed ? 'mt-1 space-y-0.5' : 'mt-0.5 space-y-0.5 pl-4'}>
-      {DASHBOARD_VIEWS.map(({ view, labelKey, icon: Icon }) => {
-        const active = !projectOpen && location.area === 'dashboard' && current === view;
+      {ANALYSIS_VIEWS.map(({ view, labelKey, icon: Icon }) => {
+        const active = !projectOpen && current === view;
         return (
           <ShellNavItem
-            key={labelKey}
+            key={view}
             active={active}
             disabled={blocked}
             disabledReason={blockedReason}
             collapsed={collapsed}
-            onClick={() => void go(dashboardLocation(view ? { view } : undefined))}
+            onClick={() => void go(analysisLocation({ view }))}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
@@ -154,7 +160,7 @@ function DashboardViews({ collapsed }: { collapsed: boolean }) {
 }
 
 /**
- * Aree del workspace attivo. Radio con Dashboard e workspace: sempre
+ * Aree del workspace attivo. Radio con Home, Ricerca e workspace: sempre
  * esattamente una vista attiva, click sull'attiva = no-op, mai deselezione.
  */
 function AreaSection({ collapsed }: { collapsed: boolean }) {
@@ -166,32 +172,34 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
       {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => {
         const active = enabled && (projectOpen ? id === 'translations' : location.area === id);
         return (
-          <ShellNavItem
-            key={id}
-            active={active}
-            disabled={!enabled || blocked}
-            disabledReason={blockedReason}
-            collapsed={collapsed}
-            labelFont="display"
-            onClick={enabled ? () => void go({ area: id }) : undefined}
-            ariaCurrent={active ? 'page' : undefined}
-            icon={
-              <span
-                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${MAIN_CIRCLE} ${
-                  active
-                    ? 'border-editorial-accent text-editorial-accent'
-                    : enabled
-                      ? `border-editorial-border bg-editorial-textbox/30 hover:border-editorial-accent/30 hover:text-editorial-accent ${
-                        isInkedArea(id) ? AREA_INK_CLASSNAME[id] : 'text-editorial-muted'}`
-                      : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
-                }`}
-              >
-                <Icon size={MAIN_ICON} />
-              </span>
-            }
-            label={t(`areas.${id}.title`)}
-            hint={t(`areas.${id}.sidebarHint`)}
-          />
+          <div key={id}>
+            <ShellNavItem
+              active={active}
+              disabled={!enabled || blocked}
+              disabledReason={blockedReason}
+              collapsed={collapsed}
+              labelFont="display"
+              onClick={enabled ? () => void go({ area: id }) : undefined}
+              ariaCurrent={active ? 'page' : undefined}
+              icon={
+                <span
+                  className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${MAIN_CIRCLE} ${
+                    active
+                      ? 'border-editorial-accent text-editorial-accent'
+                      : enabled
+                        ? `border-editorial-border bg-editorial-textbox/30 hover:border-editorial-accent/30 hover:text-editorial-accent ${
+                          isInkedArea(id) ? AREA_INK_CLASSNAME[id] : 'text-editorial-muted'}`
+                        : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
+                  }`}
+                >
+                  <Icon size={MAIN_ICON} />
+                </span>
+              }
+              label={t(`areas.${id}.title`)}
+              hint={t(`areas.${id}.sidebarHint`)}
+            />
+            {id === 'analysis' && <AnalysisViews collapsed={collapsed} />}
+          </div>
         );
       })}
     </ShellNavSection>
@@ -307,7 +315,7 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
           )}
         </div>
         <nav aria-label={t('sidebar.navigation')} className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
-          <DashboardItem collapsed={collapsed} />
+          <TopItems collapsed={collapsed} />
           <AreaSection collapsed={collapsed} />
           <WorkspaceSection collapsed={collapsed} />
         </nav>

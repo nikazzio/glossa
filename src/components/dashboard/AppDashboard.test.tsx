@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppDashboard } from './AppDashboard';
@@ -11,7 +11,6 @@ vi.mock('../../services/dashboardService', () => ({dashboardCounts:mocks.counts,
 vi.mock('../../services/projectService', () => ({listRecentProjectsAllWorkspaces:mocks.projects,listProjectsNeedingAttention:mocks.attention}));
 vi.mock('../../services/workProgressService', () => ({loadWorkProgress:mocks.progress}));
 vi.mock('../../services/statsService', () => ({loadMonthSummary:mocks.month,loadFailedJobCount:mocks.failures}));
-vi.mock('../../hooks/useFederatedSearch', () => ({useFederatedSearch:() => ({runs:[],loading:false,error:null,refresh:vi.fn()})}));
 
 describe('Dashboard overview', () => {
   beforeEach(() => {
@@ -20,16 +19,45 @@ describe('Dashboard overview', () => {
     mocks.failures.mockResolvedValue(0);
     mocks.month.mockResolvedValue({pages:3,fragments:5,phrases:2,usage:[]});
     mocks.counts.mockResolvedValue({sources:12,transcriptions:3,projects:4,workspaces:2});
-    useUiStore.setState({location:{area:'dashboard'},dashboardSections:{}});
+    useUiStore.setState({location:{area:'home'},dashboardSections:{},dashboardSectionColumns:{left:['progress','resume'],right:['attention','jobs']}});
     useWorkspaceStore.setState({workspaces:[{id:'w',name:'Workspace'}] as never});
     useProjectStore.setState({openProjectInWorkspace:vi.fn().mockResolvedValue(undefined)});
   });
-  it('shows actual holdings and links search without rendering a search form', async () => {
+  it('shows actual holdings without a recent searches section', async () => {
     render(<AppDashboard />);
     expect(await screen.findByText('12')).toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button',{name:'federation.launch'}));
-    expect(useUiStore.getState().location).toMatchObject({area:'dashboard',view:'search'});
+    expect(screen.queryByText('federation.history')).not.toBeInTheDocument();
+  });
+  // Nel test le misure sono tutte zero e il bordo della colonna dei job si
+  // prende il focus a ogni clic: la casella si riempie e si conferma a mano.
+  const submitHomeBox = (text: string) => {
+    const box=screen.getByRole('textbox',{name:'federation.fields.query'});
+    fireEvent.change(box,{target:{value:text}});
+    fireEvent.submit(box.closest('form') as HTMLFormElement);
+  };
+  it('opens the Search page with the words typed in the Home box', async () => {
+    render(<AppDashboard />);
+    submitHomeBox('Divina commedia');
+    expect(useUiStore.getState().location).toEqual({area:'search',query:'Divina commedia'});
+  });
+  it('passes an address from the Home box to the Search page for recognition', async () => {
+    render(<AppDashboard />);
+    submitHomeBox('https://gallica.bnf.fr/ark:/12148/btv1b1');
+    expect(useUiStore.getState().location).toEqual({area:'search',query:'https://gallica.bnf.fr/ark:/12148/btv1b1'});
+  });
+  it('does nothing when the Home box is empty', async () => {
+    render(<AppDashboard />);
+    submitHomeBox('   ');
+    expect(useUiStore.getState().location).toEqual({area:'home'});
+  });
+  it('opens with the other sections in their saved order when a saved order still lists searches', async () => {
+    useUiStore.setState({dashboardSectionColumns:{left:['searches','resume','progress'],right:['attention','jobs']}});
+    render(<AppDashboard />);
+    await screen.findByText('overview.progressEmpty');
+    expect(screen.queryByText('federation.history')).not.toBeInTheDocument();
+    const resume=screen.getByText('dashboard.resumeTitle');
+    const progress=screen.getByText('overview.progressTitle');
+    expect(resume.compareDocumentPosition(progress) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
   it('opens a recent translation in its own workspace', async () => {
     mocks.projects.mockResolvedValue([{id:'p',name:'Dante',workspace_id:'w',workspace_name:'Workspace'}]);
@@ -66,7 +94,7 @@ describe('Dashboard overview', () => {
     render(<AppDashboard />);
     await screen.findByText('overview.thisMonth');
     await userEvent.click(screen.getByRole('button',{name:'overview.openStats'}));
-    expect(useUiStore.getState().location).toMatchObject({area:'dashboard',view:'stats'});
+    expect(useUiStore.getState().location).toEqual({area:'analysis'});
   });
   it('does not claim Resume is empty while transcriptions are loading or failed', async () => {
     let reject!: (error: Error) => void;

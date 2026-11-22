@@ -199,11 +199,11 @@ describe('uiStore uiFont preference', () => {
 
 describe('uiStore — location', () => {
   beforeEach(() => {
-    useUiStore.setState({ location: { area: 'dashboard' } });
+    useUiStore.setState({ location: { area: 'home' } });
   });
 
-  it('defaults to dashboard (never an empty selection)', () => {
-    expect(useUiStore.getState().location).toEqual({ area: 'dashboard' });
+  it('defaults to home (never an empty selection)', () => {
+    expect(useUiStore.getState().location).toEqual({ area: 'home' });
   });
 
   it('navigate switches to an area', () => {
@@ -211,10 +211,10 @@ describe('uiStore — location', () => {
     expect(useUiStore.getState().location).toEqual({ area: 'translations' });
   });
 
-  it('navigate returns to the dashboard', () => {
+  it('navigate returns to home', () => {
     useUiStore.getState().navigate({ area: 'translations' });
-    useUiStore.getState().navigate({ area: 'dashboard' });
-    expect(useUiStore.getState().location).toEqual({ area: 'dashboard' });
+    useUiStore.getState().navigate({ area: 'home' });
+    expect(useUiStore.getState().location).toEqual({ area: 'home' });
   });
 });
 

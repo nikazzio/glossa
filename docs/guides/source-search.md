@@ -4,14 +4,21 @@ title: Ricerca delle fonti
 
 # Ricerca delle fonti
 
-La Dashboard offre una sola schermata di **Ricerca**: una casella per cercare
-opere nelle biblioteche e per aprire direttamente un'opera di cui si conosce
+La **Ricerca** è una schermata sola: una casella per cercare opere nelle
+biblioteche e per aprire direttamente un'opera di cui si conosce
 l'identificativo o l'indirizzo. I risultati restano separati dal catalogo
 personale finché non vengono aggiunti alla Biblioteca.
 
 ## Cercare
 
-La ricerca si apre dalla barra a sinistra, sotto Dashboard.
+La ricerca ha una voce sua nella barra a sinistra, subito sotto Home. Si può
+partire anche dalla casella in cima alla Home: parole, identificativo o
+indirizzo, e alla conferma si apre la Ricerca. Parole e identificativi partono
+come ricerca su tutte le biblioteche, come premendo Invio nella Ricerca; se una
+biblioteca riconosce l'identificativo, sopra i risultati compare anche la
+proposta di aprire l'opera. Un indirizzo completo non si cerca: resta nella
+casella con la proposta di aprirla. I risultati compaiono solo nella Ricerca,
+mai nella Home.
 
 A sinistra della casella si sceglie **dove cercare**: tutte le biblioteche, una
 sola, oppure una scelta personalizzata. «Tutte» comprende le biblioteche che
@@ -37,8 +44,9 @@ risultati che si aggiungono entrano con una breve dissolvenza.
 L'avvio registra i criteri della ricerca. Ogni pagina di risultati di ciascuna
 fonte è un lavoro indipendente: una fonte lenta o in errore non impedisce alle
 altre di pubblicare risultati. La scheda **Fonti**, a destra, ha una riga per
-biblioteca con stato, numero di risultati arrivati, il comando «riprova» dopo
-un errore e il filtro per guardare solo quella fonte. Pause, ripartenze e
+biblioteca con stato, numero di risultati arrivati, il sito della biblioteca,
+il comando «riprova» dopo un errore e il filtro per guardare solo quella fonte.
+L'avviso «fonti non hanno risposto», sopra i risultati, porta a questa scheda. Pause, ripartenze e
 tentativi stanno nel pannello dei lavori. Le ricerche già fatte si riaprono
 dalla scheda **Ricerche**, che conserva criteri e risultati.
 
@@ -168,16 +176,29 @@ possono impedire una richiesta anche per una fonte supportata.
 
 ## Cercare sul sito della biblioteca
 
-Accanto a ogni biblioteca compare un comando che apre la sua pagina di ricerca
-nel browser, con le parole già scritte dove la biblioteca le accetta
+Un comando apre la pagina di ricerca della biblioteca nel browser, con le parole già scritte dove la biblioteca le accetta
 nell’indirizzo. Serve quando la ricerca interna non basta: quello che Glossa
 interroga è ciò che la biblioteca espone a un programma, che quasi mai coincide
 con tutto il suo catalogo. Si cerca sul loro sito, si copia l’indirizzo
 dell’opera e lo si incolla qui per aprirla.
 
-Il comando compare quando l’elenco dei risultati resta vuoto, quando si stanno
-guardando i risultati di una sola biblioteca, e nella scheda di un’opera che
-non porta con sé l’indirizzo della propria pagina.
+Il comando sta in ogni riga della scheda **Fonti**, in ogni stato, anche quando
+la biblioteca ha risposto. Compare anche sopra i risultati quando si guarda una
+sola biblioteca, e nella scheda di un’opera che non porta con sé l’indirizzo della propria pagina. Una
+biblioteca senza un indirizzo di ricerca noto non ha il comando. Quando
+l’elenco dei risultati resta vuoto, una riga sotto il messaggio rimanda alla
+scheda Fonti.
+
+### Biblioteche consultabili solo sul loro sito
+
+Alcune biblioteche Glossa non le sa interrogare, ma ne conosce il sito: oggi
+Heidelberg, Harvard, e-rara, e-manuscripta e Glasgow. Stanno in fondo al menu
+**dove cercare**, nel gruppo «Solo sul sito della biblioteca». Sceglierne una
+apre il suo sito nel browser con le parole scritte nella casella, se le
+accetta; Heidelberg apre la sua pagina di partenza. La scelta di dove cercare
+non cambia, in Glossa non parte nessuna ricerca, e queste biblioteche non fanno
+parte di «tutte». Trovata l'opera sul loro sito, se ne incolla l'indirizzo
+nella casella per aprirla.
 
 ## Disponibilità delle riproduzioni
 

@@ -244,7 +244,7 @@ solo**.
   ognuno con la sua identità — come i tab del documento).
 - `bodyScrolls` (default vero): falso quando il contenuto porta già il proprio
   contenitore scorrevole — per esempio una barra di filtri fissa sopra un elenco
-  lungo, come la colonna dei lavori in Panoramica. **Un solo contenitore che
+  lungo, come la colonna dei lavori nella Home. **Un solo contenitore che
   scorre per colonna**: due aree annidate dividono rotellina e tasti fra due
   destinazioni e nessuna delle due si comporta come ci si aspetta.
 - `beforeTabs`: blocco fisso fra intestazione e linguette, in vista con
@@ -441,7 +441,7 @@ Il consumo non si colora: il verde resta per scelta e stato attivo.
 
 ### Grafici
 
-I grafici stanno solo nella Dashboard (Panoramica e Statistiche), dentro i suoi
+I grafici stanno solo nella Home e nelle Statistiche di Analisi, dentro i loro
 riquadri, e sono scritti a mano con i token dell'app (`components/dashboard/charts`):
 nessuna libreria di grafici.
 
@@ -493,9 +493,13 @@ chi costruisce l'elenco, non una sorpresa del componente.
 L'intestazione del gruppo basta: niente simboli davanti ai nomi né frasi sotto
 la tendina che spiegano cosa sia un gruppo. Nella scelta di dove cercare i
 gruppi sono «Biblioteche» e «Raccolte», preceduti da «Tutte le biblioteche» e
-dalla scelta personalizzata. Le fonti che non cercano per parole non stanno in
-quella tendina: si aprono incollando identificativo o indirizzo nella stessa
-casella, e compaiono nei criteri avanzati in un gruppo a parte con il motivo al
+dalla scelta personalizzata, e seguiti da «Solo sul sito della biblioteca»: le
+biblioteche che Glossa non sa interrogare ma di cui conosce il sito. Una voce di
+quest'ultimo gruppo non è una scelta: apre il sito nel browser con le parole
+della casella e lascia la tendina com'era. Una fonte senza ricerca né sito
+(l'indirizzo IIIF diretto) non sta nella tendina: si apre incollando
+identificativo o indirizzo nella stessa casella. Nei criteri avanzati le fonti
+che non cercano per parole compaiono in un gruppo a parte con il motivo al
 passaggio del mouse.
 
 ### Elenchi di indirizzi
@@ -627,7 +631,7 @@ un'attesa, e la seconda volta è già di troppo.
 
 ### Riordino a trascinamento
 
-Dove l'ordine è una preferenza dell'utente (i riquadri della Panoramica), si
+Dove l'ordine è una preferenza dell'utente (i riquadri della Home e delle Statistiche), si
 trascina da una **maniglia** dedicata e non dall'intera intestazione: l'header
 porta già comandi, e un'intera superficie trascinabile trasforma ogni click
 mancato in uno spostamento. La maniglia arriva al riquadro tramite contesto
@@ -641,12 +645,13 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
 - Grip sempre visibile; stato hover, drag e focus riconoscibile.
 - Animazioni usano i token di motion condivisi.
 - Fly-out non coprono il controllo che li ha aperti e si chiudono con Escape.
-- Barra di sinistra (`WorkspaceRailNext`): solo navigazione (Dashboard con le
-  sue viste, aree nell'ordine del lavoro, workspace), gruppi aperti da un
+- Barra di sinistra (`WorkspaceRailNext`): solo navigazione (Home e Ricerca
+  come voci singole in cima, aree nell'ordine del lavoro con le viste di
+  Analisi sotto la sua voce, workspace), gruppi aperti da un
   filetto (`ShellNavSection`), una riga per voce con la spiegazione nel
   suggerimento. Voce scelta: velatura `bg-editorial-accent/6`, nome e
   cerchietto in accento, nessuna barretta. Due misure di cerchietto, uguali aperta e chiusa: voci
-  principali `h-7` icona 14, viste della Dashboard `h-5` icona 11. In fondo il
+  principali `h-7` icona 14, viste di Analisi `h-5` icona 11. In fondo il
   menu generale (`ShellNavFooter`): salva, risorse linguistiche, impostazioni,
   guida, lingua; in fila da aperta, in colonna da chiusa. Chiusa: restano le
   icone, niente titoli di gruppo; una voce porta alla pagina senza riaprire.

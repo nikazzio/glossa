@@ -15,6 +15,7 @@
       "printed": "Libri a stampa"
     },
     "title": "Ricerca",
+    "navHint": "Cerca nelle biblioteche",
     "catalog": "Catalogo",
     "criteria": "Criteri",
     "execution": "Fonti",
@@ -26,6 +27,7 @@
     "refresh": "Aggiorna",
     "library": "Biblioteche",
     "aggregator": "Raccolte",
+    "siteOnly": "Solo sul sito della biblioteca",
     "selectedCount": "{{count}} fonti selezionate",
     "draftHint": "I criteri modificati valgono per una nuova ricerca; non cambiano le esecuzioni già lanciate.",
     "dateHint": "Intervallo inclusivo. Dove si filtrano i risultati arrivati, le date per secolo o approssimate non bastano a decidere.",
@@ -34,6 +36,7 @@
     "readFailed": "Impossibile aggiornare le ricerche. I dati visibili possono non essere aggiornati.",
     "empty": "Scrivi le parole da cercare, oppure incolla un identificativo o un indirizzo per aprire direttamente l'opera.",
     "noVisible": "Nessun risultato per questi criteri.",
+    "tryProviderSites": "Cerca sul sito delle biblioteche dalla colonna Fonti",
     "retry": "Riprova",
     "pageCount": "Pagina {{page}} · {{count}} record acquisiti",
     "fields": {
@@ -60,7 +63,6 @@
     "remoteGroup": "Inviato ai cataloghi",
     "unavailableGroup_one": "{{count}} fonte non interrogabile per parole",
     "unavailableGroup_other": "{{count}} fonti non interrogabili per parole",
-    "viewAll": "Vedi tutte le ricerche",
     "copies": "{{count}} copie",
     "copies_one": "{{count}} copia",
     "failedSources_one": "{{count}} fonte non ha risposto",
@@ -79,6 +81,7 @@
     "unknownShort_other": "{{count}} non verificabili",
     "unknownHint": "Risultati che i filtri non possono confermare né escludere, perché il catalogo non dichiara quel dato o la data è approssimata.",
     "failedHint": "Queste fonti non hanno risposto: quello che elencano manca dai risultati.",
+    "showSources": "Mostra le fonti",
     "extendHint": "Cerca le stesse parole anche nelle raccolte selezionate che non erano incluse, in una ricerca collegata.",
     "onlyThisSource": "Mostra solo i risultati di questa fonte",
     "allSources": "Mostra i risultati di tutte le fonti",
@@ -115,17 +118,14 @@
     "workspaces": "Workspace",
     "scope": "Ambito",
     "global": "Tutti i workspace",
-    "subtitle": "Patrimonio e attività di Glossa",
-    "patrimony": "Patrimonio",
+    "patrimony": "Il tuo materiale",
     "openSource": "Apri opera",
     "openProject": "Apri traduzione",
     "openJobs": "Apri lavori",
     "jobsSummary": "Globali: {{active}} attivi · {{failed}} con errori",
-    "searchGlobal": "Ricerche e lavori sono globali, indipendenti dal filtro workspace. Le ricerche con più fonti non si sommano ai loro lavori.",
     "resumeHint": "Opere e progetti modificati recentemente, non necessariamente aperti per ultimi.",
     "attentionHint": "Frammenti da rivedere e lavori che richiedono intervento. I grafici contano i lavori, non il completamento delle opere.",
     "jobsHint": "Conta i lavori per stato, non il completamento delle opere. Lavori e ricerche restano globali, fuori dal filtro workspace.",
-    "title": "Panoramica",
     "thisMonth": "Questo mese",
     "costUnavailable": "Spesa non disponibile: prezzi mancanti",
     "monthSummary": "{{pages}} pagine · {{fragments}} frammenti · {{phrases}} frasi · {{cost}}",
@@ -181,6 +181,7 @@
     "backToLibrary": "Torna alla Biblioteca",
     "backToTranscriptions": "Torna alle Trascrizioni",
     "backToAnalysis": "Torna ad Analisi",
+    "backToSearch": "Nuova ricerca",
     "resize": "Ridimensiona la barra",
     "collapse": "Comprimi barra",
     "expand": "Espandi barra",
@@ -1886,9 +1887,7 @@
     },
     "analysis": {
       "title": "Analisi",
-      "sidebarHint": "Metriche e dataset",
-      "emptyMessage": "L'area Analisi non ha ancora contenuto.",
-      "emptyHint": "Arriverà con metriche, confronti e dataset."
+      "sidebarHint": "Metriche e dataset"
     }
   },
   "workspace": {
@@ -2001,8 +2000,8 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
-    "navHint": "Home dell'applicazione",
+    "title": "Home",
+    "navHint": "Il tuo materiale e il lavoro in corso",
     "loadFailed": "Caricamento della dashboard non riuscito",
     "discovery": {
       "loadMore": "Carica altri risultati",
@@ -2895,13 +2894,13 @@
           {
             "title": "Orientarsi nell’applicazione",
             "paragraphs": [
-              "La Dashboard mostra i lavori a metà con quanto manca, cosa riprendere, elementi da controllare, lavori in corso e il lavoro del mese. I lavori falliti restano visibili anche dopo 24 ore. Lo storico dei lavori si filtra per stato e tipo, inclusi download PDF e OCR, e si cerca per testo. La scheda Ricerca cerca fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
-              "Le Statistiche mostrano come procede il lavoro: previsioni, giorni di lavoro, spesa, modelli, qualità, precisione dell'OCR, glossari. In alto scegli il periodo e il workspace. Passa sul titolo di un riquadro per sapere cosa misura. Se i dati sono pochi, il riquadro lo dice invece di mostrare un numero. Le previsioni mostrano la stima centrale (mediana). Il costo per mille parole considera i frammenti completati nel periodo e tutte le loro chiamate. Con prezzi mancanti la spesa totale non è disponibile. I conflitti fra glossari riguardano la stessa coppia di lingue.",
+              "La Home è la pagina su cui si apre Glossa. In cima c'è la casella di ricerca: scrivi parole, un identificativo o un indirizzo e confermi, e si apre la pagina Ricerca con i risultati. Sotto trovi il tuo materiale, il lavoro del mese, i lavori a metà con quanto manca, cosa riprendere, gli elementi da controllare e i lavori in corso. I lavori falliti restano visibili anche dopo 24 ore. Lo storico dei lavori si filtra per stato e tipo, inclusi download PDF e OCR, e si cerca per testo.",
+              "Analisi apre le Statistiche, che mostrano come procede il lavoro: previsioni, giorni di lavoro, spesa, modelli, qualità, precisione dell'OCR, glossari. Ci arrivi anche dal comando accanto a «Questo mese», nella Home. In alto scegli il periodo e il workspace. Passa sul titolo di un riquadro per sapere cosa misura. Se i dati sono pochi, il riquadro lo dice invece di mostrare un numero. Le previsioni mostrano la stima centrale (mediana). Il costo per mille parole considera i frammenti completati nel periodo e tutte le loro chiamate. Con prezzi mancanti la spesa totale non è disponibile. I conflitti fra glossari riguardano la stessa coppia di lingue.",
               "La Biblioteca contiene le opere che hai aggiunto al catalogo. Traduzioni mostra i progetti di tutti i workspace. Aprendo un workspace trovi i progetti e le risorse che gli appartengono.",
-              "La barra di sinistra porta Dashboard, aree nell’ordine del lavoro e workspace; in fondo il menu generale: salva tutto, risorse linguistiche, impostazioni, guida e lingua. Chiusa, restano le icone e un clic porta alla pagina senza riaprirla.",
+              "La barra di sinistra porta in cima Home e Ricerca, poi le aree nell’ordine del lavoro (sotto Analisi la voce Statistiche) e i workspace; in fondo il menu generale: salva tutto, risorse linguistiche, impostazioni, guida e lingua. Chiusa, restano le icone e un clic porta alla pagina senza riaprirla.",
               "Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio: petrolio, seppia e indaco. Lo vedi nell'icona dell'area nella barra di sinistra, nel filetto sotto il titolo grande. I cataloghi e Analisi condividono lo stesso fondo; le pagine di testo e le anteprime mantengono una superficie dedicata alla lettura. I colori di stato non cambiano: il verde segna sempre ciò che è scelto o attivo.",
               "Passa il puntatore sui comandi a icona, oppure raggiungili con la tastiera, per leggerne la funzione. Le barre laterali si possono ridimensionare o richiudere.",
-              "I riquadri della Panoramica e delle Statistiche si spostano: prendi la maniglia a sinistra del titolo e trascina il riquadro più in alto, più in basso o nell'altra colonna. La disposizione resta come l'hai lasciata."
+              "I riquadri della Home e delle Statistiche si spostano: prendi la maniglia a sinistra del titolo e trascina il riquadro più in alto, più in basso o nell'altra colonna. La disposizione resta come l'hai lasciata."
             ]
           },
           {
@@ -2959,14 +2958,15 @@
       },
       "search": {
         "title": "Cercare fonti",
-        "intro": "Dalla Dashboard apri Ricerca: una casella sola per cercare opere nelle biblioteche o aprirne una di cui conosci l'identificativo. I risultati entrano in Biblioteca solo quando lo decidi.",
+        "intro": "Ricerca ha una voce sua nella barra di sinistra, subito sotto Home: una casella sola per cercare opere nelle biblioteche o aprirne una di cui conosci l'identificativo. Puoi partire anche dalla casella in cima alla Home. I risultati entrano in Biblioteca solo quando lo decidi.",
         "blocks": [
           {
             "title": "Cercare",
             "paragraphs": [],
             "steps": [
-              "Apri Ricerca dalla barra a sinistra, sotto Dashboard.",
+              "Apri Ricerca dalla barra a sinistra, sotto Home, oppure scrivi nella casella della Home: la ricerca parte su tutte le biblioteche.",
               "A sinistra della casella scegli dove cercare: tutte le biblioteche, una sola, oppure una scelta personalizzata che fai nei criteri avanzati.",
+              "In fondo al menu «dove cercare», il gruppo «Solo sul sito della biblioteca» elenca le biblioteche che Glossa non sa interrogare (oggi Heidelberg, Harvard, e-rara, e-manuscripta e Glasgow). Sceglierne una apre il suo sito nel browser con le parole scritte nella casella, quando il sito le accetta; altrimenti la sua pagina di partenza. La scelta di dove cercare non cambia e in Glossa non parte nessuna ricerca.",
               "Scrivi le parole e avvia con il comando accanto. Per restringere apri i criteri avanzati, prima scheda della colonna di destra: titolo, autore, tipografo, materiale, anni. Le raccolte come Europeana si aggiungono di proposito; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
               "I risultati compaiono man mano che le fonti rispondono. Sopra l'elenco scegli l'ordine: per pertinenza, anno, autore o titolo. Quando manca il dato per decidere su un criterio, il risultato resta in elenco segnato «dati incompleti».",
               "Le parole cercate sono in grassetto e nel colore d'accento dove compaiono, nella riga e nei dati della scheda aperta. Un'icona accanto alla riga segna i risultati le cui parole non sono nella scheda: su Gallica, trovate solo nel testo delle pagine. «Frase esatta», nei criteri avanzati, cerca le parole in fila dove la biblioteca lo sa fare. Library of Congress e Biblioteca di Scozia non fanno parte di «tutte»: si scelgono a mano nei criteri avanzati.",
@@ -2988,14 +2988,14 @@
             "paragraphs": [
               "Scrivi o incolla nella stessa casella l'identificativo di un'opera o il suo indirizzo. Se una biblioteca lo riconosce, sopra i risultati compare la riga «Apri su …»: premi il comando accanto e l'opera si apre, pronta da aggiungere alla Biblioteca.",
               "Un indirizzo completo si apre anche con Invio. Un manifesto IIIF di un'istituzione non elencata si apre allo stesso modo, incollandone l'indirizzo.",
-              "Quando l'elenco resta vuoto, o guardi i risultati di una sola fonte, compare il comando che apre la ricerca della biblioteca nel browser con le stesse parole. Quello che Glossa interroga è ciò che la biblioteca offre a un programma, quasi mai tutto il suo catalogo: nel dubbio cerca sul loro sito, copia l'indirizzo dell'opera e incollalo qui."
+              "Il comando che apre la ricerca della biblioteca nel browser, con le stesse parole, sta in ogni riga della scheda Fonti, anche quando la biblioteca ha risposto. Lo trovi anche sopra i risultati quando guardi una sola fonte; quando l'elenco resta vuoto, una riga rimanda alla scheda Fonti. Quello che Glossa interroga è ciò che la biblioteca offre a un programma, quasi mai tutto il suo catalogo: nel dubbio cerca sul loro sito, copia l'indirizzo dell'opera e incollalo qui."
             ]
           },
           {
             "title": "Fonti, storico e salvataggio",
             "paragraphs": [
-              "La scheda Fonti, a destra, ha una riga per biblioteca: stato, quanti risultati sono arrivati, «riprova» dopo un errore e il filtro per guardare solo quella fonte.",
-              "Lo storico delle ricerche vive nella scheda accanto: da lì riapri una ricerca precedente con i suoi criteri e i risultati.",
+              "La scheda Fonti, a destra, ha una riga per biblioteca: stato, quanti risultati sono arrivati, il sito della biblioteca, «riprova» dopo un errore e il filtro per guardare solo quella fonte. L'avviso «fonti non hanno risposto», sopra i risultati, porta a questa scheda.",
+              "Lo storico delle ricerche vive nella scheda Ricerche, accanto: da lì riapri una ricerca precedente con i suoi criteri e i risultati.",
               "Aggiungi alla Biblioteca salva la scheda. Aggiungi a un workspace salva anche il collegamento al workspace scelto. Lo stesso manifesto non viene duplicato. Estendi alle raccolte avvia una ricerca collegata sulle sole raccolte nuove selezionate.",
               "Puoi cambiare schermata mentre la ricerca prosegue. Chiudendo Glossa si ferma; lo storico resta disponibile alla riapertura."
             ]
@@ -3087,7 +3087,7 @@
             "title": "Rivedere ed eliminare i jobs passati",
             "paragraphs": [
               "Il pannello in basso mostra i jobs in corso, quelli in attesa e quelli conclusi di recente: è la vista di adesso. Il comando con il cestino nella sua intestazione toglie dalla vista le righe concluse, così i nuovi jobs si leggono senza rumore; non cancella niente.",
-              "L'elenco completo sta nella colonna a destra della Panoramica, e si può stringere, allargare o chiudere con il comando in alto a sinistra della colonna. Ogni riga si apre come nel pannello in basso, con fase, tentativi, orari ed errore.",
+              "L'elenco completo sta nella colonna a destra della Home, e si può stringere, allargare o chiudere con il comando in alto a sinistra della colonna. Ogni riga si apre come nel pannello in basso, con fase, tentativi, orari ed errore.",
               "In cima alla colonna ci sono la ricerca a testo libero e due file di comandi: la prima sceglie come è andato il job (in corso, riuscito, fallito, interrotto), la seconda il tipo di lavoro. Si possono accendere più scelte insieme.",
               "Il cestino in cima alla colonna elimina i jobs conclusi che i filtri stanno mostrando: con i filtri spenti sono tutti, con un filtro acceso solo quelli. Nessun job viene eliminato da solo. Fanno eccezione i jobs di una ricerca, che restano finché resta la ricerca a cui appartengono, altrimenti il suo storico perderebbe pezzi."
             ]
@@ -3095,7 +3095,7 @@
           {
             "title": "Scegliere la risoluzione",
             "paragraphs": [
-              "In Impostazioni → Biblioteca → Immagini scegli dimensioni delle pagine e delle miniature. La scelta fatta sulla singola opera prevale sul valore generale.",
+              "In Impostazioni → Biblioteca → Immagini scegli dimensioni delle pagine e delle miniature. La scelta fatta sulla singola opera prevale sul valore generale. Pagine e miniature già sul computer si vedono subito anche quando la biblioteca non risponde; se la biblioteca è in pausa dopo un rifiuto, il visore lo dice subito invece di attendere.",
               "La dimensione indica il lato lungo desiderato. Secondo il servizio e la modalità scelta, l’immagine ricevuta può essere più grande o più piccola. Risoluzione massima richiede il dettaglio disponibile completo.",
               "I file già scaricati non cambiano. Per ottenere una versione più piccola senza riscaricare, usa la riduzione delle immagini: crea una nuova copia e conserva l’originale. Elimina una delle versioni solo dopo aver controllato il risultato."
             ]

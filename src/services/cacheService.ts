@@ -104,8 +104,15 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
   // Le ricerche non sono immagini: non passano dalla corsia del visore.
   if (request.kind === 'search') return load();
 
-  // Una richiesta remota può finire nel deposito o in cache senza toccare la
-  // rete: si conta lo stesso, perché è comunque il tempo che l'utente aspetta.
+  // Quello che è già sul computer non prende posto in coda: i posti servono a
+  // chi deve andare in rete, e una miniatura locale non deve aspettare dietro
+  // richieste ferme verso una biblioteca in pausa.
+  const local = await localImage(request, options);
+  if (local) return local;
+  options.signal?.throwIfAborted();
+
+  // Da qui l'immagine non è sul computer, salvo che ci arrivi nel frattempo:
+  // si conta, perché è il tempo che l'utente aspetta.
   const priority = options.priority ?? 'normal';
   const host = request.kind === 'remote' ? request.url : (request.remoteUrl ?? '');
   useNetworkActivity.getState().queue(priority);
@@ -152,6 +159,43 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
     if (!started) useNetworkActivity.getState().drop(priority);
     throw error;
   }
+}
+
+// Le letture dal computer hanno una coda loro, separata da quella della rete:
+// non aspettano mai una biblioteca, ma restano poche alla volta. Una miniatura
+// da ricavare legge una pagina intera e la riduce, e uno scorrimento veloce
+// non deve lanciarne decine per righe già uscite dallo schermo. Due posti
+// restano alla pagina aperta.
+const localImageScheduler = createRequestScheduler(4, 2);
+const localInFlight = new Map<string, Promise<Uint8Array | null>>();
+
+/** L'immagine dal deposito o dalla memoria di lavoro, o `null` se va chiesta alla rete. */
+async function localImage(request: CacheRequest, options: CachedImageOptions): Promise<Uint8Array | null> {
+  const key = JSON.stringify(request);
+  const shared = localInFlight.get(key);
+  if (shared) {
+    try {
+      const bytes = await shared;
+      return bytes ? new Uint8Array(bytes) : null;
+    } catch (error) {
+      // Chi l'aveva chiesta per primo se n'è andato: si rifà per conto proprio.
+      if (!(error instanceof DOMException && error.name === 'AbortError')) throw error;
+      return localImage(request, options);
+    }
+  }
+  const running = localImageScheduler
+    .schedule(async () => {
+      try {
+        return new Uint8Array(await invoke<ArrayBuffer>('local_cached_image', { request }));
+      } catch {
+        // Non è sul computer, o il deposito non si legge: decide la strada
+        // normale, che riprova il deposito e poi va in rete e riporta l'errore.
+        return null;
+      }
+    }, { priority: options.priority, signal: options.signal })
+    .finally(() => localInFlight.delete(key));
+  localInFlight.set(key, running);
+  return running;
 }
 
 /** Cosa sa il motore della rete verso le biblioteche, in questo momento. */

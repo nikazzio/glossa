@@ -92,9 +92,9 @@ lose it.
 
 ## Left bar
 
-The left bar holds navigation: at the top the Dashboard with Overview and
-Search, then the areas in working order (Library, Transcriptions, Translations,
-Analysis) and finally the workspaces, with the plus to create one. A rule
+The left bar holds navigation: at the top Home and Search, then the areas in
+working order (Library, Transcriptions, Translations, Analysis, with Statistics
+under it) and finally the workspaces, with the plus to create one. A rule
 separates each group; an item’s explanation appears on hover.
 
 At the bottom is the general menu: save all, general language resources,
@@ -116,26 +116,28 @@ is selected or active, red errors, ochre cautions, gold running jobs.
 
 Dialogs and menus share the same background; panels, fields and hovered rows use consistent colours across screens.
 
-## Dashboard
+## Home
 
-The Dashboard contains an overview, statistics, a search across multiple
-sources, and a single-source or identifier search. Only the visible tab is mounted in the
-interface; the backend manages jobs that have already started independently.
+Glossa opens on Home. At the top is the search field: on confirming,
+[Search](./source-search) opens with the results, which never appear on Home.
+Earlier searches reopen from the Searches tab in Search.
 
-The overview shows work in progress with what is left, recent works,
+Home shows work in progress with what is left, recent works,
 transcriptions and translations, items requiring attention (including failed
-jobs), jobs by status, recent searches and one line with this month's work. Expanded and collapsed
+jobs), jobs by status and one line with this month's work; the command next to
+it opens Statistics. Expanded and collapsed
 sections retain their state. The workspace filter applies to the relevant
-summaries; jobs and searches remain global. A section that cannot load its
+summaries; jobs remain global. A section that cannot load its
 data displays an error rather than a zero count.
 
 The cards can be arranged as needed: the handle to the left of the title drags a
 card higher, lower or into the other column, and the chosen arrangement is
-remembered. The full job list sits to the right of the overview, grouped by
+remembered. The full job list sits to the right of Home, grouped by
 day, in a column that can be resized and closed.
 
-### Statistics
+## Analysis: Statistics
 
+Analysis opens Statistics; the same item sits under Analysis in the left bar.
 Choose the period (30 days, 6 months, all) and the workspace at the top.
 
 - **Forecasts**: how many working days are left to finish each work, and for

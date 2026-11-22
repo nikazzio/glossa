@@ -64,7 +64,7 @@ for the received files.
 Pages smaller than the target and pages without valid dimensions are requested
 at full size. A predefined size can be larger or smaller than the target.
 If the service rejects the requested dimensions, a download may use full size
-and preserve it without local resizing. Thumbnails are generated from downloaded pages.
+and preserve it without local resizing. Thumbnails are generated from downloaded pages. Pages and thumbnails already on your computer show at once even when the library does not answer; while a library is paused after a refusal, the viewer says so at once instead of waiting.
 
 Requesting a different resolution **replaces** the downloaded one: for a work
 Glossa keeps a single image copy at a time (see “One copy per work” further
@@ -232,7 +232,7 @@ bin command in its header **takes the finished rows out of the view**, so new
 jobs read clearly: it deletes nothing, and a hidden job that starts again comes
 back on its own. The cleanup lasts for the current session.
 
-The **full history** lives in the right-hand column of the Overview: it lists
+The **full history** lives in the right-hand column of Home: it lists
 everything that went through the queue, reads in pages and can be narrowed,
 widened or closed like the other side columns. Every row expands like in the
 bottom panel, with phase, attempts, times, outcome and error.

@@ -13,7 +13,17 @@
     "sql:allow-execute",
     "sql:allow-select",
     "sql:allow-close",
-    "opener:allow-open-url",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://*"
+        },
+        {
+          "url": "http://*"
+        }
+      ]
+    },
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",

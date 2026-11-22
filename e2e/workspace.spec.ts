@@ -13,7 +13,7 @@ async function openFirstRun(page: Page): Promise<void> {
 async function createWorkspace(page: Page): Promise<void> {
   await page.getByRole('textbox', { name: 'Nome workspace' }).fill('Archivio E2E');
   await page.getByRole('button', { name: 'Crea workspace' }).click();
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
 }
 
 test('avvia l’app e crea il primo workspace', async ({ page }) => {

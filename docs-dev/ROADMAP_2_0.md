@@ -6,7 +6,8 @@ Glossa permette di cercare fonti in più biblioteche, conservarle e consultarle,
 trascrivere con assistenza OCR, tradurre con glossari e memoria, revisionare ed
 esportare. Sono integrati Studio di trascrizione e traduzione, contesto e
 composizione dei prompt, lingue e varietà dell’opera, corpus con revisioni e
-misure multiple, Panoramica e Statistiche. Le superfici condividono le regole
+misure multiple, Home con casella di ricerca, Ricerca come voce autonoma e
+Statistiche dentro Analisi. Le superfici condividono le regole
 di leggibilità e il pannello OCR distingue la scelta dell’immagine dalle istruzioni.
 
 Le issue #311 (modifica dei prompt salvati) e #489 (contesto e lingue) sono
@@ -15,30 +16,21 @@ Lo Studio di traduzione è accettabile per questa fase; rifiniture UI/UX rimanda
 
 ## Ordine dei prossimi interventi
 
-1. **Home, Ricerca e Statistiche**, in una PR dedicata da main (#485/#379).
-   Home all’apertura e sempre raggiungibile: ricerca in primo piano, ripresa
-   del lavoro e riepilogo sintetico. Ricerca come destinazione autonoma
-   principale; Statistiche dentro Analisi, collegate anche dalla Home.
-   Riutilizzare motore, risultati e riepiloghi esistenti. Conservare ricerca
-   e filtri durante la navigazione; non duplicare le richieste passando dalla Home.
-   Verificare contestualmente i residui di #210, senza prometterne la chiusura
-   prima del confronto con tutti i criteri.
-2. **Cartella predefinita degli export (#375).** Preferenza proposta nei dialoghi
+1. **Cartella predefinita degli export (#375).** Preferenza proposta nei dialoghi
    di salvataggio, modificabile per ogni file. Nessuno spostamento dei file esistenti.
    È una funzione piccola ancora da realizzare, non una consegna già conclusa.
-3. **Filtri del visore e preset (#221).** Zoom, pan e cambio fonte esistono;
+2. **Filtri del visore e preset (#221).** Zoom, pan e cambio fonte esistono;
    restano luminosità, contrasto, saturazione, tonalità, inversione e scala di grigi.
    I filtri non devono alterare gli originali. Ritaglio e corpus visivo restano separati.
-4. **Selezione multipagina e OCR (#388/#220).** Definire insieme selezione e
+3. **Selezione multipagina e OCR (#388/#220).** Definire insieme selezione e
    azioni collettive: intervalli, pagine non contigue, seleziona tutto/azzera,
    numero di pagine visibile. Riutilizzare i comandi singoli e la coda esistente.
    Restano OCR da PDF e contesto delle pagine vicine. Lo Studio e l’OCR della
    pagina singola sono già disponibili.
 
-La PR di navigazione non include nuovi operatori di ricerca, nuove biblioteche,
-OCR multipagina o analisi avanzate. #485 raccoglie più interventi: non si chiude
-automaticamente spostando Statistiche. Gli altri rilievi storici vanno prima
-confrontati con l’app attuale.
+#485 raccoglie più interventi: restano il ripensamento del collasso della barra
+e gli altri rilievi storici, da confrontare prima con l’app attuale. Di #210
+vanno verificati i criteri residui prima di chiuderla.
 
 ## Ricerca e Biblioteca
 

@@ -25,7 +25,7 @@ import { useChunksStore } from './stores/chunksStore';
 import { usePipelineStore } from './stores/pipelineStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
-import { DashboardArea } from './components/dashboard/DashboardArea';
+import { HomeArea, SearchArea } from './components/dashboard/AreaPage';
 import { WorkspaceOverview } from './components/workspace/WorkspaceOverview';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
 import { LibraryCatalogArea } from './components/workspace/LibraryCatalogArea';
@@ -521,9 +521,7 @@ export default function App() {
                   key={
                     location.area === 'workspace'
                       ? `workspace-${location.workspaceId}`
-                      : location.area === 'dashboard'
-                        ? 'app-dashboard'
-                        : `area-${location.area}`
+                      : `area-${location.area}`
                   }
                   initial={{ opacity: 0, y: MOTION_SHIFT }}
                   animate={{ opacity: 1, y: 0 }}
@@ -540,8 +538,10 @@ export default function App() {
                     <AnalysisArea />
                   ) : location.area === 'workspace' ? (
                     <WorkspaceOverview />
+                  ) : location.area === 'search' ? (
+                    <SearchArea searchId={location.searchId} query={location.query} />
                   ) : (
-                    <DashboardArea location={location.area === 'dashboard' ? location : {area:'dashboard'}} />
+                    <HomeArea />
                   )}
                 </motion.div>
               ) : (

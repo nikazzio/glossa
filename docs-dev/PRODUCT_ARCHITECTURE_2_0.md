@@ -7,9 +7,8 @@ Questo documento descrive il prodotto verso cui evolve la beta, non un elenco
 di funzioni già disponibili. La numerazione 2.x deriva da prove di rilascio.
 Biblioteca, Studio di trascrizione e traduzione, OCR della pagina e Statistiche
 sono operativi. Restano selezione multipagina, bridge, Export Studio e Analisi
-avanzate. La navigazione attuale mantiene Panoramica, ricerca e Statistiche
-nella Dashboard; Home con ricerca predominante, Ricerca autonoma e Statistiche
-sotto Analisi sono il prossimo intervento pianificato, non funzioni già spostate.
+avanzate. L'app si apre sulla Home, con la casella di ricerca in cima; Ricerca
+è una voce autonoma e le Statistiche sono la prima vista di Analisi.
 Stato implementato in ARCHITECTURE.md; ordine e criteri in ROADMAP_2_0.md.
 
 ## 1. Scopo
@@ -73,11 +72,13 @@ ambiguo.
 
 ```text
 Glossa
-├── Dashboard
+├── Home
+│   ├── Casella di ricerca
 │   ├── Riprendi
 │   ├── Richiede attenzione
 │   ├── Attività e job
 │   └── Riepilogo globale
+├── Ricerca
 ├── Biblioteca
 │   ├── Catalogo globale
 │   ├── Discovery
@@ -90,7 +91,7 @@ Glossa
 │   ├── Catalogo globale
 │   └── Studio di traduzione
 ├── Analisi
-│   ├── Dashboard
+│   ├── Statistiche
 │   ├── Esplorazione dati
 │   ├── Confronti
 │   ├── Dataset
@@ -232,7 +233,7 @@ forzato per ogni attività.
 
 ### Cataloghi e dashboard
 
-- rail primaria: Dashboard, Biblioteca, Trascrizioni, Traduzioni, Analisi;
+- rail primaria: Home, Ricerca, Biblioteca, Trascrizioni, Traduzioni, Analisi;
 - a barra aperta: elenco e creazione workspace in una sezione distinta;
 - a barra chiusa: sole icone delle aree principali;
 - intestazione contenuto: titolo della posizione, ricerca, filtri attivi e
@@ -362,7 +363,7 @@ Gli artifact sono raggiungibili:
 
 - dalla cronologia dell'oggetto che li ha prodotti;
 - dalla panoramica del workspace;
-- dalla vista globale di job e output collegata a Dashboard/status bar.
+- dalla vista globale di job e output collegata a Home/status bar.
 
 Questa vista globale è una superficie di servizio, non una quinta area
 primaria. Potrà diventare un catalogo autonomo solo se il volume e i workflow

@@ -4,14 +4,19 @@ title: Source search
 
 # Source search
 
-The Dashboard provides a single **Search** screen: one field to look for works
-in the libraries and to open directly a work whose identifier or address you
+**Search** is a single screen: one field to look for works in the libraries and to open directly a work whose identifier or address you
 know. Results remain separate from your personal catalogue until you add them
 to the Library.
 
 ## Searching
 
-Search opens from the left-hand rail, under Dashboard.
+Search has its own item in the left-hand rail, right under Home. You can also
+start from the field at the top of Home: words, identifier or address, and on
+confirming Search opens. Words and identifiers run as a search on all
+libraries, as when pressing Enter in Search; if a library recognises the
+identifier, the offer to open the work also appears above the results. A full
+address is not searched: it stays in the field with the offer to open it.
+Results appear only in Search, never on Home.
 
 To the left of the field you choose **where to search**: all libraries, a
 single one, or a custom choice. “All” means the libraries that search by
@@ -37,8 +42,9 @@ fade.
 Starting a search records its criteria. Each result page from each source is an
 independent job, so a slow or failed source does not prevent others from
 returning results. The **Sources** tab, on the right, has one row per library
-with state, number of results received, a “retry” command after an error, and
-the filter to look at that source only. Pausing, restarting and attempts live
+with state, number of results received, the library website, a “retry” command
+after an error, and the filter to look at that source only. The “sources did
+not answer” warning above the results leads to this tab. Pausing, restarting and attempts live
 in the jobs panel. Earlier searches reopen from the **Searches** tab, which
 keeps their criteria and results.
 
@@ -182,15 +188,28 @@ the search state, while “retry” and a new search query the sources again.
 
 ## Searching on the library's own site
 
-Next to every library there is a command that opens its search page in the
-browser, carrying the words already typed where the library accepts them in the
+A command opens the library’s search page in the browser, carrying the words already typed where the library accepts them in the
 address. It is there for when the internal search is not enough: what Glossa
 queries is what the library exposes to a program, which rarely matches its whole
 catalogue. Search on their site, copy the address of the work, paste it here to
 open it.
 
-The command appears when the result list stays empty, when the results of a
-single library are being read, and on the page of a work that does not carry
-the address of its own page.
+The command is on every row of the **Sources** tab, in every state, even when
+the library answered. It also appears above the results when a single library
+is being read, and on the page of a work that
+does not carry the address of its own page. A library without a known search
+address has no command. When the result list stays empty, a line under the
+message points to the Sources tab.
+
+### Libraries searchable only on their website
+
+Some libraries Glossa cannot query, but it knows their website: today
+Heidelberg, Harvard, e-rara, e-manuscripta and Glasgow. They sit at the bottom
+of the **where to search** menu, in the “Only on the library website” group.
+Choosing one opens its website in the browser with the words typed in the
+field, if it accepts them; Heidelberg opens its start page. Where to search does
+not change, no search starts in Glossa, and these libraries are not part of
+“all”. Once you find the work on their site, paste its address in the field to
+open it.
 
 ## Availability of reproductions

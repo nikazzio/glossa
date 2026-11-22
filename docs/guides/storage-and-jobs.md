@@ -68,7 +68,7 @@ Le pagine già più piccole dell’obiettivo e quelle prive di dimensioni valide
 vengono richieste intere. Un formato predefinito può risultare più grande o
 più piccolo dell’obiettivo. Se il servizio rifiuta la dimensione richiesta,
 il download può usare la dimensione piena e conservarla senza riduzione locale.
-Le miniature vengono generate dalle pagine scaricate.
+Le miniature vengono generate dalle pagine scaricate. Pagine e miniature già sul computer si vedono subito anche quando la biblioteca non risponde; mentre una biblioteca è in pausa dopo un rifiuto, il visore lo dice subito invece di attendere.
 
 Chiedere una risoluzione diversa **sostituisce** quella scaricata: di un'opera
 Glossa tiene una sola copia a immagini alla volta (vedi «Una copia sola per
@@ -242,7 +242,7 @@ il cestino nella sua intestazione **toglie dalla vista** le righe concluse, cos�
 i jobs nuovi si leggono senza rumore: non cancella niente, e un job nascosto che
 riparte ricompare da solo. La pulizia vale per la sessione in corso.
 
-Lo **storico completo** sta nella colonna a destra della Panoramica: elenca tutto
+Lo **storico completo** sta nella colonna a destra della Home: elenca tutto
 ciò che è passato dalla coda, si legge a pagine e si può stringere, allargare o
 chiudere come le altre colonne laterali. Ogni riga si apre come nel pannello in
 basso, con fase, tentativi, orari, esito ed errore.

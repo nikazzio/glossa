@@ -11,7 +11,8 @@ su `main`; confronta la versione installata con le
 
 ## Funzioni disponibili
 
-- Dashboard con riepiloghi e una sola ricerca su una o più fonti, con apertura diretta di identificativi e indirizzi e storico persistente.
+- Home con riepiloghi e casella di ricerca; Ricerca su una o più fonti, con apertura diretta di identificativi e indirizzi, collegamento al sito di ogni biblioteca e storico persistente.
+- Analisi con le Statistiche del lavoro.
 - Catalogo delle opere, metadati modificabili, collezioni e collegamenti ai workspace.
 - Lettura IIIF, download, versioni locali, riduzione e verifica delle immagini.
 - Workspace e progetti di traduzione con importazione e segmentazione del testo.
