@@ -20,22 +20,18 @@ Priorità: la trascrizione minuta di un documento intero, letta pagina per pagin
 con controllo a vista. L'esportazione viene per ultima, quando il formato di
 testo e note è definito.
 
-1. **Solo il prompt del documento, in cache (#501).** In corso (OpenSpec
-   `ocr-document-prompt-cache`): al modello arrivano solo il prompt in vigore e
-   l'immagine; il prompt è la parte in cache. Comprende costo stimato con lo
-   sconto della cache, righe del log in parole e Riepilogo arricchito.
-2. **Editor Markdown unico (#503).** Scegliere l'editor standard per i testi
+1. **Editor Markdown unico (#503).** Scegliere l'editor standard per i testi
    lunghi, estenderlo con evidenziazioni e colori, sostituire gradualmente le
    caselle di testo semplici.
-3. **Fasi di trascrizione (#502).** Commenti e note separati dal testo (i segni
+2. **Fasi di trascrizione (#502).** Commenti e note separati dal testo (i segni
    `==...==` e `{COMMENT: ...}` del prompt di oggi spariscono dal testo),
    trascrizione pulita, dubbi per documento, cartulazione, stati di revisione,
    pagine vicine, OCR da PDF.
-4. **Lettura di più pagine (#499).** Selezione di intervalli e pagine sparse,
+3. **Lettura di più pagine (#499).** Selezione di intervalli e pagine sparse,
    un solo avvio sulla coda esistente.
-5. **Esportazione della trascrizione (#500).** Per ultima: formato del file e
+4. **Esportazione della trascrizione (#500).** Per ultima: formato del file e
    delle note deciso dopo #502.
-6. **Cartella predefinita degli export (#375)** e **filtri del visore (#221).**
+5. **Cartella predefinita degli export (#375)** e **filtri del visore (#221).**
 
 #485 raccoglie più interventi: restano il ripensamento del collasso della barra
 e gli altri rilievi storici, da confrontare prima con l’app attuale. Di #210
