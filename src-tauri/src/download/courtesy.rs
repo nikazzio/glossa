@@ -121,6 +121,10 @@ impl Signals<'_> {
 #[derive(Default)]
 pub struct Courtesy {
     hosts: Mutex<HashMap<String, Arc<HostGate>>>,
+    /// Fino a quando ogni host è in raffreddamento, leggibile **senza
+    /// aspettare**: il visore lo guarda dentro l'attesa del turno, dove si può
+    /// solo chiedere «smetto?» e non mettersi in coda per un lucchetto.
+    paused_until: std::sync::Mutex<HashMap<String, Instant>>,
 }
 
 /// Il turno di parola verso un host: finché è vivo, occupa uno dei posti
@@ -187,13 +191,15 @@ impl Courtesy {
     ///
     /// Serve a chi guarda e non può aspettare: il visore preferisce sapere
     /// subito che la biblioteca è in pausa piuttosto che restare minuti in coda.
-    pub async fn cooling_down(&self, host: &str) -> bool {
-        let gate = self.hosts.lock().await.get(host).cloned();
-        let Some(gate) = gate else {
-            return false;
-        };
-        let mut timeline = gate.timeline.lock().await;
-        cooldown_delay_at(&mut timeline, Instant::now()).is_some()
+    pub fn cooling_down(&self, host: &str) -> bool {
+        self.paused_until
+            .lock()
+            .map(|paused| {
+                paused
+                    .get(host)
+                    .is_some_and(|until| *until > Instant::now())
+            })
+            .unwrap_or(false)
     }
 
     /// Mette un host in raffreddamento: da qui in avanti, per quei secondi,
@@ -207,10 +213,14 @@ impl Courtesy {
         let gate = self.gate_for(host, profile).await;
         let until = Instant::now() + Duration::from_secs(seconds);
         let mut timeline = gate.timeline.lock().await;
-        timeline.cooldown_until = Some(match timeline.cooldown_until {
+        let until = match timeline.cooldown_until {
             Some(existing) if existing > until => existing,
             _ => until,
-        });
+        };
+        timeline.cooldown_until = Some(until);
+        if let Ok(mut paused) = self.paused_until.lock() {
+            paused.insert(host.to_string(), until);
+        }
     }
 
     /// Un posto in corsia, aspettato **a fette**, guardando fra una e l'altra se
@@ -619,7 +629,7 @@ mod tests {
     #[tokio::test]
     async fn cooling_down_tells_whether_a_host_is_paused_without_creating_it() {
         let courtesy = Courtesy::new();
-        assert!(!courtesy.cooling_down("gallica.bnf.fr").await);
+        assert!(!courtesy.cooling_down("gallica.bnf.fr"));
         assert!(
             courtesy.hosts.lock().await.is_empty(),
             "un host mai sentito non si crea"
@@ -629,8 +639,8 @@ mod tests {
             .cool_down("gallica.bnf.fr", &crate::iiif::network::CAUTIOUS, 600)
             .await;
 
-        assert!(courtesy.cooling_down("gallica.bnf.fr").await);
-        assert!(!courtesy.cooling_down("www.e-codices.unifr.ch").await);
+        assert!(courtesy.cooling_down("gallica.bnf.fr"));
+        assert!(!courtesy.cooling_down("www.e-codices.unifr.ch"));
     }
 
     #[test]
@@ -672,6 +682,43 @@ mod tests {
             .await;
 
         assert!(second.is_none(), "chi rinuncia non resta in coda");
+    }
+
+    /// Chi guarda una pagina rinuncia quando la pausa comincia **mentre è già in
+    /// fila**: senza, una miniatura teneva il posto per tutti i dieci minuti.
+    #[tokio::test]
+    async fn a_viewer_waiting_in_line_gives_up_when_a_cooldown_starts() {
+        let courtesy = Arc::new(Courtesy::new());
+        let rhythm = NetworkProfile {
+            host_concurrency: 1,
+            ..profile(100, 60)
+        };
+        let (held, _) = turn(&courtesy, "gallica.bnf.fr", &rhythm, Lane::Page).await;
+
+        let starter = Arc::clone(&courtesy);
+        let cooldown = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            starter.cool_down("gallica.bnf.fr", &rhythm, 600).await;
+        });
+        let paused = || courtesy.cooling_down("gallica.bnf.fr");
+        let waiting = AtomicBool::new(false);
+        let outcome = tokio::time::timeout(
+            Duration::from_secs(5),
+            courtesy.wait_turn(
+                "gallica.bnf.fr",
+                &rhythm,
+                Lane::Thumbnail,
+                &signals(&paused, &waiting),
+            ),
+        )
+        .await;
+
+        assert!(
+            matches!(outcome, Ok(None)),
+            "rinuncia invece di scontare la pausa"
+        );
+        drop(held);
+        cooldown.await.expect("cooldown task");
     }
 
     /// Chi invece aspetta davvero ottiene il posto appena si libera: la

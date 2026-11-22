@@ -13,10 +13,12 @@ personale finché non vengono aggiunti alla Biblioteca.
 
 La ricerca ha una voce sua nella barra a sinistra, subito sotto Home. Si può
 partire anche dalla casella in cima alla Home: parole, identificativo o
-indirizzo, e alla conferma si apre la Ricerca. Le parole partono su tutte le
-biblioteche; un identificativo o un indirizzo resta nella casella con la
-proposta di aprire l'opera. I risultati compaiono solo nella Ricerca, mai nella
-Home.
+indirizzo, e alla conferma si apre la Ricerca. Parole e identificativi partono
+come ricerca su tutte le biblioteche, come premendo Invio nella Ricerca; se una
+biblioteca riconosce l'identificativo, sopra i risultati compare anche la
+proposta di aprire l'opera. Un indirizzo completo non si cerca: resta nella
+casella con la proposta di aprirla. I risultati compaiono solo nella Ricerca,
+mai nella Home.
 
 A sinistra della casella si sceglie **dove cercare**: tutte le biblioteche, una
 sola, oppure una scelta personalizzata. «Tutte» comprende le biblioteche che

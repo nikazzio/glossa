@@ -1859,14 +1859,20 @@ possono tenersi a vicenda quello che serve all'altra.
 
 La finestra a raffica e il raffreddamento valgono per tutte e tre. Le immagini
 del visore (`cached_image`) però non aspettano un raffreddamento: se l'host è in
-pausa (`Courtesy::cooling_down`) la richiesta fallisce subito con `throttled`,
-invece di occupare un posto fino a dieci minuti. Gli scaricamenti aspettano.
+pausa (`Courtesy::cooling_down`, letto senza lucchetti asincroni) la richiesta
+fallisce subito con `throttled`, e chi è già in fila usa la stessa condizione
+come segnale di stop, così rinuncia e libera il posto se la pausa comincia
+mentre aspetta. Gli scaricamenti e la ricerca (che scaduta l'attesa procede
+comunque) non usano questa rinuncia.
 
-Prima ancora della coda, la finestra chiede l'immagine con `local_cached_image`
-(deposito, memoria di lavoro, riduzione da una pagina più grande; mai la rete).
-Solo se manca prende un posto nella coda di `cacheService` (6 posti, 4 per la
-pagina aperta): una miniatura di un libro scaricato non aspetta dietro
-richieste verso una biblioteca in pausa.
+Prima ancora della coda di rete, la finestra chiede l'immagine con
+`local_cached_image` (deposito, memoria di lavoro, riduzione da una pagina più
+grande; mai la rete), eseguito con `spawn_blocking`. Queste letture hanno una
+coda loro in `cacheService` (4 posti, 2 per la pagina aperta), con richieste
+uguali unite e quelle annullate scartate prima di partire. Solo se l'immagine
+manca si prende un posto nella coda di rete (6 posti, 4 per la pagina aperta):
+una miniatura di un libro scaricato non aspetta dietro richieste verso una
+biblioteca in pausa.
 
 Tentativi e scadenze per classe: pagina un tentativo a 90 secondi, miniatura un
 tentativo a 20 secondi, scaricamento tre tentativi con la scadenza del profilo.

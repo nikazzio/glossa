@@ -12,9 +12,11 @@ to the Library.
 
 Search has its own item in the left-hand rail, right under Home. You can also
 start from the field at the top of Home: words, identifier or address, and on
-confirming Search opens. Words run on all libraries; an identifier or an
-address stays in the field with the offer to open the work. Results appear only
-in Search, never on Home.
+confirming Search opens. Words and identifiers run as a search on all
+libraries, as when pressing Enter in Search; if a library recognises the
+identifier, the offer to open the work also appears above the results. A full
+address is not searched: it stays in the field with the offer to open it.
+Results appear only in Search, never on Home.
 
 To the left of the field you choose **where to search**: all libraries, a
 single one, or a custom choice. “All” means the libraries that search by

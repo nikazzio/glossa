@@ -37,4 +37,18 @@ describe('cachedImage', () => {
     expect(Array.from(bytes)).toEqual([1]);
     expect(invoke).toHaveBeenCalledWith('cached_image', { request: { ...THUMBNAIL, index: 4 } });
   });
+
+  it('reads an image once from the computer when two views ask for it together', async () => {
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === 'local_cached_image') return new Uint8Array([5]).buffer;
+      throw new Error(`unexpected ${command}`);
+    });
+    const request = { ...THUMBNAIL, index: 5 };
+
+    const [first, second] = await Promise.all([cachedImage(request), cachedImage(request)]);
+
+    expect(Array.from(first)).toEqual([5]);
+    expect(Array.from(second)).toEqual([5]);
+    expect(vi.mocked(invoke).mock.calls.filter(([command]) => command === 'local_cached_image')).toHaveLength(1);
+  });
 });
