@@ -100,9 +100,9 @@ aggiunta e non filtro dei cataloghi remoti.
     versione di Node usata;
   - bloccati: `sqlx`, `rusqlite`, `libsqlite3-sys`, `gtk` (legato a Tauri).
 - #410/#402: evoluzione delle risposte strutturate senza duplicare il contratto esistente.
-- Da valutare separatamente: processi rimasti attivi alla chiusura, anteprima
-  di audit/coerenza sul frammento, fasi configurabili, posizione del comando
-  di aggiornamento dell’app oggi nella guida.
+- #495: chiudere i processi rimasti attivi alla chiusura dell’app.
+- #496: spostare il comando di aggiornamento dell’app, oggi nella guida; posizione da decidere.
+- Da valutare separatamente: anteprima di audit/coerenza sul frammento, fasi configurabili.
 - #186/#446: Scriptoria resta riferimento tecnico; #383/#404 raccolgono
   riferimenti di prodotto e approfondimenti bibliografici.
 - Nuovi formati, cloud, varianti dei prompt e altre estensioni restano nel backlog.
