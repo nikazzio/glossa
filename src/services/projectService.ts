@@ -23,24 +23,10 @@ export interface Project {
   pipeline_names: string | null;
 }
 
-export interface WorkspaceProject extends Project {
-  workspace_id: string;
-  workspace_name: string;
-}
-
 export interface RecentProject {
   id: string;
   name: string;
   updated_at: string;
-  workspace_id: string;
-  workspace_name: string;
-}
-
-export interface RecentPipelineRun {
-  at: string;
-  level: string;
-  project_id: string;
-  project_name: string;
   workspace_id: string;
   workspace_name: string;
 }
@@ -132,22 +118,6 @@ export async function listProjects(workspaceId: string): Promise<Project[]> {
   );
 }
 
-/** Tutti i progetti di traduzione di TUTTI i workspace — alimenta l'area Traduzioni. */
-export async function listAllProjects(): Promise<WorkspaceProject[]> {
-  return select<WorkspaceProject>(
-    `SELECT
-       p.*,
-       COUNT(pi.id) AS pipeline_count,
-       GROUP_CONCAT(pi.name, ' · ') AS pipeline_names,
-       w.name AS workspace_name
-     FROM projects p
-     LEFT JOIN pipelines pi ON pi.project_id = p.id
-     JOIN workspaces w ON w.id = p.workspace_id
-     GROUP BY p.id
-     ORDER BY p.updated_at DESC`,
-  );
-}
-
 /** Ultimi progetti toccati in TUTTI i workspace — alimenta il blocco Riprendi della Dashboard. */
 export async function listRecentProjectsAllWorkspaces(limit: number, workspaceId: string | null = null): Promise<RecentProject[]> {
   return select<RecentProject>(
@@ -164,50 +134,6 @@ export async function listRecentProjectsAllWorkspaces(limit: number, workspaceId
      LIMIT $1`,
     [limit, workspaceId],
   );
-}
-
-/** Ultime esecuzioni pipeline concluse (scope='pipeline', phase='end') a livello globale. */
-export async function listRecentPipelineRuns(limit: number): Promise<RecentPipelineRun[]> {
-  return select<RecentPipelineRun>(
-    `SELECT
-       ol.at,
-       ol.level,
-       p.id AS project_id,
-       p.name AS project_name,
-       p.workspace_id,
-       w.name AS workspace_name
-     FROM operation_logs ol
-     JOIN projects p ON p.id = ol.project_id
-     JOIN workspaces w ON w.id = p.workspace_id
-     WHERE ol.scope = 'pipeline' AND ol.phase = 'end'
-     ORDER BY ol.at DESC
-     LIMIT $1`,
-    [limit],
-  );
-}
-
-export interface DashboardOverviewStats {
-  totalProjects: number;
-  totalChunks: number;
-  completedChunks: number;
-}
-
-/** Numeri complessivi su tutti i workspace — alimenta i riquadri della Dashboard. */
-export async function getDashboardOverviewStats(): Promise<DashboardOverviewStats> {
-  const [[projectRow], [chunkRow]] = await Promise.all([
-    select<{ count: number }>('SELECT COUNT(*) AS count FROM projects'),
-    select<{ total: number; completed: number | null }>(
-      `SELECT
-         COUNT(*) AS total,
-         SUM(CASE WHEN chunk_status = 'completed' THEN 1 ELSE 0 END) AS completed
-       FROM translations`,
-    ),
-  ]);
-  return {
-    totalProjects: projectRow?.count ?? 0,
-    totalChunks: chunkRow?.total ?? 0,
-    completedChunks: chunkRow?.completed ?? 0,
-  };
 }
 
 export interface ProjectNeedingAttention {

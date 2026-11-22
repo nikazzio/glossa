@@ -126,10 +126,6 @@ impl LlmProvider for OllamaProvider {
         "Ollama"
     }
 
-    fn api_key_env_var(&self) -> Option<&'static str> {
-        None
-    }
-
     fn default_test_model(&self) -> &'static str {
         ""
     }

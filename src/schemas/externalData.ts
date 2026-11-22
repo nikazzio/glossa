@@ -128,7 +128,6 @@ const downloadedSourceSchema = z.object({
 
 export const downloadedSourcesSchema = z.array(downloadedSourceSchema);
 
-export type DownloadedSize = z.infer<typeof downloadedSizeSchema>;
 export type DownloadedSource = z.infer<typeof downloadedSourceSchema>;
 
 export const backupPayloadSchema = z.object({
@@ -150,5 +149,3 @@ export const customProviderProfileSchema = z.object({
   baseUrl: z.string().trim().url(),
   requiresApiKey: z.boolean(),
 });
-
-export type CustomProviderProfileInput = z.infer<typeof customProviderProfileSchema>;

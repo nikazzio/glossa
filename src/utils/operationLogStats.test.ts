@@ -6,7 +6,6 @@ import {
   formatUsd,
   summarizeChunkUsage,
   summarizeGlobalUsage,
-  listRunsForCategory,
 } from './operationLogStats';
 import type { OperationLogEntry } from '../stores/operationLogStore';
 
@@ -262,30 +261,6 @@ describe('aggregateEntries', () => {
       ['audit', 1],
     ]);
     expect(summary.scopeBreakdown.find((row) => row.stageId === 'refine')?.stats.totalInput).toBe(80);
-  });
-});
-
-describe('listRunsForCategory', () => {
-  const entries = [
-    entry({ scope: 'stage', phase: 'end', stageId: 'translate', chunkId: 'a', message: 'Stage "Translate" completed', meta: { provider: 'openai', model: 'gpt-5.4', inputTokens: 100, outputTokens: 20 } }),
-    entry({ scope: 'stage', phase: 'end', stageId: 'refine', chunkId: 'a', message: 'Stage "Refine" completed', meta: { provider: 'openai', model: 'gpt-5.4-mini', inputTokens: 80, outputTokens: 15 } }),
-    entry({ scope: 'stage', phase: 'end', stageId: 'format', chunkId: 'a', message: 'Stage "Format" completed', meta: { provider: 'openai', model: 'gpt-5-nano', inputTokens: 30, outputTokens: 5 } }),
-    entry({ scope: 'audit', phase: 'end', chunkId: 'a', message: 'Audit completed', meta: { provider: 'openai', model: 'gpt-5.4-mini', inputTokens: 40, outputTokens: 8 } }),
-    entry({ scope: 'stage', phase: 'end', stageId: 'translate', chunkId: 'b', message: 'Stage "Translate" completed', meta: { provider: 'openai', model: 'gpt-5.4', inputTokens: 999, outputTokens: 1 } }),
-  ];
-
-  it('returns one entry per translation stage in execution order for the given chunk', () => {
-    const steps = listRunsForCategory(entries, 'a', 'translation');
-    expect(steps.map((s) => s.stageName)).toEqual(['Translate', 'Refine', 'Format']);
-    expect(steps[0].stats.totalInput).toBe(100);
-    expect(steps[2].stats.totalOutput).toBe(5);
-  });
-
-  it('isolates a single audit step and ignores other chunks', () => {
-    const audit = listRunsForCategory(entries, 'a', 'audit');
-    expect(audit).toHaveLength(1);
-    expect(audit[0].stats.totalInput).toBe(40);
-    expect(listRunsForCategory(entries, 'b', 'audit')).toHaveLength(0);
   });
 });
 

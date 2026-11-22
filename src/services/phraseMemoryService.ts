@@ -486,12 +486,6 @@ export async function searchPhraseMemoryBatch(
   return result;
 }
 
-/** Frasi totali in memoria su tutti i workspace — alimenta la Dashboard. */
-export async function countPhraseMemoryEntries(): Promise<number> {
-  const rows = await select<{ count: number }>('SELECT COUNT(*) AS count FROM phrase_memory');
-  return rows[0]?.count ?? 0;
-}
-
 /** `workspaceId` `null`: tutte le frasi, anche di traduzioni senza workspace.
  *  `chunkId`: solo quelle di un frammento. */
 export async function listPhraseMemoryEntries(

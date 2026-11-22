@@ -1,4 +1,4 @@
-import { chunkText, estimateTextStats, resolveSplitIndex, trimSplitFragment } from './index';
+import { chunkText, estimateTextStats } from './index';
 
 export interface ImportPreviewChunk {
   index: number;
@@ -13,13 +13,6 @@ export interface ImportPreview {
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
   warnings: string[];
-}
-
-export interface SplitPreview {
-  beforeText: string;
-  afterText: string;
-  isValid: boolean;
-  adjustedSplitAt: number | null;
 }
 
 export function buildImportPreview(
@@ -52,30 +45,6 @@ export function buildImportPreview(
   };
 }
 
-export function buildSplitPreview(
-  text: string,
-  splitAt: number,
-  options: { markdownAware?: boolean } = {},
-): SplitPreview {
-  const boundedSplitAt = resolveSplitIndex(text, splitAt, options);
-  if (boundedSplitAt === null) {
-    return {
-      beforeText: '',
-      afterText: '',
-      isValid: false,
-      adjustedSplitAt: null,
-    };
-  }
-  const beforeText = trimSplitFragment(text.slice(0, boundedSplitAt));
-  const afterText = trimSplitFragment(text.slice(boundedSplitAt));
-
-  return {
-    beforeText,
-    afterText,
-    isValid: beforeText.length > 0 && afterText.length > 0,
-    adjustedSplitAt: boundedSplitAt,
-  };
-}
 function buildImportWarnings(options: {
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';

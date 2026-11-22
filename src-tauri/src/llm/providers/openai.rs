@@ -18,7 +18,6 @@ pub struct OpenAiCompatibleProvider {
     display_name: &'static str,
     /// Owned so tests can point it at a local wiremock server.
     base_url: String,
-    env_var: &'static str,
     test_model: &'static str,
     use_responses_api: bool,
 }
@@ -28,7 +27,6 @@ pub fn openai() -> OpenAiCompatibleProvider {
         id: "openai",
         display_name: "OpenAI",
         base_url: "https://api.openai.com/v1".to_string(),
-        env_var: "OPENAI_API_KEY",
         test_model: "gpt-4.1-mini",
         use_responses_api: true,
     }
@@ -39,7 +37,6 @@ pub fn deepseek() -> OpenAiCompatibleProvider {
         id: "deepseek",
         display_name: "DeepSeek",
         base_url: "https://api.deepseek.com".to_string(),
-        env_var: "DEEPSEEK_API_KEY",
         test_model: "deepseek-v4-flash",
         use_responses_api: false,
     }
@@ -50,7 +47,6 @@ pub fn custom_endpoint(base_url: String) -> OpenAiCompatibleProvider {
         id: "custom",
         display_name: "Custom",
         base_url,
-        env_var: "",
         test_model: "",
         use_responses_api: false,
     }
@@ -165,7 +161,6 @@ impl OpenAiCompatibleProvider {
         id: &'static str,
         display_name: &'static str,
         base_url: &str,
-        env_var: &'static str,
         test_model: &'static str,
         use_responses_api: bool,
     ) -> Self {
@@ -173,7 +168,6 @@ impl OpenAiCompatibleProvider {
             id,
             display_name,
             base_url: base_url.to_string(),
-            env_var,
             test_model,
             use_responses_api,
         }
@@ -458,10 +452,6 @@ impl LlmProvider for OpenAiCompatibleProvider {
 
     fn display_name(&self) -> &'static str {
         self.display_name
-    }
-
-    fn api_key_env_var(&self) -> Option<&'static str> {
-        Some(self.env_var)
     }
 
     fn default_test_model(&self) -> &'static str {

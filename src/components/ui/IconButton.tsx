@@ -41,7 +41,6 @@ const iconButton = cva(
 
 export type IconButtonTone = NonNullable<VariantProps<typeof iconButton>['tone']>;
 export type IconButtonSize = NonNullable<VariantProps<typeof iconButton>['size']>;
-export type IconButtonDisabledStyle = NonNullable<VariantProps<typeof iconButton>['disabledStyle']>;
 
 type IconButtonProps = VariantProps<typeof iconButton> &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'aria-pressed' | 'aria-label'> & {

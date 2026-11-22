@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   canRefineWithProvider,
   formatProviderModelLabel,
-  providerNeedsApiKey,
   useProviderKeyStatus,
 } from './useProviderKeyStatus';
 
@@ -20,20 +19,6 @@ vi.mock('../services/llmService', async () => {
     ...actual,
     settingsService: settingsMocks,
   };
-});
-
-describe('providerNeedsApiKey', () => {
-  it('marks remote providers as requiring a key', () => {
-    expect(providerNeedsApiKey('gemini')).toBe(true);
-    expect(providerNeedsApiKey('openai')).toBe(true);
-    expect(providerNeedsApiKey('anthropic')).toBe(true);
-    expect(providerNeedsApiKey('deepseek')).toBe(true);
-  });
-
-  it('does not mark ollama or unknown providers as requiring a key', () => {
-    expect(providerNeedsApiKey('ollama')).toBe(false);
-    expect(providerNeedsApiKey('whatever')).toBe(false);
-  });
 });
 
 describe('canRefineWithProvider', () => {
