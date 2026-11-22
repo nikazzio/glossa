@@ -8,7 +8,7 @@
 ## 2. Cache del prompt nella lettura OCR
 
 - [x] 2.1 Verificare sulla documentazione ufficiale di Anthropic e OpenAI la soglia minima di cache, la durata di 1 ora su Anthropic e la durata della cache di OpenAI. Riportare l'esito in `design.md`. Verifica: fonti citate in `design.md`.
-- [x] 2.2 In `ocr/handler.rs` passare alla richiesta una configurazione con la cache Anthropic attiva e la durata di 1 ora. Nessuna opzione per Gemini. Controllare che l'indirizzo di Ollama congelato nel lavoro resti usato come oggi. Verifica: test Rust sulla richiesta OCR (cache Anthropic attiva con durata di 1 ora, nessuna opzione OpenAI e Gemini) e test del provider Anthropic che mostra `cache_control` sul blocco del prompt.
+- [x] 2.2 In `ocr/handler.rs` passare alla richiesta una configurazione con la cache Anthropic attiva e la durata di 1 ora. Gemini con cache esplicita spenta. Controllare che l'indirizzo di Ollama congelato nel lavoro resti usato come oggi. Verifica: test Rust sulla richiesta OCR (cache Anthropic attiva con durata di 1 ora, cache esplicita Gemini spenta, nessuna opzione OpenAI) e test del provider Anthropic che mostra `cache_control` sul blocco del prompt.
 - [x] 2.3 Test OpenAI: due prompt diversi producono `prompt_cache_key` diversi, lo stesso prompt la stessa chiave. Verifica: `cargo test` del modulo.
 - [x] 2.4 Documentazione pubblica: sezione OCR di `docs/guides/context-and-caching.md` e `docs/en/guides/context-and-caching.md` (al modello partono solo il prompt del documento e l'immagine; il prompt è la parte in cache; i token in cache si vedono nel log della trascrizione). Verifica: `npx vitepress build docs` senza link rotti.
 - [x] 2.5 Documentazione pubblica: nel paragrafo «Al modello partono…» di `docs/guides/transcription.md` e del suo corrispettivo in `docs/en/`, dire che nessuna istruzione si aggiunge al prompt. Verifica: rilettura dei due testi.
@@ -36,6 +36,12 @@
 - [x] 3.2 `docs-dev/ROADMAP_2_0.md`: sostituire i riferimenti alle issue chiuse #220 e #388 con #499–#503 e indicare #501 come in corso. Verifica: nessun riferimento a #220 o #388 come lavoro aperto.
 - [x] 3.3 Verifica finale, una volta sola, dopo i gruppi 4-6: `cargo fmt`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `npm run lint:all`, `npm test`. Verifica: tutti verdi.
 - [x] 3.4 Prova dal vivo del maintainer: due pagine lette di seguito con il prompt della trascrizione minuta. Nel log della trascrizione, prompt inviato senza istruzioni aggiunte e token in cache alla seconda pagina. Verifica: esito riportato dal maintainer.
+
+## 7. Correzioni dalla review della PR #505
+
+- [x] 7.1 Gemini: cache esplicita spenta per l'OCR (senza opzioni il provider la attivava da sé sopra la soglia). Verifica: test Rust della richiesta OCR Gemini.
+- [x] 7.2 Token inviati di Anthropic: log e Riepilogo sommano le letture dalla cache, che Anthropic registra a parte; il costo usa i campi grezzi. Verifica: test Vitest con 500 token di input e 2.000 dalla cache → 2.500 inviati.
+- [x] 7.3 Riepilogo aggiornato a ogni cambio di un lavoro di lettura, anche quando le versioni della pagina aperta non cambiano. Verifica: test Vitest della scheda.
 
 ## Workflow follow-up
 

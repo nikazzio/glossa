@@ -30,7 +30,7 @@ Motivazione in proposal.md. Lo stato attuale, letto dal codice:
 2. **`OCR_USER_MESSAGE` resta.** Alcuni servizi rifiutano un messaggio utente senza testo. La frase «Transcribe the page in the attached image.» è neutra e non contraddice nessun metodo.
 3. **Opzioni di cache costruite dal gestore OCR,** non dall'utente. Il gestore passa una `ProviderRuntimeConfig` con `anthropic.enable_caching = true` e `extended_cache_ttl = true` (1 ora): fra una pagina e l'altra il controllo visivo può durare 20-30 minuti, oltre la durata breve di 5 minuti.
    - Per OpenAI e DeepSeek, stessa cache della traduzione: nessuna opzione, `prompt_cache_key` ricavata dal blocco cacheable, quindi per documento.
-   - Per Gemini nessuna opzione: la cache esplicita ha un costo di conservazione orario e soglie alte; si resta sulla cache implicita.
+   - Per Gemini `explicit_caching = false`: senza opzioni il provider crea da sé una cache esplicita sopra la soglia di token, con un costo di conservazione orario. Si resta sulla cache implicita.
    - L'indirizzo di Ollama oggi non passa da `provider_options`. Va controllato in implementazione che la nuova configurazione non lo cambi.
    - *Alternativa scartata:* esporre le opzioni nell'interfaccia OCR. È fuori perimetro: prima si misura dal vivo con il log.
 

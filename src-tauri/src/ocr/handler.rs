@@ -15,7 +15,7 @@ use crate::llm::pipeline::resolve_provider;
 use crate::llm::prompts::build_ocr_prompt;
 use crate::llm::provider::LlmRequest;
 use crate::llm::types::{
-    AnthropicConfig, ImageAttachment, ProviderRuntimeConfig, StructuredPrompt,
+    AnthropicConfig, GeminiCacheConfig, ImageAttachment, ProviderRuntimeConfig, StructuredPrompt,
 };
 use crate::ocr::log::{write_ocr_log, OcrLogEntry, OcrPhase};
 use crate::ocr::revisions::write_ocr_revision;
@@ -518,15 +518,22 @@ impl Default for LogRow {
 /// con durata di 1 ora, perché fra una pagina e l'altra c'è il controllo a vista
 /// e possono passare 20-30 minuti; ogni lettura rinnova la durata gratis.
 /// OpenAI/DeepSeek non chiedono nulla: la chiave deriva dal blocco cacheable del
-/// prompt, quindi è per documento, come nella traduzione. Gemini resta sulla
-/// cache implicita (quella esplicita fa pagare la conservazione a ore).
+/// prompt, quindi è per documento, come nella traduzione. Gemini: la cache
+/// esplicita va spenta in modo esplicito, perché senza opzioni il provider la
+/// attiva da sé sopra la soglia di token, e fa pagare la conservazione a ore;
+/// resta la cache implicita del servizio.
 /// L'indirizzo di Ollama passa da `resolve_provider`, non da qui.
 pub(crate) fn ocr_provider_options() -> ProviderRuntimeConfig {
     ProviderRuntimeConfig {
         ollama: None,
         openai: None,
         deepseek: None,
-        gemini: None,
+        gemini: Some(GeminiCacheConfig {
+            explicit_caching: Some(false),
+            cache_ttl_seconds: None,
+            thinking_budget: None,
+            temperature: None,
+        }),
         deepl: None,
         anthropic: Some(AnthropicConfig {
             temperature: None,
@@ -551,7 +558,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn ocr_calls_enable_the_one_hour_anthropic_cache_and_nothing_else() {
+    fn ocr_calls_enable_the_one_hour_anthropic_cache_and_turn_off_gemini_explicit_cache() {
         let options = ocr_provider_options();
         let anthropic = options.anthropic.expect("anthropic options");
         assert_eq!(anthropic.enable_caching, Some(true));
@@ -559,7 +566,11 @@ mod tests {
         assert_eq!(anthropic.temperature, None);
         assert!(options.openai.is_none());
         assert!(options.deepseek.is_none());
-        assert!(options.gemini.is_none());
+        let gemini = options.gemini.expect("gemini options");
+        assert_eq!(gemini.explicit_caching, Some(false));
+        assert_eq!(gemini.cache_ttl_seconds, None);
+        assert_eq!(gemini.thinking_budget, None);
+        assert_eq!(gemini.temperature, None);
         assert!(options.ollama.is_none());
     }
 

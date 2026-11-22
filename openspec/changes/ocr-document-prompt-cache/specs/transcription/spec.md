@@ -71,6 +71,14 @@ Le voci senza dati SHALL essere omesse oppure mostrare zero, mai valori inventat
 - **WHEN** un documento ha 14 letture riuscite su 11 pagine e un errore
 - **THEN** il Riepilogo mostra 14 letture riuscite, 1 errore, 11 pagine lette di cui 3 rilette
 
+#### Scenario: Lettura che non crea una nuova versione
+- **WHEN** con il Riepilogo aperto una lettura finisce con un errore o con un testo identico al precedente
+- **THEN** i totali della lettura automatica si aggiornano senza riaprire la scheda
+
+#### Scenario: Token inviati con Anthropic
+- **WHEN** una lettura con Anthropic registra 500 token di input e 2.000 letti dalla cache
+- **THEN** log e Riepilogo mostrano 2.500 token inviati, di cui 2.000 dalla cache
+
 #### Scenario: Pagina mai letta automaticamente
 - **WHEN** la pagina aperta ha solo versioni scritte a mano
 - **THEN** la sezione della pagina mostra le versioni a mano e nessuna lettura automatica, senza costo

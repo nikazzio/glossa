@@ -124,6 +124,15 @@ function categoryForEntry(entry: OperationLogEntry): OperationUsageCategory | nu
   return null;
 }
 
+/** Token di input davvero inviati, compresi quelli letti dalla cache.
+ *  Anthropic li registra a parte (`input_tokens` esclude le letture dalla
+ *  cache), gli altri servizi li includono già nell'input. Solo per mostrare
+ *  i totali: il costo usa i campi grezzi. */
+export function sentInputTokens(usage: EntryUsage): number {
+  const input = usage.inputTokens ?? 0;
+  return usage.provider === 'anthropic' ? input + (usage.cachedInputTokens ?? 0) : input;
+}
+
 export function costForEntry(usage: EntryUsage, pricingOverrides: Pricing): number | null {
   if (!usage.provider || !usage.model) return null;
   if (usage.provider === 'ollama') return 0;

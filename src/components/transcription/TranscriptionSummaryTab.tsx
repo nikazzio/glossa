@@ -16,6 +16,7 @@ import { getTranscriptionSummary, type OcrUsage, type TranscriptionSummary } fro
 import { formatDurationMs, formatUsd } from '../../utils/operationLogStats';
 import { parseStoredDate } from '../../utils/dashboardStats';
 import { usePricingStore } from '../../stores/pricingStore';
+import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
 
 interface Props {
   documentId: string | null;
@@ -43,6 +44,18 @@ export function TranscriptionSummaryTab({ documentId, segmentId, displayIndex, p
     }).catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
   }, [documentId, segmentId, revisionCount, pricing, reloadToken]);
+
+  // Una lettura può non cambiare le versioni della pagina aperta (testo
+  // identico, errore, altra pagina): i totali si aggiornano a ogni cambio di
+  // stato di un lavoro di lettura, come il log.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    onJobChanged((job) => {
+      if (job.jobType === OCR_JOB_TYPE) setReloadToken((token) => token + 1);
+    }).then((fn) => { if (!cancelled) unlisten = fn; else fn(); });
+    return () => { cancelled = true; unlisten?.(); };
+  }, []);
 
   const retry = () => {
     setError(false);

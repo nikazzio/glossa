@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TranscriptionSummaryTab } from './TranscriptionSummaryTab';
 import type { TranscriptionRevision } from '../../services/transcriptionService';
@@ -6,6 +6,14 @@ import type { OcrUsage, TranscriptionSummary } from '../../services/transcriptio
 
 const getSummary = vi.hoisted(() => vi.fn());
 vi.mock('../../services/transcriptionSummaryService', () => ({ getTranscriptionSummary: getSummary }));
+const jobListener = vi.hoisted(() => ({ current: null as null | ((job: { jobType: string }) => void) }));
+vi.mock('../../services/jobsService', () => ({
+  OCR_JOB_TYPE: 'ocr_page',
+  onJobChanged: vi.fn((listener: (job: { jobType: string }) => void) => {
+    jobListener.current = listener;
+    return Promise.resolve(() => { jobListener.current = null; });
+  }),
+}));
 
 const usage = (overrides: Partial<OcrUsage> = {}): OcrUsage => ({
   runs: 0, errors: 0, pagesRead: 0, rereads: 0, inputTokens: 0, cachedInputTokens: 0,
@@ -63,5 +71,17 @@ describe('riepilogo della trascrizione', () => {
 
     await screen.findByText('transcription.summary.runsValue');
     expect(screen.queryByText('transcription.summary.tokensSent')).not.toBeInTheDocument();
+  });
+
+  it('ricarica i totali quando cambia un lavoro di lettura, anche senza nuove versioni', async () => {
+    getSummary.mockReset().mockResolvedValue(summary());
+    renderTab([]);
+    await screen.findByText('transcription.summary.runsValue');
+    await waitFor(() => expect(jobListener.current).not.toBeNull());
+    const calls = getSummary.mock.calls.length;
+
+    act(() => { jobListener.current?.({ jobType: 'ocr_page' }); });
+
+    await waitFor(() => expect(getSummary.mock.calls.length).toBe(calls + 1));
   });
 });

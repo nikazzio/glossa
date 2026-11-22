@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   aggregateEntries,
   costForEntry,
+  sentInputTokens,
   formatCacheHitRate,
   formatDurationMs,
   formatUsd,
@@ -360,5 +361,15 @@ describe('costForEntry with cached input', () => {
       inputTokens: 1000, cachedInputTokens: 1000, outputTokens: 0,
     }, { 'openai/gpt-5.6-terra': { input: 2, output: 12 } });
     expect(cost).toBeCloseTo((1000 * 2 * 0.1) / 1_000_000, 10);
+  });
+});
+
+describe('sentInputTokens', () => {
+  it('adds Anthropic cache reads, which the input excludes', () => {
+    expect(sentInputTokens({ provider: 'anthropic', inputTokens: 500, cachedInputTokens: 2000 })).toBe(2500);
+  });
+
+  it('keeps the input of providers that already include cached tokens', () => {
+    expect(sentInputTokens({ provider: 'openai', inputTokens: 4441, cachedInputTokens: 1930 })).toBe(4441);
   });
 });

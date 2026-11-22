@@ -823,7 +823,9 @@ La cache segue da lì: `ocr::handler::ocr_provider_options` attiva la cache
 Anthropic con durata di 1 ora (fra una pagina e l'altra c'è il controllo a vista,
 e ogni lettura rinnova la durata gratis); OpenAI/DeepSeek ricavano
 `prompt_cache_key` dal blocco, quindi una chiave per documento, come nella
-traduzione; Gemini resta sulla cache implicita del servizio.
+traduzione; Gemini riceve `explicit_caching = false`, perché senza opzioni il
+provider crea da sé una cache esplicita (a pagamento orario) sopra la soglia di
+token, e resta sulla cache implicita del servizio.
 Il messaggio utente porta immagine + testo fisso e neutro (`OCR_USER_MESSAGE`:
 alcuni provider rifiutano un messaggio senza testo). **Nessun numero di pagina al
 modello**: l'etichetta del manifesto è la numerazione stampata della

@@ -67,4 +67,15 @@ describe('riepilogo della trascrizione', () => {
 
     expect(summary.ocr.costUsd).toBeNull();
   });
+
+  it('per Anthropic conta fra gli inviati anche i token letti dalla cache', async () => {
+    selectMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      outcome({ provider: 'anthropic', model: 'claude-sonnet-5', input_tokens: 500, cached_input_tokens: 2000 }),
+    ]);
+
+    const summary = await getTranscriptionSummary('td1', null, {});
+
+    expect(summary.ocr.inputTokens).toBe(2500);
+    expect(summary.ocr.cachedInputTokens).toBe(2000);
+  });
 });

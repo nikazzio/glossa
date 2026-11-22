@@ -1,6 +1,6 @@
 import { select } from './dbService';
 import { providerLabel } from '../models/catalog';
-import { costForEntry, type Pricing } from '../utils/operationLogStats';
+import { costForEntry, sentInputTokens, type Pricing } from '../utils/operationLogStats';
 
 /** Letture automatiche di un insieme di righe di esito del log. */
 export interface OcrUsage {
@@ -8,6 +8,7 @@ export interface OcrUsage {
   errors: number;
   pagesRead: number;
   rereads: number;
+  /** Token inviati, compresi quelli letti dalla cache, per ogni servizio. */
   inputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
@@ -64,7 +65,11 @@ function summarizeOutcomes(rows: OutcomeRow[], pricing: Pricing): OcrUsage {
     errors: rows.filter((row) => row.level === 'error').length,
     pagesRead,
     rereads: Math.max(reads.length - pagesRead, 0),
-    inputTokens: sum(reads.map((row) => row.input_tokens ?? 0)),
+    inputTokens: sum(reads.map((row) => sentInputTokens({
+      provider: row.provider ?? undefined,
+      inputTokens: row.input_tokens ?? undefined,
+      cachedInputTokens: row.cached_input_tokens ?? undefined,
+    }))),
     cachedInputTokens: sum(reads.map((row) => row.cached_input_tokens ?? 0)),
     outputTokens: sum(reads.map((row) => row.output_tokens ?? 0)),
     costUsd: costs.some((cost) => cost === null) ? null : sum(costs.map((cost) => cost ?? 0)),

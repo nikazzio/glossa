@@ -8,7 +8,7 @@ import { errorMessage, logger } from '../../utils/logger';
 import { ConsoleChrome } from '../console/ConsoleChrome';
 import { ConsoleToolbar } from '../console/ConsoleToolbar';
 import { usePricingStore } from '../../stores/pricingStore';
-import { costForEntry, formatDurationMs, formatUsd } from '../../utils/operationLogStats';
+import { costForEntry, formatDurationMs, formatUsd, sentInputTokens } from '../../utils/operationLogStats';
 import { providerLabel } from '../../models/catalog';
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -264,7 +264,7 @@ export function LogRow({
     entry.durationMs != null ? formatDurationMs(entry.durationMs) : null,
     hasTokens
       ? t(cached > 0 ? 'transcription.log.sentTokensCached' : 'transcription.log.sentTokens', {
-          sent: (entry.inputTokens ?? 0).toLocaleString(i18n.language),
+          sent: sentInputTokens(entry).toLocaleString(i18n.language),
           cached: cached.toLocaleString(i18n.language),
         })
       : null,
