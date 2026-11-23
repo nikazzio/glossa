@@ -36,6 +36,7 @@ export async function createWorkspace(params: {
     ocrDefaultProvider: DEFAULT_OCR_PROVIDER,
     ocrDefaultModel: DEFAULT_OCR_MODEL,
     ocrDefaultPrompt: '',
+    ocrSeparateNotes: true,
     memorySearchAllWorkspaces: false,
     createdAt: new Date().toISOString(),
   };
@@ -70,12 +71,13 @@ export async function listWorkspaces(includeArchived = false): Promise<Workspace
     ocr_default_provider: string | null;
     ocr_default_model: string | null;
     ocr_default_prompt: string | null;
+    ocr_separate_notes: number | null;
     memory_search_all_workspaces: number | null;
     created_at: string;
     archived_at: string | null;
   }>(`SELECT id, name, icon_key, description, embedding_model,
              memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
-             ocr_default_provider, ocr_default_model, ocr_default_prompt,
+             ocr_default_provider, ocr_default_model, ocr_default_prompt, ocr_separate_notes,
              memory_search_all_workspaces, created_at, archived_at
       FROM workspaces
       WHERE archived_at IS NULL OR $1 = 1
@@ -95,6 +97,7 @@ export async function listWorkspaces(includeArchived = false): Promise<Workspace
     ocrDefaultProvider: (r.ocr_default_provider || DEFAULT_OCR_PROVIDER) as ModelProvider,
     ocrDefaultModel: r.ocr_default_model || DEFAULT_OCR_MODEL,
     ocrDefaultPrompt: r.ocr_default_prompt || '',
+    ocrSeparateNotes: r.ocr_separate_notes !== 0,
     memorySearchAllWorkspaces: r.memory_search_all_workspaces === 1,
     createdAt: r.created_at,
     archivedAt: r.archived_at ?? undefined,
@@ -107,7 +110,7 @@ export async function updateWorkspace(
     'name' | 'description' | 'embeddingModel' |
     'iconKey' |
     'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt' |
-    'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt' |
+    'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt' | 'ocrSeparateNotes' |
     'memorySearchAllWorkspaces'
   >>,
 ): Promise<void> {
@@ -154,6 +157,10 @@ export async function updateWorkspace(
   if (updates.ocrDefaultPrompt !== undefined) {
     sets.push(`ocr_default_prompt = $${index++}`);
     params.push(updates.ocrDefaultPrompt);
+  }
+  if (updates.ocrSeparateNotes !== undefined) {
+    sets.push(`ocr_separate_notes = $${index++}`);
+    params.push(updates.ocrSeparateNotes ? 1 : 0);
   }
   if (updates.memorySearchAllWorkspaces !== undefined) {
     sets.push(`memory_search_all_workspaces = $${index++}`);

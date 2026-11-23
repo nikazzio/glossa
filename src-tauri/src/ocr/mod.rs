@@ -5,4 +5,5 @@
 
 pub mod handler;
 pub mod log;
+pub mod notes;
 pub mod revisions;

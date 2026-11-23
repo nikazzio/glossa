@@ -20,13 +20,19 @@ Priorità: la trascrizione minuta di un documento intero, letta pagina per pagin
 con controllo a vista. L'esportazione viene per ultima, quando il formato di
 testo e note è definito.
 
-1. **Editor Markdown unico (#503).** Scegliere l'editor standard per i testi
-   lunghi, estenderlo con evidenziazioni e colori, sostituire gradualmente le
-   caselle di testo semplici.
-2. **Fasi di trascrizione (#502).** Commenti e note separati dal testo (i segni
-   `==...==` e `{COMMENT: ...}` del prompt di oggi spariscono dal testo),
-   trascrizione pulita, dubbi per documento, cartulazione, stati di revisione,
-   pagine vicine, OCR da PDF.
+1. **Editor della pagina in traduzione e nella pagina della fonte (#503).** La
+   pagina di trascrizione e la scheda Note usano l'editor nuovo
+   (`components/editor/PageEditor`); traduzione (testo di partenza e
+   traduzione) e pagina della fonte in Biblioteca usano ancora `MarkdownEditor`.
+   Spostarle sull'editor nuovo, un'area alla volta (specifica, schema approvato,
+   riscrittura), poi eliminare `MarkdownEditor`. Valutare insieme l'unione di
+   `annotations` (note della traduzione) e `transcription_notes`, e il passaggio
+   dei prompt della traduzione al pannello del prompt riusabile
+   (`components/prompt/PromptPanel`), eliminando `PipelinePromptEditor` e
+   `PromptTemplateMenus`.
+2. **Fasi di trascrizione (#502).** Le note separate dal testo sono fatte;
+   restano trascrizione pulita, dubbi per documento, cartulazione, stati di
+   revisione, pagine vicine, OCR da PDF.
 3. **Lettura di più pagine (#499).** Selezione di intervalli e pagine sparse,
    un solo avvio sulla coda esistente.
 4. **Esportazione della trascrizione (#500).** Per ultima: formato del file e

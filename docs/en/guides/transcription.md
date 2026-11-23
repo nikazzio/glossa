@@ -86,6 +86,10 @@ with the same command. When the check is off, its tooltip says why: empty
 page, loading, or being read. If a save fails, the disk turns red and retries
 it.
 
+The page has two modes, in its right margin: **Write**, to edit the text, and
+**Read**, to see it formatted. Below them are the text commands: note on the
+selected passage, formatting and text size, copy.
+
 While the viewer is still opening the chosen page, a veil covers the text
 and history with a spinner in the middle: writing or restoring stay
 disabled until the page is actually shown. If opening fails, a warning
@@ -110,14 +114,23 @@ without moving where you're writing.
 
 ## Automatic page reading (OCR)
 
-In the **OCR** tab, on the right, you can have the text of the open page
-read by a connected AI model — the same mechanism already used for
-Translation, with providers and keys already configured. The command
+The reading command sits at the top of the right column, above the tabs, and
+is visible from each of them: it has a connected AI model read the text of the
+open page — the same mechanism already used for Translation, with providers and
+keys already configured. Next to it you find the service and model that will
+read the page and the cost of its last reading. Provider, model and prompt of
+the document are chosen in the **OCR** tab. The command
 appears disabled until the conditions are met: the page must belong to a
 digitization linked to the document, and a provider and model that can read
 images must be chosen, either for the document or inherited from the
 workspace settings. The reason a command is disabled is always in its
 tooltip.
+
+Service and model are chosen in the OCR tab. While the document follows the
+workspace they are off, with the line “from the workspace”; the **customise for
+this document** command makes them editable for this document only, and used
+again brings the document back to the workspace. The model name above the tabs
+opens the OCR tab.
 
 The text that comes back enters the history as a normal revision, marked
 "Automatic recognition": it never overwrites what's there, it stays
@@ -131,14 +144,23 @@ OCR, where you can also load one from the prompt library. To reuse a prompt in
 another document, save it to the library from the edit command, then load it
 there. The reset command brings the document back to the workspace prompt.
 
-The model receives the page image and the prompt, nothing else: Glossa adds no
-instructions of its own, so the prompt decides the text format (line breaks,
-comments, page markers). The page number is not sent: the
+To change the prompt use the pencil: the text stays as a draft, even when you
+switch tab, until you save it with the check (or **Ctrl + Enter**) or discard it
+with the X (or **Esc**). Saving does not create a template. Next to the title you
+read where the text comes from — default, custom, a template, a modified
+template — and whether the draft is not saved yet. The book opens the
+automatic-reading templates: you can use one, update it with the current text,
+delete it (with a confirmation in the row) or save the text as a new template.
+
+The model receives the page image and the prompt: Glossa adds no editorial rules
+of its own, so the prompt decides line breaks, comments and page markers. With
+**notes apart from the text** (see below) Glossa only adds the format of the
+notes, before the prompt. The page number is not sent: the
 library's printed numbering rarely matches the position in the scan and would
 only confuse the reading.
 
-After the prompt, the **Image for OCR** section shows the active choice beside
-the two selectors, including the size when optimised:
+After the prompt, the **Image sent** section has two dots; the name of the
+choice and the size are in their tooltip:
 
 - **optimised**: reduced to the long side chosen in Settings, Transcriptions
   tab (1500, 2000, 2500 or 3000 pixels), and recompressed. A smaller image is
@@ -153,6 +175,10 @@ Both choices send the image to the selected model.
 The starting choice is in Settings; in the Studio you change it for the
 session, without it being saved in the document. With the right panel closed,
 the reading command stays under the reopen command.
+
+If the page has already been read, Glossa asks before reading it again and says
+how many notes from the previous reading will be replaced. The previous text
+stays in the history.
 
 While a page is being read its sheet is veiled and stays read-only, even
 after a cancellation request, until the job actually stops.
@@ -172,15 +198,57 @@ here, inside a transcription document, mirroring the Translation log you see
 inside a project. Every reading leaves four rows: the start with provider and
 model, the image that was sent with its real size, weight and origin (downloaded book, cache or library), the full prompt that
 was sent (expandable row by row), and the outcome with duration, tokens sent
-(and how many came from the cache), tokens received, estimated cost and the
-number of the revision created. Each row states these items in words, on a
+(and how many came from the cache), tokens received, estimated cost, the
+number of the revision created and, with notes apart from the text, how many
+notes arrived and how many could not be attached. Each row states these items in words, on a
 single line. On top there are
 search, filters by row type and by level, and grouping by page.
 
+## Page notes
+
+Transcription notes live in the **Notes** tab, on the right, apart from the
+text: each note has a type, a text and, when it is about a passage, the
+annotated passage. In the text, annotated passages are highlighted with a single
+colour; hover one to read the type and the start of the note, click it to open
+the note in the tab.
+
+The types are **Emendation** (slip corrected, repetition removed, supplement),
+**Doubt** (uncertain reading, in ochre), **Addition** (in the margin or between
+the lines), **Correction** (in the witness: “corrected over”, “corrected from”),
+**Typography** (small capitals, Roman numerals, titles), **Abbreviation**
+(non-obvious, expanded) and **Note**, the generic one. The filter at the top of
+the tab shows one type only, with the number of notes of each type.
+
+The tab splits notes into three groups:
+
+- **Page**: notes on the whole page, with no passage;
+- **In the text**: in reading order;
+- **To reattach**: in grey, notes whose passage is no longer in the text. A note
+  is never lost: to reattach it, select the passage in the text and use the
+  attach command on the note.
+
+To write a note, select a passage in the text and use the note command in the
+page margin, or **Ctrl + Alt + N**; the + command in the tab adds a note on the
+whole page. On each note, on hover, you find find in the text, edit and delete.
+A note also remembers which repetition of the passage it annotates, so a word
+that appears several times stays attached to the right one. When you edit the
+text by hand, notes follow their passages.
+
+**Notes apart from the text.** In the workspace settings, under OCR, the switch
+of the same name (on at first) has the model write every note as a footnote, in
+standard Markdown, with its type and the quoted passage:
+`[^1]: Doubt «et dixit» — uncertain reading`. After the reading Glossa removes
+the notes from the text and moves them to the Notes tab. Matching the passage
+tolerates differences in spacing, case and punctuation. A type Glossa does not
+recognise becomes Note; a quoted passage that cannot be found goes among the
+notes to reattach. Reading the page again replaces the notes from the previous
+reading with the new ones; notes you wrote or corrected stay. The setting
+applies to readings started after you change it.
+
 ## History and summary
 
-The right column has three tabs — **History**, **OCR**, **Summary** — and
-opens on History. Every save stays in that page's history: for each version
+The right column has four tabs — **Notes**, **History**, **OCR**, **Summary** —
+and opens on Notes. Every save stays in that page's history: for each version
 it shows who wrote it — manual correction, automatic recognition, or import
 —, when, and whether it is the current or the verified version. The command on each history entry brings that version's
 text back as a new save, without overwriting earlier versions, even after a

@@ -37,6 +37,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [ocrDefaultProvider, setOcrDefaultProvider] = useState<ModelProvider | ''>('');
   const [ocrDefaultModel, setOcrDefaultModel] = useState('');
   const [ocrDefaultPrompt, setOcrDefaultPrompt] = useState('');
+  const [ocrSeparateNotes, setOcrSeparateNotes] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
@@ -52,6 +53,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     setOcrDefaultProvider(activeWorkspace.ocrDefaultProvider);
     setOcrDefaultModel(activeWorkspace.ocrDefaultModel);
     setOcrDefaultPrompt(activeWorkspace.ocrDefaultPrompt);
+    setOcrSeparateNotes(activeWorkspace.ocrSeparateNotes);
     setActiveTab('general');
   }, [open, activeWorkspace]);
 
@@ -76,6 +78,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
         ocrDefaultProvider,
         ocrDefaultModel: ocrDefaultModel.trim(),
         ocrDefaultPrompt: ocrDefaultPrompt.trim(),
+        ocrSeparateNotes,
       } : {
         name: name.trim(),
         description: description.trim() || undefined,
@@ -258,6 +261,8 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     }}
                     onModelChange={setOcrDefaultModel}
                     onPromptChange={setOcrDefaultPrompt}
+                    separateNotes={ocrSeparateNotes}
+                    onSeparateNotesChange={setOcrSeparateNotes}
                   />
                 </div>
               )}

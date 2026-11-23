@@ -1245,7 +1245,8 @@
       "history": "History",
       "summary": "Summary",
       "assist": "OCR",
-      "log": "Transcription log"
+      "log": "Transcription log",
+      "notes": "Notes"
     },
     "meta": {
       "page": "Page",
@@ -1297,7 +1298,7 @@
       "documentModel": "Model",
       "documentPrompt": "Document OCR prompt",
       "readThisPage": "Read page {{page}}",
-      "inheritWorkspace": "Inherit from workspace",
+      "inheritWorkspace": "Follow the workspace again",
       "saveFailed": "Could not save OCR settings",
       "jobStarted": "Reading started: follow progress in the jobs panel",
       "jobStartFailed": "Could not start the reading job",
@@ -1309,7 +1310,11 @@
       "imageModeHint": "Optimised: resized and recompressed. Copy on this computer: unchanged; if missing, the optimised image is used. Applies to this session. The image goes to the selected model.",
       "imageOptimized": "Optimised · {{edge}} px",
       "imageLocal": "Copy on this computer",
-      "imageSettingsFailed": "Could not read the image settings"
+      "imageSettingsFailed": "Could not read the image settings",
+      "modelFromWorkspace": "from the workspace",
+      "modelFromDocument": "this document only",
+      "refineNeedsKey": "the service key is missing",
+      "image": "Image sent"
     },
     "log": {
       "title": "Transcription log",
@@ -1345,7 +1350,78 @@
     "commandBlocked": "{{command}} — {{reason}}",
     "blockedEmptyPage": "Write some text before verifying",
     "blockedPageLoading": "Page loading",
-    "blockedReading": "Reading in progress"
+    "blockedReading": "Reading in progress",
+    "notes": {
+      "types": {
+        "emendation": {
+          "label": "Emendation",
+          "hint": "Slip corrected, repetition removed, supplement."
+        },
+        "doubt": {
+          "label": "Doubt",
+          "hint": "Uncertain reading."
+        },
+        "addition": {
+          "label": "Addition",
+          "hint": "In the margin or between the lines, with the hand."
+        },
+        "correction": {
+          "label": "Correction",
+          "hint": "Correction in the witness: “corrected over” or “corrected from”, with the hand."
+        },
+        "typography": {
+          "label": "Typography",
+          "hint": "Small capitals, Roman numerals, titles."
+        },
+        "abbreviation": {
+          "label": "Abbreviation",
+          "hint": "Non-obvious abbreviation, expanded."
+        },
+        "note": {
+          "label": "Note",
+          "hint": "Generic note, also for a model note with an unrecognised type."
+        }
+      },
+      "type": "Note type",
+      "text": "Note text",
+      "textPlaceholder": "Write the note…",
+      "save": "Save the note",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete?",
+      "confirmDeleteYes": "Delete the note",
+      "confirmDeleteNo": "Cancel",
+      "reattach": "Attach to the selected text",
+      "reattachNeedsSelection": "Select the passage in the text to attach it to",
+      "locate": "Find in the text",
+      "edit": "Edit",
+      "delete": "Delete",
+      "notFound": "not found in the text",
+      "filter": "Filter by type",
+      "filterAll": "All ({{count}})",
+      "filterType": "{{type}} ({{count}})",
+      "addPageNote": "New page note",
+      "newNote": "New note",
+      "groupPage": "Page",
+      "groupText": "In the text",
+      "groupDetached": "To reattach",
+      "empty": "No notes on this page.",
+      "emptyHint": "Select a passage in the text to annotate it, or add a page note.",
+      "emptyFilter": "No notes of this type.",
+      "saveFailed": "Note not saved"
+    },
+    "reread": {
+      "title": "Read the page again?",
+      "message": "This page has already been read. The new reading creates a new version of the text; the current one stays in the History.",
+      "messageNotes_one": "This page has already been read. The new reading creates a new version of the text and replaces the note from the previous reading. Notes you wrote or corrected stay.",
+      "messageNotes_other": "This page has already been read. The new reading creates a new version of the text and replaces the {{count}} notes from the previous reading. Notes you wrote or corrected stay.",
+      "confirm": "Read again"
+    },
+    "run": {
+      "lastReadCost": "Last reading ≈ {{cost}}",
+      "lastReadNoPrice": "Last reading: cost unknown",
+      "neverRead": "Never read automatically",
+      "openSettings": "Choose service, model and prompt"
+    }
   },
   "areas": {
     "translations": {
@@ -2013,7 +2089,9 @@
       "ocrTab": "OCR",
       "ocrDefaultPromptHint": "Every document starts from this. In the Studio the prompt is changed from any page and applies to the whole document.",
       "ocrDefaultModel": "Default OCR model",
-      "ocrDefaultPrompt": "Default OCR prompt"
+      "ocrDefaultPrompt": "Default OCR prompt",
+      "ocrSeparateNotes": "Notes apart from the text",
+      "ocrSeparateNotesHint": "The model answers in Markdown and writes every note as a footnote. Glossa moves them to the Notes tab and keeps the text clean."
     },
     "hub": {
       "lockedArea": "Coming in version 2.0"
@@ -2470,7 +2548,8 @@
             "title": "Writing and saving",
             "paragraphs": [
               "Text saves after 30 seconds without changes. The indicator at the bottom right, in the status bar, distinguishes unsaved text from a save in progress, completed, or failed; hover it to read the time of the last save. To save a version to the history right away, use the disk at the top of the page, or Ctrl + S even while typing; the command stays off when there is nothing new to save. Changing page or leaving the Studio normally saves pending text immediately; a forced shutdown before a save can lose the latest edits.",
-              "When the text is ready, mark it as verified with the check next to the page title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command. When the check is off, hover it to read why: empty page, loading, or being read. If a save fails, the disk turns red and retries it."
+              "When the text is ready, mark it as verified with the check next to the page title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command. When the check is off, hover it to read why: empty page, loading, or being read. If a save fails, the disk turns red and retries it.",
+              "The page has two modes, in its right margin: Write, to edit the text, and Read, to see it formatted. Below them are the text commands: note on the selected passage, formatting and text size, copy."
             ]
           },
           {
@@ -2489,20 +2568,34 @@
           {
             "title": "Automatic page reading (OCR)",
             "paragraphs": [
-              "In the \"OCR\" tab, on the right, you can have the open page read by a connected AI model — the same mechanism already used for translation, with the providers and keys you already configured.",
+              "The command that reads the open page sits at the top of the right column, above the tabs, and is visible from each of them: it has a connected AI model read the text — the same mechanism already used for translation, with the providers and keys you already configured. Next to it you find the service and model that will read the page and the cost of its last reading.",
               "The command stays disabled until the conditions are met: the page must belong to a digitization linked to the document, and you need a provider and a model that can read images, chosen for the document or inherited from the workspace settings. The reason a command is disabled is in its own tooltip.",
+              "Service and model are chosen in the OCR tab; while the document follows the workspace they are off, with the line “from the workspace”. The “customise for this document” command makes them editable for this document only; used again, the document follows the workspace again. The model name above the tabs opens the OCR tab.",
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
-              "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt. The prompt is the only instruction the model receives, together with the image: it decides line breaks, comments and page markers.",
-              "After the prompt, the Image for OCR section shows the active choice beside the two selectors: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
+              "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt. The prompt is the only editorial instruction the model receives: with notes apart from the text, Glossa only adds the format of the notes (see “Page notes”).",
+              "To change the prompt use the pencil: the text stays as a draft, even if you switch tab, until you save it with the check (or Ctrl + Enter) or discard it with the X (or Esc). Saving does not create a template. Next to the title you read where the text comes from: default, custom, a template, a modified template, and whether the draft is not saved yet. The book opens the automatic-reading templates: use one, update it with the current text, delete it (with a confirmation in the row) or save the text as a new template.",
+              "After the prompt, the “Image sent” section has two dots: optimised (reduced to the size set in Settings, Transcriptions tab, and recompressed) or the copy on your computer as it is, the same as the viewer's; if the copy is missing the optimised one is sent. Name and size are in the tooltip, and the arrow keys choose them too. The starting choice is in Settings; here it applies to the session. With the panel closed the reading command stays visible.",
               "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a gold label in the top row names the page being read.",
               "Reading is queued like a download: you find it in the jobs panel while it runs, and you can pause or cancel it the same way. A passing problem is retried on its own; a wrong key or an empty answer is not, because retrying would give the same answer. An empty answer usually means the model found no text on the page.",
-              "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens sent (and how many came from the cache), tokens received, estimated cost and the number of the revision created. On top there are search, filters by row type and by level, and grouping by page."
+              "If the page has already been read, Glossa asks before reading it again and says how many notes from the previous reading will be replaced. The previous text stays in the History.",
+              "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens sent (and how many came from the cache), tokens received, estimated cost, the number of the revision created and, with notes apart from the text, how many notes arrived and how many could not be attached. On top there are search, filters by row type and by level, and grouping by page."
+            ]
+          },
+          {
+            "title": "Page notes",
+            "paragraphs": [
+              "Transcription notes live in the Notes tab, on the right, apart from the text: each note has a type, a text and, when it is about a passage, the annotated passage. In the text, annotated passages are highlighted with a single colour; hover one to read the type and the start of the note, click it to open the note in the tab.",
+              "The types are Emendation, Doubt (in ochre), Addition, Correction, Typography, Abbreviation and Note, the generic one. The filter at the top of the tab shows one type only, with the number of notes of each type.",
+              "The tab splits notes into three groups: Page, for notes on the whole page; In the text, in reading order; To reattach, in grey, for notes whose passage is no longer in the text. A note is never lost: to reattach it, select the passage in the text and use the attach command on the note.",
+              "To write a note, select a passage in the text and use the note command in the page margin, or Ctrl + Alt + N; the + command in the tab adds a note on the whole page. On each note, on hover, you find find in the text, edit and delete.",
+              "With notes apart from the text, on in the workspace settings under OCR, the automatic reading asks the model to write every note as a footnote, with its type and the quoted passage. Glossa moves them to the Notes tab and keeps the text clean. A type Glossa does not recognise becomes Note; a quoted passage that cannot be found goes among the notes to reattach.",
+              "When you edit the text by hand, notes follow their passages. Reading the page again replaces the notes from the previous reading with the new ones; notes you wrote or corrected stay."
             ]
           },
           {
             "title": "History and summary",
             "paragraphs": [
-              "The right column has three tabs: History, OCR and Summary. It opens on History.",
+              "The right column has four tabs: Notes, History, OCR and Summary. It opens on Notes.",
               "Every save stays in that page's history: for each version you see who wrote it — manual correction, automatic recognition, or import —, when, and whether it is the current or the verified version.",
               "The command on each version brings its text back as a new save, without overwriting earlier versions. Changing page changes the history shown, too.",
               "You can consolidate a version and give it an editable name: it appears in the upper section without duplicating the text. Remove the name to return it to ordinary history.",
@@ -2842,6 +2935,7 @@
               "Ctrl + Enter starts the selected translation action, including from a text field. Segment mode requires a selected segment.",
               "Ctrl + S saves the open translation and modified language resources, even while typing on the pages. During automatic translation, saving the translation is deferred.",
               "In the transcription Studio, Ctrl + S saves a version of the page to the history right away, even while typing on the page.",
+              "In the Transcription Studio, Ctrl + Alt + N creates a note on the passage selected on the page.",
               "Ctrl + E opens export when the document has segments. Ctrl + comma opens pipeline configuration."
             ]
           },
@@ -4073,5 +4167,28 @@
       "moreConflicts_one": "and {{count}} more",
       "moreConflicts_other": "and {{count}} more"
     }
+  },
+  "pageEditor": {
+    "write": "Write",
+    "read": "Read",
+    "readEmpty": "Nothing to read.",
+    "commands": "Text commands",
+    "addNote": "Note on the selected text (Ctrl+Alt+N)",
+    "addNoteNeedsSelection": "Select a passage to annotate it",
+    "format": "Formatting and text size"
+  },
+  "promptPanel": {
+    "templates": "Templates",
+    "templateUpdated": "Template “{{name}}” updated",
+    "deleteFailed": "Could not delete the template",
+    "confirmDelete": "Confirm: delete “{{name}}”",
+    "updateTemplate": "Update “{{name}}” with the current text",
+    "deleteTemplate": "Delete “{{name}}”",
+    "saveAsTemplate": "Save the current text as a new template",
+    "unsaved": "not saved",
+    "templateModified": "Template “{{name}}”, modified",
+    "resetDraft": "Bring the text back to the starting one",
+    "save": "Save the prompt (Ctrl+Enter): it does not create a template",
+    "discard": "Discard changes (Esc)"
   }
 }

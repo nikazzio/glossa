@@ -44,6 +44,11 @@ pub struct OcrPageConfig {
     #[serde(default)]
     pub ollama_base_url: Option<String>,
     pub image_edge: u32,
+    /// Note separate dal testo (impostazione del workspace al momento della
+    /// messa in coda): il prompt chiede le note a piè di pagina e la risposta
+    /// le cede alla scheda Note.
+    #[serde(default)]
+    pub separate_notes: bool,
     /// Copie già sul computer da inviare così come sono, in ordine di
     /// preferenza (vuoto = immagine ottimizzata). Senza indirizzo remoto:
     /// quella che manca non si scarica, si passa alla successiva.
@@ -246,6 +251,7 @@ impl OcrJobHandler {
 
         let structured = build_ocr_prompt(
             &page.prompt,
+            page.separate_notes,
             ImageAttachment {
                 bytes: image.bytes,
                 media_type: image.media_type.to_string(),
@@ -311,11 +317,29 @@ impl OcrJobHandler {
         }
 
         let segment_id = page.segment_id.clone();
-        let text = response.content.clone();
+        let extracted = page
+            .separate_notes
+            .then(|| crate::ocr::notes::extract_notes(&response.content));
+        let text = extracted.as_ref().map_or_else(
+            || response.content.clone(),
+            |notes| notes.clean_text.clone(),
+        );
+        let notes_summary = extracted.as_ref().and_then(|notes| notes.stats.summary());
+        let characters = text.chars().count();
         let write_result = ctx
             .with_database(move |conn| {
-                let before = crate::ocr::revisions::latest_revision_number(conn, &segment_id)?;
-                let revision = write_ocr_revision(conn, &segment_id, &text)?;
+                // Testo e note insieme: una revisione senza le sue note (o il
+                // contrario) lascerebbe la scheda Note fuori posto.
+                let tx = conn
+                    .unchecked_transaction()
+                    .map_err(|error| format!("transazione lettura automatica: {error}"))?;
+                let before = crate::ocr::revisions::latest_revision_number(&tx, &segment_id)?;
+                let revision = write_ocr_revision(&tx, &segment_id, &text)?;
+                if let Some(extracted) = &extracted {
+                    crate::ocr::notes::replace_model_notes(&tx, &segment_id, &extracted.notes)?;
+                }
+                tx.commit()
+                    .map_err(|error| format!("transazione lettura automatica: {error}"))?;
                 Ok(if Some(revision.revision_number) == before {
                     PageOutcome::Unchanged(revision.revision_number)
                 } else {
@@ -332,7 +356,6 @@ impl OcrJobHandler {
             }
         };
 
-        let characters = response.content.chars().count();
         let (level, message) = match outcome {
             PageOutcome::Written(number) => (
                 "success",
@@ -344,6 +367,10 @@ impl OcrJobHandler {
                     "testo identico alla revisione {number}: nessuna revisione nuova ({characters} caratteri)"
                 ),
             ),
+        };
+        let message = match notes_summary {
+            Some(summary) => format!("{message} · {summary}"),
+            None => message,
         };
 
         self.log(

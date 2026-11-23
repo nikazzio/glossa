@@ -13,6 +13,7 @@ un campo di testo, una selezione o un editor modificabile.
 | `Ctrl + Invio` | Avvia l’azione di traduzione selezionata | In modalità frammento richiede un frammento selezionato; funziona anche nei campi di testo |
 | `Ctrl + S` | Salva la traduzione aperta (con una versione nello storico dei frammenti cambiati) e le risorse linguistiche modificate | A traduzione aperta funziona anche mentre scrivi nei fogli; la traduzione non viene salvata mentre è in elaborazione |
 | `Ctrl + S` nello Studio di trascrizione | Salva subito una versione della pagina nello storico | Funziona anche mentre scrivi nel foglio; non fa niente se non c’è niente di nuovo da salvare |
+| `Ctrl + Alt + N` nello Studio di trascrizione | Crea una nota sul passaggio selezionato | Il passaggio va selezionato nel foglio, in modalità Scrivi |
 | `Ctrl + E` | Apre l’esportazione | Richiede almeno un frammento |
 | `Ctrl + ,` | Apre la configurazione della pipeline | Fuori dai campi modificabili |
 | `Ctrl + H` | Apre questa sezione della guida in-app | Fuori dai campi modificabili |

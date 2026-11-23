@@ -33,6 +33,7 @@ export const BACKUP_TABLES = [
   'transcription_documents',
   'transcription_segments',
   'transcription_revisions',
+  'transcription_notes',
   'translation_origins',
   'translations',
   'translation_revisions',
@@ -61,8 +62,15 @@ const backupValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()
 const backupRowSchema = z.record(z.string(), backupValueSchema);
 const backupTableSchema = z.array(backupRowSchema);
 
+// Tabelle nate dopo il formato corrente: un backup precedente non le ha, e
+// vale come «nessuna riga» invece di essere rifiutato.
+const TABLES_ADDED_LATER: ReadonlySet<BackupTable> = new Set(['transcription_notes']);
+
 const backupTablesShape = Object.fromEntries(
-  BACKUP_TABLES.map((table) => [table, backupTableSchema]),
+  BACKUP_TABLES.map((table) => [
+    table,
+    TABLES_ADDED_LATER.has(table) ? backupTableSchema.default([]) : backupTableSchema,
+  ]),
 ) as Record<BackupTable, typeof backupTableSchema>;
 
 const corpusTablesSchema = z.object(backupTablesShape).passthrough().superRefine((tables, ctx) => {

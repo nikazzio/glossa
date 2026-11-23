@@ -20,6 +20,8 @@ interface OcrStartButtonProps {
   reading: boolean;
   onStart: () => void;
   tooltipSide?: TooltipSide;
+  /** Il comando principale sopra le schede, grande come quello della traduzione. */
+  large?: boolean;
 }
 
 /** Il comando «leggi la pagina»: lo stesso nella scheda OCR e sul pannello
@@ -33,6 +35,7 @@ export function OcrStartButton({
   reading,
   onStart,
   tooltipSide,
+  large = false,
 }: OcrStartButtonProps) {
   const { t } = useTranslation();
   const resolved = resolveOcrSettings(document, workspace);
@@ -46,14 +49,16 @@ export function OcrStartButton({
 
   return (
     <IconButton
-      size="sm"
-      tone={busy ? 'running' : 'default'}
+      size={large ? 'md' : 'sm'}
+      tone={busy ? 'running' : large ? 'charcoal' : 'default'}
       onClick={onStart}
       disabled={busy || reason !== null}
       title={title}
+      ariaLabel={title}
       tooltipSide={tooltipSide}
+      className={large ? 'h-14 w-14' : undefined}
     >
-      {busy ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
+      {busy ? <Loader2 size={large ? 22 : 16} className="animate-spin" /> : <ScanText size={large ? 22 : 16} />}
     </IconButton>
   );
 }

@@ -131,6 +131,7 @@ const DELETE_ORDER = [
   'translation_revisions',
   'translations',
   'translation_origins',
+  'transcription_notes',
   'transcription_revisions',
   'transcription_segments',
   'transcription_documents',

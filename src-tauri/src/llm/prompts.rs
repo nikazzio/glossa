@@ -65,17 +65,44 @@ fn format_few_shot_list(examples: &[FewShotExample]) -> String {
 /// confuses the model. Some providers reject an empty text block.
 const OCR_USER_MESSAGE: &str = "Transcribe the page in the attached image.";
 
+/// Output format of the automatic reading when the workspace keeps notes
+/// apart from the text (#502, #503): standard Markdown, every note as a
+/// footnote whose definition starts with the type and quotes the passage.
+/// Glossa turns those footnotes into page notes (`ocr::notes`). Only the
+/// format: editorial rules stay in the document prompt.
+pub(crate) const OCR_NOTES_FORMAT: &str = "Output format:
+- Reply with the transcription only, in standard Markdown.
+- Write every note as a footnote. Put the marker [^n] right after the passage it refers to.
+- Start each footnote with one type word, then the exact passage in «», then the note: [^1]: Doubt «et dixit» — uncertain reading.
+- Types: Emendation, Doubt, Addition, Correction, Typography, Abbreviation, Note.
+- A note about the whole page has no marker and no passage: [^p1]: Note — faded ink in the lower margin.";
+
 /// Prompt for one OCR/HTR call (#220, #501): the document's resolved prompt is
-/// the only instruction, sent as one cacheable block so consecutive pages of the
-/// same document reuse it. The image stays in the user message only — never in
-/// a system block, or Gemini's whole-prompt cache invalidates on every page and
+/// the only editorial instruction, sent as one cacheable block so consecutive
+/// pages of the same document reuse it. With `separate_notes` the fixed format
+/// block goes first (static → document, the cache order): it is not marked
+/// cacheable itself, the breakpoint on the document prompt already covers the
+/// whole prefix. The image stays in the user message only — never in a system
+/// block, or Gemini's whole-prompt cache invalidates on every page and
 /// Anthropic/OpenAI lose the cached prefix.
-pub(crate) fn build_ocr_prompt(resolved_prompt: &str, image: ImageAttachment) -> StructuredPrompt {
+pub(crate) fn build_ocr_prompt(
+    resolved_prompt: &str,
+    separate_notes: bool,
+    image: ImageAttachment,
+) -> StructuredPrompt {
+    let format = separate_notes.then(|| PromptBlock {
+        text: OCR_NOTES_FORMAT.to_string(),
+        cacheable: false,
+    });
+    let document = PromptBlock {
+        text: resolved_prompt.to_string(),
+        cacheable: true,
+    };
     StructuredPrompt {
-        system: vec![PromptBlock {
-            text: resolved_prompt.to_string(),
-            cacheable: true,
-        }],
+        system: format
+            .into_iter()
+            .chain(std::iter::once(document))
+            .collect(),
         user: OCR_USER_MESSAGE.to_string(),
         images: vec![image],
     }

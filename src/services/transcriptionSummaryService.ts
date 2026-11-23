@@ -117,3 +117,42 @@ export async function getTranscriptionSummary(
     ),
   };
 }
+
+/** Le letture automatiche di una pagina: quante, e quanto è costata l'ultima. */
+export interface PageReadInfo {
+  reads: number;
+  /** `null` se non ci sono letture o il prezzo del modello non è noto. */
+  lastCostUsd: number | null;
+}
+
+export async function getPageReadInfo(segmentId: string, pricing: Pricing): Promise<PageReadInfo> {
+  const rows = await select<OutcomeRow>(
+    `SELECT at, level, provider, model, input_tokens, cached_input_tokens, output_tokens,
+            cost_usd, duration_ms, transcription_segment_id
+       FROM operation_logs
+      WHERE transcription_segment_id = $1 AND phase = 'end' AND level IN ('success', 'warn')
+      ORDER BY at DESC`,
+    [segmentId],
+  );
+  const last = rows[0];
+  const lastCostUsd = last
+    ? last.cost_usd ?? costForEntry({
+      provider: last.provider ?? undefined,
+      model: last.model ?? undefined,
+      inputTokens: last.input_tokens ?? undefined,
+      outputTokens: last.output_tokens ?? undefined,
+      cachedInputTokens: last.cached_input_tokens ?? undefined,
+    }, pricing)
+    : null;
+  return { reads: rows.length, lastCostUsd };
+}
+
+/** La pagina è già stata letta automaticamente almeno una volta. */
+export async function hasAutomaticReading(segmentId: string): Promise<boolean> {
+  const rows = await select<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM operation_logs
+      WHERE transcription_segment_id = $1 AND phase = 'end' AND level IN ('success', 'warn')`,
+    [segmentId],
+  );
+  return (rows[0]?.count ?? 0) > 0;
+}

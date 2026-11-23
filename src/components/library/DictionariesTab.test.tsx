@@ -20,7 +20,7 @@ const loadGlossaryEntries = vi.fn().mockResolvedValue(undefined);
 const saveGlossaryEntries = vi.fn().mockResolvedValue(undefined);
 const workspace: Workspace = { id: 'guest', name: 'Archivio', iconKey: 'book', embeddingModel: 'text-embedding-3-small',
   memorySearchAllWorkspaces: false, memoryExtractorProvider: 'openai', memoryExtractorModel: 'gpt-5.4-nano', memoryExtractorPrompt: 'Extract',
-  ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', createdAt: '2026-10-03' };
+  ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', ocrSeparateNotes: true, createdAt: '2026-10-03' };
 
 describe('Dictionary resources', () => {
   beforeEach(() => {

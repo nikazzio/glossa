@@ -57,7 +57,7 @@ describe('pagina inviata al modello', () => {
     await startOcrForPage({
       document,
       segment: segmentAt(position),
-      workspace: { ocrDefaultPrompt: '', ocrDefaultProvider: 'openai', ocrDefaultModel: 'gpt-5.6-terra' },
+      workspace: { ocrDefaultPrompt: '', ocrDefaultProvider: 'openai', ocrDefaultModel: 'gpt-5.6-terra', ocrSeparateNotes: true },
       viewerRef: {
         sourceId: 's1', versionId: 'v1', versionKind: 'iiif_manifest',
         sourceUrl: 'https://biblioteca.example/manifest.json', providerKey: 'gallica',
@@ -87,6 +87,12 @@ describe('pagina inviata al modello', () => {
     expect(sent.pageLabel).toBe('9');
   });
 
+  it('fissa nel lavoro le note separate del workspace al momento dell avvio', async () => {
+    const sent = await sentFor(0);
+
+    expect(sent.separateNotes).toBe(true);
+  });
+
   it('una pagina oltre la fine del libro non parte', async () => {
     await expect(sentFor(10)).rejects.toThrow('noDigitization');
     expect(enqueueMock).not.toHaveBeenCalled();
@@ -99,7 +105,7 @@ describe('pagina inviata al modello', () => {
       await startOcrForPage({
         document: { ...document, ocr_provider: 'ollama', ocr_model: 'llava' },
         segment: segmentAt(0),
-        workspace: { ocrDefaultPrompt: '', ocrDefaultProvider: '', ocrDefaultModel: '' },
+        workspace: { ocrDefaultPrompt: '', ocrDefaultProvider: '', ocrDefaultModel: '', ocrSeparateNotes: false },
         viewerRef: {
           sourceId: 's1', versionId: 'v1', versionKind: 'iiif_manifest',
           sourceUrl: 'https://biblioteca.example/manifest.json', providerKey: 'gallica',

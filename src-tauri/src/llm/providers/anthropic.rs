@@ -529,6 +529,7 @@ mod tests {
     fn ocr_request_caches_the_document_prompt_for_one_hour_and_leaves_the_image_out() {
         let structured = crate::llm::prompts::build_ocr_prompt(
             "Document prompt",
+            false,
             crate::llm::types::ImageAttachment {
                 bytes: vec![0xFF, 0xD8, 0xFF],
                 media_type: "image/jpeg".to_string(),

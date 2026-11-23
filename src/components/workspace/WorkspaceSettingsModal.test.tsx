@@ -22,7 +22,7 @@ describe('WorkspaceSettingsModal', () => {
         memoryExtractorProvider: 'openai',
         memoryExtractorModel: 'gpt-5.4-nano',
         memoryExtractorPrompt: 'Estrai le frasi.',
-        ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', memorySearchAllWorkspaces: false,
+        ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', ocrSeparateNotes: true, memorySearchAllWorkspaces: false,
         createdAt: '2026-07-28T00:00:00.000Z',
       },
       workspaces: [],
@@ -54,5 +54,15 @@ describe('WorkspaceSettingsModal', () => {
     expect(screen.queryByRole('switch', { name: 'workspace.memorySearchAllWorkspaces' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'common.save' }));
     expect(updateActiveWorkspace).toHaveBeenCalledWith(expect.not.objectContaining({ memorySearchAllWorkspaces: expect.anything() }));
+  });
+  it('salva le note separate dal testo dalla scheda OCR', async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceSettingsModal open onClose={vi.fn()} />);
+    await user.click(screen.getByRole('tab', { name: 'workspace.settings.ocrTab' }));
+    const toggle = screen.getByRole('switch', { name: 'workspace.settings.ocrSeparateNotes' });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await user.click(toggle);
+    await user.click(screen.getByRole('button', { name: 'common.save' }));
+    expect(updateActiveWorkspace).toHaveBeenCalledWith(expect.objectContaining({ ocrSeparateNotes: false }));
   });
 });

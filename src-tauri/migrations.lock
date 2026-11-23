@@ -40,3 +40,4 @@
 # conservato; ripristino dal backup applicativo su database nuovo.
 
 0001_baseline_2_0.sql 9e516d504414db6f
+0002_transcription_notes.sql bf0a14503bf2ee09

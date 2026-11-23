@@ -1,9 +1,7 @@
-import { ChevronLeft, ChevronRight, CircleCheck, Loader2, Save, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleCheck, Loader2, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '../ui';
 import type { SaveState } from './useSegmentEditor';
-
-const DIVIDER_CLASSNAME = 'h-4 w-px shrink-0 bg-editorial-border';
 
 interface StudioTextHeaderProps {
   title: string;
@@ -24,15 +22,14 @@ interface StudioTextHeaderProps {
   /** Perché il salvataggio non si può usare adesso; `null` se non c'è niente da salvare. */
   saveBlockedReason: string | null;
   onSave: () => void;
-  textMenuOpen: boolean;
-  onTextMenuToggle: () => void;
 }
 
 /**
  * La barra sopra il foglio: stessa altezza della barra del visore a sinistra
  * (h-12), così le due colonne partono allineate. Lo stato del salvataggio sta
  * nella barra di stato, come per le traduzioni; qui resta il dischetto, rosso
- * se il salvataggio è fallito.
+ * se il salvataggio è fallito. I comandi del testo stanno nel margine della
+ * pagina, non qui.
  */
 export function StudioTextHeader({
   title,
@@ -49,8 +46,6 @@ export function StudioTextHeader({
   canSave,
   saveBlockedReason,
   onSave,
-  textMenuOpen,
-  onTextMenuToggle,
 }: StudioTextHeaderProps) {
   const { t } = useTranslation();
   const verifyLabel = t(verified ? 'transcription.unverify' : 'transcription.verify');
@@ -122,16 +117,6 @@ export function StudioTextHeader({
             title={saveLabel}
           >
             <Save size={14} />
-          </IconButton>
-          <span className={DIVIDER_CLASSNAME} aria-hidden="true" />
-          <IconButton
-            size="sm"
-            tone={textMenuOpen ? 'accent' : 'default'}
-            onClick={onTextMenuToggle}
-            title={t('editor.textMenu')}
-            ariaPressed={textMenuOpen}
-          >
-            <SlidersHorizontal size={14} />
           </IconButton>
         </div>
       </div>

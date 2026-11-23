@@ -530,7 +530,7 @@ describe('LibraryCatalogArea', () => {
       workspaces: [
         {
           id: 'ws1', name: 'Scherma', iconKey: 'book', embeddingModel: 'text-embedding-3-small',
-          memoryExtractorProvider: 'openai', memoryExtractorModel: 'm', memoryExtractorPrompt: 'p', ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', memorySearchAllWorkspaces: false,
+          memoryExtractorProvider: 'openai', memoryExtractorModel: 'm', memoryExtractorPrompt: 'p', ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '', ocrSeparateNotes: true, memorySearchAllWorkspaces: false,
           createdAt: '2026-08-01',
         },
       ],
