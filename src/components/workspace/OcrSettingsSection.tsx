@@ -1,17 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Cpu } from 'lucide-react';
+import { Cpu, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { AuditPromptEditor } from '../pipeline/AuditPromptEditor';
+import { PromptPanel } from '../prompt/PromptPanel';
 import { DEFAULT_OCR_PROMPT } from '../../constants';
-import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
+import { canRefineWithProvider, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { getVisionCapableModelIds, LLM_PROVIDER_ORDER, providerSupportsVision } from '../../models/catalog';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
-import { llmService } from '../../services/llmService';
-import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider, PromptTemplate } from '../../types';
-import { FieldLabel, Select } from '../ui';
+import { FieldLabel, Select, ToggleRow } from '../ui';
 import { FIELD_MONO_CLASSNAME } from '../ui/fieldStyles';
 
 interface OcrSettingsSectionProps {
@@ -22,6 +18,10 @@ interface OcrSettingsSectionProps {
   onProviderChange: (provider: ModelProvider | '', model: string) => void;
   onModelChange: (model: string) => void;
   onPromptChange: (prompt: string) => void;
+  /** Note separate dal testo: il modello le scrive a piè di pagina e Glossa
+   *  le sposta nella scheda Note. */
+  separateNotes: boolean;
+  onSeparateNotesChange: (value: boolean) => void;
 }
 
 /** Impostazioni OCR/HTR a livello workspace (#220): fornitore, modello e
@@ -39,21 +39,15 @@ export function OcrSettingsSection({
   onProviderChange,
   onModelChange,
   onPromptChange,
+  separateNotes,
+  onSeparateNotesChange,
 }: OcrSettingsSectionProps) {
   const { t } = useTranslation();
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
-  const { templates, isLoaded, loadTemplates, saveTemplate } = usePromptTemplateStore();
   const { statuses: keyStatuses } = useProviderKeyStatus();
-  const [isRefining, setIsRefining] = useState(false);
-
-  useEffect(() => {
-    if (!isLoaded) void loadTemplates();
-  }, [isLoaded, loadTemplates]);
 
   const modelOptions = provider ? getVisionCapableModelIds(provider, ollamaModels) : [];
-  const ocrTemplates = templates.filter((template) => template.context === 'ocr');
   const canRefine = provider ? canRefineWithProvider(provider, keyStatuses) : false;
-  const refineLabel = provider ? formatProviderModelLabel(provider, model) : '';
 
   const handleProviderChange = (nextProvider: ModelProvider | '') => {
     if (!nextProvider) {
@@ -63,30 +57,12 @@ export function OcrSettingsSection({
     onProviderChange(nextProvider, getVisionCapableModelIds(nextProvider, ollamaModels)[0] ?? '');
   };
 
-  const handleRefine = async () => {
-    const current = prompt || DEFAULT_OCR_PROMPT;
-    if (!provider || !model.trim()) return;
-    setIsRefining(true);
-    try {
-      const refined = await llmService.refinePrompt(current, provider, model, 'ocr');
-      onPromptChange(refined);
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setIsRefining(false);
-    }
-  };
-
   // Testo uguale al predefinito dell'applicazione = nessuna scelta salvata.
   const handlePromptChange = (next: string) => {
     onPromptChange(next.trim() === DEFAULT_OCR_PROMPT.trim() ? '' : next);
   };
 
-  const handleApplyTemplate = (template: PromptTemplate) => {
-    handlePromptChange(template.prompt);
+  const handleTemplateUsed = (template: PromptTemplate) => {
     if (template.defaultProvider) {
       const nextProvider = template.defaultProvider as ModelProvider;
       onProviderChange(
@@ -150,26 +126,31 @@ export function OcrSettingsSection({
         </div>
       </div>
 
-      <AuditPromptEditor
+      <PromptPanel
         label={t('workspace.settings.ocrDefaultPrompt')}
         hint={t('workspace.settings.ocrDefaultPromptHint')}
-        value={prompt || DEFAULT_OCR_PROMPT}
-        placeholder={DEFAULT_OCR_PROMPT}
-        templates={ocrTemplates}
-        isRefining={isRefining}
-        canRefine={canRefine}
-        refineLabel={refineLabel}
-        onRefine={() => void handleRefine()}
-        onChange={handlePromptChange}
-        onApplyTemplate={handleApplyTemplate}
-        saveTemplate={saveTemplate}
-        defaultModel={model}
-        defaultProvider={provider || undefined}
+        value={prompt}
         defaultValue={DEFAULT_OCR_PROMPT}
-        onReset={() => onPromptChange('')}
+        onSave={handlePromptChange}
+        onTemplateUsed={handleTemplateUsed}
         templateContext="ocr"
         templateWorkflow="transcription"
+        refine={provider ? {
+          provider,
+          model,
+          blockedReason: canRefine ? null : t('transcription.assist.refineNeedsKey'),
+        } : undefined}
       />
+
+      <div className="border-y border-rule py-2.5">
+        <ToggleRow
+          icon={<MessageSquare size={14} />}
+          label={t('workspace.settings.ocrSeparateNotes')}
+          hint={t('workspace.settings.ocrSeparateNotesHint')}
+          checked={separateNotes}
+          onChange={() => onSeparateNotesChange(!separateNotes)}
+        />
+      </div>
     </div>
   );
 }

@@ -579,7 +579,8 @@ Il controllo pre-avvio con problemi apre direttamente Modelli.
 ## Trascrizioni
 
 Schema in `transcription_documents` → `transcription_segments` →
-`transcription_revisions` (baseline #211, non un modulo Rust: nessun comando
+`transcription_revisions`, più `transcription_notes` per le note della pagina
+(vedi «Note separate dal testo» nella sezione OCR) (baseline #211, non un modulo Rust: nessun comando
 backend dedicato, come `translation_revisions`). `transcriptionService.ts`
 scrive e legge direttamente via `dbService` (`execute`/`select`), stesso
 pattern di `translationRevisionsService.ts`: revisioni append-only,
@@ -816,9 +817,12 @@ Anthropic blocco `type: "base64"`, OpenAI `image_url` con data-URL (sia
 Responses sia Chat Completions), Gemini `inline_data`, Ollama campo
 `images` (base64 nudo, senza prefisso data-URL). Nessuna immagine ⇒ stesso
 corpo di richiesta di prima, byte per byte — invariante coperto da test in
-ogni provider. `llm/prompts.rs::build_ocr_prompt` compone un solo blocco di
-sistema, cacheable: il prompt in vigore così com'è, senza persona né istruzioni
-aggiunte da Glossa (#501), così che un metodo editoriale non venga contraddetto.
+ogni provider. `llm/prompts.rs::build_ocr_prompt` compone un blocco di sistema
+cacheable con il prompt in vigore così com'è, senza persona né istruzioni
+editoriali aggiunte da Glossa (#501), così che un metodo editoriale non venga
+contraddetto. Con le note separate (vedi sotto) lo precede il blocco fisso
+`OCR_NOTES_FORMAT`, non cacheable: statico → documento, e il segno di cache sul
+prompt del documento copre tutto il prefisso.
 La cache segue da lì: `ocr::handler::ocr_provider_options` attiva la cache
 Anthropic con durata di 1 ora (fra una pagina e l'altra c'è il controllo a vista,
 e ogni lettura rinnova la durata gratis); OpenAI/DeepSeek ricavano
@@ -870,10 +874,36 @@ coprono il caso di un workspace con le colonne vuote: fascia media di
 proposito, il fondo del listino sbaglia abbastanza da sembrare rotto su una
 pagina manoscritta.
 
-**Interfaccia immagine OCR.** Dopo il prompt, una sezione autonoma «Immagine per
-l’OCR» usa `SettingChoiceRow`: etichetta «Invio», nome della scelta visibile e
-misura per l’ottimizzata. Il suggerimento chiarisce ricompressione, ripiego,
-ambito di sessione e invio al modello selezionato.
+**Note separate dal testo (#502, #503).** `workspaces.ocr_separate_notes`
+(migrazione `0002`, acceso all'inizio) si congela in `OcrPageConfig.separate_notes`
+al momento della messa in coda. Acceso: il blocco `OCR_NOTES_FORMAT` chiede
+Markdown standard con ogni nota come nota a piè di pagina,
+`[^n]: Tipo «passaggio» — testo`. Dopo la risposta `ocr::notes::extract_notes`
+toglie segni e definizioni (lettore riga per riga, nessuna dipendenza Markdown
+nel motore), riconosce il tipo in inglese o italiano (sconosciuto → `note`),
+cerca il passaggio citato all'indietro dal segno e ne ricava la ripetizione
+(`occurrence`, da 1). Nella stessa transazione `write_ocr_revision` scrive il
+testo pulito e `replace_model_notes` sostituisce le note `origin = 'model'` della
+pagina, anche con testo identico; le note `user` restano. La riga di fine
+lettura del log aggiunge «N note, M non agganciate, K con tipo non
+riconosciuto». Il confronto del passaggio (minuscole, solo lettere e cifre, un
+solo spazio) esiste due volte, `ocr/notes.rs` e `src/utils/noteAnchors.ts`:
+entrambe le suite leggono `src-tauri/src/ocr/note_anchor_cases.json`.
+
+Le note vivono in `transcription_notes` (pagina, tipo, testo, passaggio,
+ripetizione, origine, ordine), lette e scritte da `transcriptionNotesService.ts`.
+Lo stato «agganciata / da riagganciare / della pagina» non si salva: passaggio
+nullo = pagina; ripetizione non trovata nel testo corrente = da riagganciare.
+Correggere una nota la rende `user`. Salvando un testo modificato a mano,
+la ripetizione delle note agganciate si aggiorna seguendo il diff fra vecchio e
+nuovo testo (`moveNoteOccurrences`, senza cambiare l'origine; `null` se il
+passaggio non c'è più dove stava); vale anche per un ripristino dallo storico,
+che scrive una versione `user`. Dopo una rilettura resta quella salvata.
+
+**Interfaccia immagine OCR.** Dopo il prompt, la sezione «Immagine inviata» ha
+solo i due pallini (`ChoiceDots`) nell'intestazione: nome della scelta e misura
+dell'ottimizzata nel loro suggerimento, ricompressione, ripiego e ambito di
+sessione nel suggerimento del titoletto.
 
 **Immagine inviata** (`ocrImageSettingsService`, chiavi `app_settings`
 `ocr_image_edge` e `ocr_image_mode`, nessuna colonna): globale, scheda

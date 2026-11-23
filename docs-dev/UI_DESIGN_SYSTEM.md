@@ -762,7 +762,7 @@ spiegazione fisso: il perché sta nei suggerimenti dei titoli, delle righe e dei
 comandi, e un comando spento dice il motivo («Modifica prompt — esistono già
 traduzioni», «Rifinisci… — manca la chiave di X»). Le icone di categoria della
 taratura (ragionamento, temperatura) sono muted dentro un `Hint`, mai in ocra.
-La pipeline usa `PipelinePromptEditor`; OCR mantiene `AuditPromptEditor`. La spiegazione la porta il titolo della carta (`Hint` con `children`, come `SectionLabel`), nessuna «i» separata; vista di lettura fino a 12 righe. Accanto al titolo `PromptSourceLabel`: Predefinito / Personalizzato / Template «nome», riconosciuto confrontando il testo (`describePromptSource`); niente pillola «Personalizzato». Campi di modifica dei prompt alti 16 righe. Un suggerimento Radix non intercetta mai il puntatore (regola CSS sul contenitore) e quello sul nome della pipeline resta chiuso a menu aperto. I modelli salvati stanno in
+La pipeline usa `PipelinePromptEditor`; la lettura automatica usa `PromptPanel` (vedi «Pannello del prompt»). La spiegazione la porta il titolo della carta (`Hint` con `children`, come `SectionLabel`), nessuna «i» separata; vista di lettura fino a 12 righe. Accanto al titolo `PromptSourceLabel`: Predefinito / Personalizzato / Template «nome», riconosciuto confrontando il testo (`describePromptSource`); niente pillola «Personalizzato». Campi di modifica dei prompt alti 16 righe. Un suggerimento Radix non intercetta mai il puntatore (regola CSS sul contenitore) e quello sul nome della pipeline resta chiuso a menu aperto. I modelli salvati stanno in
 due `ClickPopover` (`PromptTemplateMenus`), il libro con `CatalogSearchField` e
 `PopoverItem`, il segnalibro con `RenameField`; niente eliminazione lì, si
 elimina nelle risorse linguistiche. La conferma applica testo ed eventuali impostazioni del modello insieme; annullare scarta entrambi.
@@ -799,6 +799,50 @@ testata non cresce per ospitare comandi in più. I comandi di vista di una
 pagina (fasi, confronto) stanno in colonna nel margine destro della pagina,
 `IconButton` xs con suggerimento a sinistra, fermi mentre il testo scorre; il
 margine è uguale sulle due pagine anche dove la colonna non c'è.
+
+### Editor della pagina
+
+`components/editor/PageEditor` è l'editor dei testi lunghi (oggi pagina di
+trascrizione e testo delle note). Textarea nativa sopra uno strato con gli
+stessi caratteri, dove i passaggi annotati sono `mark.hl-annot`: un solo colore
+per tutte le note, il tipo sta nel suggerimento e nella scheda della nota.
+
+- Due modalità, **Scrivi** e **Leggi** (Markdown reso, passaggi evidenziati);
+  niente vista affiancata, accanto c'è già l'immagine.
+- Comandi in colonna nel margine destro (`IconButton` xs, suggerimento a
+  sinistra): modalità, nota sul testo selezionato (Ctrl/⌘+Alt+N), un
+  `ClickPopover` con formattazione e dimensione del testo, copia. La barra sopra
+  il foglio resta per titolo, verifica e salvataggio.
+- Le modifiche dei comandi passano come digitazione (`insertText`), così
+  l'annulla del sistema resta valido.
+- Variante `compact` senza margine e senza Leggi, per il testo di una nota.
+
+### Pannello del prompt
+
+`components/prompt/PromptPanel` è il pannello di un prompt (oggi lettura
+automatica: scheda OCR dello Studio e impostazioni OCR del workspace). Niente
+carta propria: titoletto `SectionLabel` con filetto, provenienza accanto in
+`text-xs`, testo in lettura (sei righe, «leggi tutto»), in modifica una sola
+textarea `FIELD_MONO`. Comandi in modifica: rifinisci, template, ripristina,
+salva (spunta, Ctrl+Invio), scarta (X, Esc); tooltip espliciti su cosa salvano.
+La bozza può stare in chi monta il pannello (`draft`/`onDraftChange`) per
+sopravvivere a un cambio di scheda. `PromptTemplateLibrary`: ricerca, usa,
+aggiorna con il testo attuale, elimina con conferma in riga, salva come nuovo.
+L'editor dei prompt della traduzione (`PipelinePromptEditor` con
+`PromptTemplateMenus`) passa a questo pannello nel riordino della traduzione.
+
+### Note della trascrizione
+
+Scheda Note della colonna Strumenti: filtro per tipo con `ChoiceDots` (un
+pallino per tipo, conteggio nel nome), gruppi `PanelSection` Pagina / Nel testo /
+Da riagganciare (quest'ultimo attenuato), una riga per nota con icona e nome
+del tipo in `text-caption` maiuscolo, passaggio in corsivo, testo; comandi al
+passaggio (trova, aggancia, modifica, elimina con conferma in riga). Colore del
+tipo neutro (`charcoal`), il Dubbio in `warning`.
+
+Il comando di lettura della pagina sta sopra le schede (`beforeTabs`), grande
+(`h-14 w-14`) come l'avvio dello Studio di traduzione, con servizio, modello e
+costo dell'ultima lettura accanto.
 
 ## Accessibilità
 

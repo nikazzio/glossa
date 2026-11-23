@@ -1,0 +1,12 @@
+[
+  { "name": "maiuscole e punteggiatura dopo il passaggio", "text": "Et dixit, dominus ad eum", "passage": "et dixit", "occurrence": 1, "count": 1, "expected": "Et dixit" },
+  { "name": "spazi e a capo diversi", "text": "in   principio\nerat verbum", "passage": "in principio erat", "occurrence": 1, "count": 1, "expected": "in   principio\nerat" },
+  { "name": "parola ripetuta, seconda occorrenza", "text": "dominus et dominus meus", "passage": "dominus", "occurrence": 2, "count": 2, "expected": "dominus" },
+  { "name": "passaggio assente", "text": "dominus meus", "passage": "sanctis", "occurrence": 1, "count": 0, "expected": null },
+  { "name": "occorrenza oltre quelle presenti", "text": "dominus meus", "passage": "dominus", "occurrence": 2, "count": 1, "expected": null },
+  { "name": "punteggiatura dentro il passaggio", "text": "Deus, qui fecit", "passage": "Deus qui", "occurrence": 1, "count": 1, "expected": "Deus, qui" },
+  { "name": "segni Markdown dentro il passaggio", "text": "*Et* dixit", "passage": "Et dixit", "occurrence": 1, "count": 1, "expected": "Et* dixit" },
+  { "name": "lettere accentate", "text": "La Città di Dio", "passage": "città", "occurrence": 1, "count": 1, "expected": "Città" },
+  { "name": "passaggio vuoto", "text": "dominus", "passage": "  ", "occurrence": 1, "count": 0, "expected": null },
+  { "name": "passaggio di sola punteggiatura", "text": "a, b", "passage": ",", "occurrence": 1, "count": 0, "expected": null }
+]

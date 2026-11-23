@@ -87,6 +87,11 @@ momento con lo stesso comando. Se la spunta è spenta, il suggerimento dice
 perché: pagina vuota, in caricamento o in lettura. Se un salvataggio non
 riesce, il dischetto diventa rosso e lo riprova.
 
+Il foglio ha due modalità, nel margine destro della pagina: **Scrivi**, per
+modificare il testo, e **Leggi**, per vederlo formattato. Sotto ci sono i
+comandi del testo: nota sul passaggio selezionato, formattazione e dimensione
+del testo, copia.
+
 Mentre il visore sta ancora aprendo la pagina scelta, un velo copre il testo
 e lo storico con una rotellina al centro: scrivere o ripristinare restano
 disattivati finché la pagina non è davvero mostrata. Se l'apertura fallisce,
@@ -112,14 +117,22 @@ pagina diversa senza spostare il punto in cui si sta scrivendo.
 
 ## Riconoscimento automatico della pagina (OCR)
 
-Nella scheda **OCR**, a destra, puoi far leggere il testo della
-pagina aperta a un modello di intelligenza artificiale collegato — lo stesso
-meccanismo già usato per la Traduzione, con provider e chiavi già
-configurati. Il comando compare disattivato finché mancano le condizioni: la
+Il comando di lettura sta in cima alla colonna a destra, sopra le schede, ed è
+visibile da ognuna: fa leggere il testo della pagina aperta a un modello di
+intelligenza artificiale collegato — lo stesso meccanismo già usato per la
+Traduzione, con provider e chiavi già configurati. Accanto trovi servizio e
+modello che leggeranno la pagina e il costo della sua ultima lettura. Fornitore,
+modello e prompt del documento si scelgono nella scheda **OCR**. Il comando compare disattivato finché mancano le condizioni: la
 pagina deve appartenere a una digitalizzazione collegata al documento, e
 serve un provider e un modello che sappiano leggere le immagini, scelti per
 il documento oppure ereditati dalle impostazioni del workspace. Il motivo di
 un comando disattivato sta sempre nel suo suggerimento.
+
+Servizio e modello si scelgono nella scheda OCR. Finché il documento segue il
+workspace sono spenti, con la scritta «dal workspace»; il comando **personalizza
+per questo documento** li rende modificabili solo per questo documento, e usato
+di nuovo riporta il documento al workspace. Il nome del modello sopra le schede
+apre la scheda OCR.
 
 Il testo letto entra nello storico come una revisione normale, marcata
 "Riconoscimento automatico": non sovrascrive mai quello che c'è, resta
@@ -134,13 +147,22 @@ prompt. Per riusare un prompt in un altro documento salvalo nella libreria dal
 comando di modifica, poi caricalo di là. Il comando di ripristino riporta il
 documento al prompt del workspace.
 
-Al modello partono l'immagine della pagina e il prompt, nient'altro: Glossa non
-aggiunge istruzioni proprie, quindi il formato del testo (a capo, commenti, segni
-di pagina) lo decide il prompt. Il numero di pagina non viene inviato: la numerazione stampata dalla biblioteca raramente coincide con la
+Per cambiare il prompt usa la matita: il testo resta in bozza, anche cambiando
+scheda, finché non lo salvi con la spunta (o **Ctrl + Invio**) o lo scarti con la
+X (o **Esc**). Salvare non crea un template. Accanto al titolo leggi da dove viene
+il testo — predefinito, personalizzato, un template, un template modificato — e
+se la bozza non è ancora salvata. Il libro apre i template della lettura
+automatica: puoi usarne uno, aggiornarlo con il testo attuale, eliminarlo (con
+conferma nella riga) o salvare il testo come nuovo template.
+
+Al modello partono l'immagine della pagina e il prompt: Glossa non aggiunge
+regole editoriali proprie, quindi a capo, commenti e segni di pagina li decide il
+prompt. Con le **note separate dal testo** (vedi sotto) Glossa aggiunge solo il
+formato delle note, prima del prompt. Il numero di pagina non viene inviato: la numerazione stampata dalla biblioteca raramente coincide con la
 posizione nella scansione e confonderebbe solo la lettura.
 
-Dopo il prompt, la sezione **Immagine per l’OCR** mostra il nome della scelta
-attiva accanto ai due selettori, con la dimensione quando è ottimizzata:
+Dopo il prompt, la sezione **Immagine inviata** ha due pallini; il nome della
+scelta e la misura stanno nel loro suggerimento:
 
 - **ottimizzata**: ridotta al lato lungo scelto nelle Impostazioni, scheda
   Trascrizioni (1500, 2000, 2500 o 3000 pixel), e ricompressa. Un'immagine più
@@ -156,6 +178,10 @@ Entrambe le scelte inviano l’immagine al modello selezionato.
 La scelta di partenza sta nelle Impostazioni; nello Studio la cambi per la
 sessione, senza che resti salvata nel documento. Con il pannello a destra
 chiuso il comando di lettura resta sotto il comando di riapertura.
+
+Se la pagina è già stata letta, prima di rileggerla Glossa chiede conferma e dice
+quante note della lettura precedente verranno sostituite. Il testo precedente
+resta nello storico.
 
 Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura,
 anche dopo la richiesta di annullamento, finché il lavoro si ferma davvero.
@@ -177,14 +203,57 @@ dentro un documento di trascrizione, speculare al Log traduzione che vedi
 dentro un progetto. Ogni lettura lascia quattro righe: l'avvio con fornitore e
 modello, l'immagine inviata con misura reale, peso e provenienza (libro scaricato, cache o biblioteca), il prompt inviato per intero
 (apribile riga per riga), e l'esito con durata, token inviati (e quanti presi
-dalla cache), token ricevuti, costo stimato e numero della revisione creata. Ogni
+dalla cache), token ricevuti, costo stimato, numero della revisione creata e, con
+le note separate, quante note sono arrivate e quante non si sono agganciate. Ogni
 riga dice queste voci in parole, su una sola linea. In testa ci sono ricerca, filtri per tipo di riga e per
 livello, e il raggruppamento per pagina.
 
+## Note della pagina
+
+Le note della trascrizione stanno nella scheda **Note**, a destra, separate dal
+testo: ogni nota ha un tipo, un testo e, se riguarda un passaggio, il passaggio
+annotato. Nel testo i passaggi annotati sono evidenziati con un solo colore;
+passandoci sopra leggi tipo e inizio della nota, e un clic apre la nota nella
+scheda.
+
+I tipi sono **Intervento** (lapsus corretto, ripetizione tolta, integrazione),
+**Dubbio** (lettura incerta, in ocra), **Aggiunta** (a margine o fra le righe),
+**Correzione** (del testimone: «corretto su», «corretto da»), **Resa grafica**
+(maiuscoletto, numeri romani, titoli), **Abbreviazione** (non evidente, sciolta)
+e **Nota**, quello generico. Il filtro in cima alla scheda mostra un tipo solo,
+con il numero di note di ciascun tipo.
+
+La scheda divide le note in tre gruppi:
+
+- **Pagina**: note sulla pagina intera, senza passaggio;
+- **Nel testo**: in ordine di lettura;
+- **Da riagganciare**: in grigio, note il cui passaggio non c'è più nel testo.
+  Una nota non si perde mai: per riagganciarla seleziona il passaggio nel testo
+  e usa il comando di aggancio sulla nota.
+
+Per scrivere una nota seleziona un passaggio nel testo e usa il comando nota nel
+margine della pagina, oppure **Ctrl + Alt + N**; il comando + nella scheda
+aggiunge una nota della pagina intera. Su ogni nota, al passaggio del mouse, ci
+sono trova nel testo, modifica ed elimina. Una nota ricorda anche quale
+ripetizione del passaggio annota, quindi una parola che compare più volte resta
+agganciata a quella giusta. Quando modifichi il testo a mano, le note seguono i
+loro passaggi.
+
+**Note separate dal testo.** Nelle impostazioni del workspace, alla voce OCR,
+l'interruttore omonimo (acceso all'inizio) fa scrivere al modello ogni nota a
+piè di pagina, in Markdown standard, con il tipo e il passaggio citato:
+`[^1]: Doubt «et dixit» — lettura incerta`. Dopo la lettura Glossa toglie le
+note dal testo e le porta nella scheda Note. Il confronto con il passaggio
+tollera differenze di spazi, maiuscole e punteggiatura. Un tipo che Glossa non
+riconosce diventa Nota; un passaggio citato che non si trova va fra le note da
+riagganciare. Rileggendo la pagina, le note della lettura precedente vengono
+sostituite da quelle nuove; le note scritte o corrette da te restano.
+L'impostazione vale per le letture avviate dopo averla cambiata.
+
 ## Storico e riepilogo
 
-La colonna a destra ha tre schede — **Storico**, **OCR**, **Riepilogo** — e si
-apre sullo Storico. Ogni salvataggio resta nello storico della pagina: per ogni
+La colonna a destra ha quattro schede — **Note**, **Storico**, **OCR**,
+**Riepilogo** — e si apre sulle Note. Ogni salvataggio resta nello storico della pagina: per ogni
 versione mostra chi l'ha scritta — correzione manuale, riconoscimento
 automatico o importazione —, quando, e se è la versione corrente o quella
 verificata. Il comando su ogni voce dello storico

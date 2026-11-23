@@ -519,6 +519,7 @@ mod ocr_cache_tests {
         let long_prompt = "Transcribe the page faithfully. ".repeat(2_000);
         let structured = crate::llm::prompts::build_ocr_prompt(
             &long_prompt,
+            false,
             ImageAttachment {
                 bytes: vec![0xFF, 0xD8, 0xFF],
                 media_type: "image/jpeg".to_string(),

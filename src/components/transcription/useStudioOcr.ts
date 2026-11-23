@@ -5,6 +5,7 @@ import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import { useOcrPageActivity, type OcrPageActivity } from '../../hooks/useOcrPageActivity';
 import { ensureSegment, updateDocumentOcrSettings, type TranscriptionDocument } from '../../services/transcriptionService';
 import { startOcrForPage } from '../../services/ocrService';
+import { confirmReread } from './confirmReread';
 import {
   DEFAULT_OCR_IMAGE_PREFERENCES,
   getOcrImagePreferences,
@@ -120,6 +121,7 @@ export function useStudioOcr({ editor, documentId, detail, workspace, viewerRef 
     if (!detail || !workspace || !viewerRef) return;
     setStarting(true);
     try {
+      if (segment && !(await confirmReread(segment.id, t))) return;
       // Una pagina mai toccata non ha ancora un segmento: nasce qui, come già
       // fa il primo salvataggio manuale — l'OCR non deve aspettare che
       // qualcuno scriva prima a mano.

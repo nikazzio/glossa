@@ -269,6 +269,7 @@ mod tests {
             "transcription_documents",
             "transcription_segments",
             "transcription_revisions",
+            "transcription_notes",
             "translation_origins",
             "text_units",
             "text_unit_revisions",

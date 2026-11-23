@@ -1245,7 +1245,8 @@
       "history": "Storico",
       "summary": "Riepilogo",
       "assist": "OCR",
-      "log": "Log trascrizione"
+      "log": "Log trascrizione",
+      "notes": "Note"
     },
     "meta": {
       "page": "Pagina",
@@ -1297,7 +1298,7 @@
       "documentModel": "Modello",
       "documentPrompt": "Prompt OCR del documento",
       "readThisPage": "Leggi la pagina {{page}}",
-      "inheritWorkspace": "Eredita dal workspace",
+      "inheritWorkspace": "Torna a seguire il workspace",
       "saveFailed": "Salvataggio impostazioni OCR non riuscito",
       "jobStarted": "Lettura avviata: segui l'avanzamento nel pannello lavori",
       "jobStartFailed": "Avvio della lettura non riuscito",
@@ -1309,7 +1310,11 @@
       "imageModeHint": "Ottimizzata: ridotta e ricompressa. Copia sul computer: senza modifiche; se manca, si usa l’ottimizzata. Vale per questa sessione. L’immagine va al modello scelto.",
       "imageOptimized": "Ottimizzata · {{edge}} px",
       "imageLocal": "Copia sul computer",
-      "imageSettingsFailed": "Impossibile leggere le impostazioni dell’immagine"
+      "imageSettingsFailed": "Impossibile leggere le impostazioni dell’immagine",
+      "modelFromWorkspace": "dal workspace",
+      "modelFromDocument": "solo questo documento",
+      "refineNeedsKey": "manca la chiave del servizio",
+      "image": "Immagine inviata"
     },
     "log": {
       "title": "Log trascrizione",
@@ -1345,7 +1350,78 @@
     "commandBlocked": "{{command}} — {{reason}}",
     "blockedEmptyPage": "Scrivi del testo prima di verificare",
     "blockedPageLoading": "Pagina in caricamento",
-    "blockedReading": "Lettura in corso"
+    "blockedReading": "Lettura in corso",
+    "notes": {
+      "types": {
+        "emendation": {
+          "label": "Intervento",
+          "hint": "Correzione di lapsus, ripetizione tolta, integrazione."
+        },
+        "doubt": {
+          "label": "Dubbio",
+          "hint": "Lettura incerta."
+        },
+        "addition": {
+          "label": "Aggiunta",
+          "hint": "A margine o fra le righe, con l'indicazione della mano."
+        },
+        "correction": {
+          "label": "Correzione",
+          "hint": "Correzione del testimone: «corretto su» o «corretto da», con l'indicazione della mano."
+        },
+        "typography": {
+          "label": "Resa grafica",
+          "hint": "Maiuscoletto, numeri romani, titoli."
+        },
+        "abbreviation": {
+          "label": "Abbreviazione",
+          "hint": "Abbreviazione non evidente, sciolta."
+        },
+        "note": {
+          "label": "Nota",
+          "hint": "Nota generica, anche per una nota del modello con un tipo non riconosciuto."
+        }
+      },
+      "type": "Tipo di nota",
+      "text": "Testo della nota",
+      "textPlaceholder": "Scrivi la nota…",
+      "save": "Salva la nota",
+      "cancel": "Annulla",
+      "confirmDelete": "Eliminare?",
+      "confirmDeleteYes": "Elimina la nota",
+      "confirmDeleteNo": "Annulla",
+      "reattach": "Aggancia al testo selezionato",
+      "reattachNeedsSelection": "Seleziona nel testo il passaggio a cui agganciarla",
+      "locate": "Trova nel testo",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "notFound": "non trovato nel testo",
+      "filter": "Filtra per tipo",
+      "filterAll": "Tutte ({{count}})",
+      "filterType": "{{type}} ({{count}})",
+      "addPageNote": "Nuova nota della pagina",
+      "newNote": "Nuova nota",
+      "groupPage": "Pagina",
+      "groupText": "Nel testo",
+      "groupDetached": "Da riagganciare",
+      "empty": "Nessuna nota su questa pagina.",
+      "emptyHint": "Seleziona un passaggio nel testo per annotarlo, o aggiungi una nota della pagina.",
+      "emptyFilter": "Nessuna nota di questo tipo.",
+      "saveFailed": "Nota non salvata"
+    },
+    "reread": {
+      "title": "Rileggere la pagina?",
+      "message": "La pagina è già stata letta. La nuova lettura crea una nuova versione del testo; quella attuale resta nello Storico.",
+      "messageNotes_one": "La pagina è già stata letta. La nuova lettura crea una nuova versione del testo e sostituisce la nota della lettura precedente. Le note scritte o corrette da te restano.",
+      "messageNotes_other": "La pagina è già stata letta. La nuova lettura crea una nuova versione del testo e sostituisce le {{count}} note della lettura precedente. Le note scritte o corrette da te restano.",
+      "confirm": "Rileggi"
+    },
+    "run": {
+      "lastReadCost": "Ultima lettura ≈ {{cost}}",
+      "lastReadNoPrice": "Ultima lettura: costo non noto",
+      "neverRead": "Mai letta automaticamente",
+      "openSettings": "Scegli servizio, modello e prompt"
+    }
   },
   "areas": {
     "translations": {
@@ -2013,7 +2089,9 @@
       "ocrTab": "OCR",
       "ocrDefaultPromptHint": "Ogni documento parte da qui. Nello Studio il prompt si cambia da una pagina qualsiasi e vale per tutto il documento.",
       "ocrDefaultModel": "Modello OCR predefinito",
-      "ocrDefaultPrompt": "Prompt OCR predefinito"
+      "ocrDefaultPrompt": "Prompt OCR predefinito",
+      "ocrSeparateNotes": "Note separate dal testo",
+      "ocrSeparateNotesHint": "Il modello risponde in Markdown e mette ogni nota a piè di pagina. Glossa le sposta nella scheda Note e lascia il testo pulito."
     },
     "hub": {
       "lockedArea": "In arrivo nella versione 2.0"
@@ -2470,7 +2548,8 @@
             "title": "Scrivere e salvare",
             "paragraphs": [
               "Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in basso a destra, nella barra di stato, distingue il testo ancora da salvare dal salvataggio in corso, riuscito o fallito; passandoci sopra leggi l'ora dell'ultimo salvataggio. Per salvare subito una versione nello storico usa il dischetto in cima al foglio, oppure Ctrl + S anche mentre scrivi; il comando resta spento quando non c'è niente di nuovo da salvare. Cambiando pagina o uscendo normalmente dallo Studio, il testo si salva subito; una chiusura forzata prima del salvataggio può perdere le ultime modifiche.",
-              "Quando il testo è pronto, segnalo come verificato con la spunta accanto al titolo della pagina: il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando. Se la spunta è spenta, passandoci sopra leggi il motivo: pagina vuota, in caricamento o in lettura. Se un salvataggio non riesce, il dischetto diventa rosso e lo riprova."
+              "Quando il testo è pronto, segnalo come verificato con la spunta accanto al titolo della pagina: il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando. Se la spunta è spenta, passandoci sopra leggi il motivo: pagina vuota, in caricamento o in lettura. Se un salvataggio non riesce, il dischetto diventa rosso e lo riprova.",
+              "Il foglio ha due modalità, nel margine destro della pagina: Scrivi, per modificare il testo, e Leggi, per vederlo formattato. Sotto ci sono i comandi del testo: nota sul passaggio selezionato, formattazione e dimensione del testo, copia."
             ]
           },
           {
@@ -2489,20 +2568,34 @@
           {
             "title": "Riconoscimento automatico della pagina (OCR)",
             "paragraphs": [
-              "Nella scheda \"OCR\", a destra, puoi far leggere il testo della pagina aperta a un modello di intelligenza artificiale collegato — lo stesso meccanismo già usato per la traduzione, con chiavi e fornitori già configurati.",
+              "Il comando per leggere la pagina aperta sta in cima alla colonna a destra, sopra le schede, ed è visibile da ognuna: fa leggere il testo a un modello di intelligenza artificiale collegato — lo stesso meccanismo già usato per la traduzione, con chiavi e fornitori già configurati. Accanto trovi servizio e modello che leggeranno la pagina e il costo della sua ultima lettura.",
               "Il comando compare disattivato finché mancano le condizioni: la pagina deve appartenere a una digitalizzazione collegata al documento, e serve un fornitore e un modello che sappiano leggere le immagini, scelti per il documento o ereditati dalle impostazioni del workspace. Il motivo di un comando disattivato è nel suo stesso suggerimento.",
+              "Servizio e modello si scelgono nella scheda OCR; finché il documento segue il workspace sono spenti, con la scritta «dal workspace». Il comando «personalizza per questo documento» li rende modificabili solo per questo documento; usato di nuovo, il documento torna a seguire il workspace. Il nome del modello sopra le schede apre la scheda OCR.",
               "Il testo letto entra nello storico come una revisione normale, marcata \"Riconoscimento automatico\": non sovrascrive mai quello che c'è, resta modificabile come qualunque altra versione, e una correzione manuale successiva crea semplicemente la revisione dopo.",
-              "Il prompt che guida la lettura appartiene al documento: lo modifichi da una pagina qualsiasi e vale per tutte le sue pagine, non per gli altri documenti. Un documento nuovo parte dal prompt del workspace, scelto nelle impostazioni alla voce OCR, anche dalla libreria. Per riusarlo altrove salvalo nella libreria dal comando di modifica; il ripristino riporta il documento al prompt del workspace. Il prompt è l’unica istruzione che riceve il modello, insieme all’immagine: a capo, commenti e segni di pagina li decide lui.",
-              "Dopo il prompt, la sezione «Immagine per l’OCR» mostra la scelta attiva accanto ai due selettori: ottimizzata (ridotta alla misura delle Impostazioni, scheda Trascrizioni, e ricompressa) o copia sul computer così com'è, la stessa del visore; se la copia manca parte l'ottimizzata. Si scelgono anche con le frecce della tastiera. La scelta di partenza sta nelle Impostazioni, qui vale per la sessione. Con il pannello chiuso il comando di lettura resta visibile.",
+              "Il prompt che guida la lettura appartiene al documento: lo modifichi da una pagina qualsiasi e vale per tutte le sue pagine, non per gli altri documenti. Un documento nuovo parte dal prompt del workspace, scelto nelle impostazioni alla voce OCR, anche dalla libreria. Per riusarlo altrove salvalo nella libreria dal comando di modifica; il ripristino riporta il documento al prompt del workspace. Il prompt è l’unica istruzione editoriale che riceve il modello: con le note separate dal testo Glossa aggiunge solo il formato delle note (vedi «Note della pagina»).",
+              "Per cambiare il prompt usa la matita: il testo resta in bozza, anche se cambi scheda, finché non lo salvi con la spunta (o Ctrl + Invio) o lo scarti con la X (o Esc). Salvare non crea un template. Accanto al titolo leggi da dove viene il testo: predefinito, personalizzato, un template, un template modificato, e se la bozza non è ancora salvata. Il libro apre i template della lettura automatica: usane uno, aggiornalo con il testo attuale, eliminalo (con conferma nella riga) o salva il testo come nuovo template.",
+              "Dopo il prompt, la sezione «Immagine inviata» ha due pallini: ottimizzata (ridotta alla misura delle Impostazioni, scheda Trascrizioni, e ricompressa) o copia sul computer così com'è, la stessa del visore; se la copia manca parte l'ottimizzata. Nome e misura sono nel suggerimento, e si scelgono anche con le frecce della tastiera. La scelta di partenza sta nelle Impostazioni, qui vale per la sessione. Con il pannello chiuso il comando di lettura resta visibile.",
               "Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura, anche dopo che chiedi di annullare il lavoro, finché la lettura si ferma davvero. Il testo che stai ancora modificando su un'altra pagina non viene rimpiazzato quando il lavoro finisce; nella riga in alto una scritta color oro dice quale pagina è in lettura.",
               "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo. Un intoppo passeggero viene ritentato da solo; una chiave sbagliata o una risposta vuota no, perché riprovare darebbe la stessa risposta. Una risposta vuota di solito vuol dire che il modello non ha trovato testo sulla pagina.",
-              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura reale, peso e provenienza, prompt inviato per intero, esito con durata, token inviati (e quanti dalla cache), token ricevuti, costo stimato e numero della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
+              "Se la pagina è già stata letta, prima di rileggerla Glossa chiede conferma e dice quante note della lettura precedente verranno sostituite. Il testo precedente resta nello Storico.",
+              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura reale, peso e provenienza, prompt inviato per intero, esito con durata, token inviati (e quanti dalla cache), token ricevuti, costo stimato, numero della revisione creata e, con le note separate, quante note sono arrivate e quante non si sono agganciate. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
+            ]
+          },
+          {
+            "title": "Note della pagina",
+            "paragraphs": [
+              "Le note della trascrizione stanno nella scheda Note, a destra, separate dal testo: ogni nota ha un tipo, un testo e, se riguarda un passaggio, il passaggio annotato. Nel testo i passaggi annotati sono evidenziati con un solo colore; passandoci sopra leggi tipo e inizio della nota, e un clic apre la nota nella scheda.",
+              "I tipi sono Intervento, Dubbio (in ocra), Aggiunta, Correzione, Resa grafica, Abbreviazione e Nota, quello generico. Il filtro in cima alla scheda mostra un tipo solo, con il numero di note di ciascun tipo.",
+              "La scheda divide le note in tre gruppi: Pagina, per le note sulla pagina intera; Nel testo, in ordine di lettura; Da riagganciare, in grigio, per le note il cui passaggio non c'è più nel testo. Una nota non si perde mai: per riagganciarla seleziona il passaggio nel testo e usa il comando di aggancio sulla nota.",
+              "Per scrivere una nota seleziona un passaggio nel testo e usa il comando nota nel margine della pagina, oppure Ctrl + Alt + N; il comando + nella scheda aggiunge una nota della pagina intera. Su ogni nota, al passaggio del mouse, ci sono trova nel testo, modifica ed elimina.",
+              "Con le note separate dal testo, attive nelle impostazioni del workspace alla voce OCR, la lettura automatica chiede al modello di scrivere ogni nota a piè di pagina, con il tipo e il passaggio citato. Glossa le sposta nella scheda Note e lascia il testo pulito. Un tipo che Glossa non riconosce diventa Nota; un passaggio citato che non si trova va fra le note da riagganciare.",
+              "Quando modifichi il testo a mano, le note seguono i loro passaggi. Rileggendo la pagina, le note della lettura precedente vengono sostituite da quelle nuove; le note scritte o corrette da te restano."
             ]
           },
           {
             "title": "Storico e riepilogo",
             "paragraphs": [
-              "La colonna a destra ha tre schede: Storico, OCR e Riepilogo. Si apre sullo Storico.",
+              "La colonna a destra ha quattro schede: Note, Storico, OCR e Riepilogo. Si apre sulle Note.",
               "Ogni salvataggio resta nello storico della pagina: per ogni versione vedi chi l'ha scritta — correzione manuale, riconoscimento automatico o importazione —, quando, e se è la versione corrente o quella verificata.",
               "Il comando su ogni versione riporta il suo testo come nuovo salvataggio, senza sovrascrivere le versioni precedenti. Cambiando pagina, lo storico mostrato cambia con lei.",
               "Puoi consolidare una versione e darle un nome modificabile: compare nella sezione in alto senza duplicare il testo. Togliendo il nome torna nello storico ordinario.",
@@ -2842,6 +2935,7 @@
               "Ctrl + Invio avvia l’azione di traduzione selezionata, anche da un campo di testo. In modalità frammento deve essere selezionato un frammento.",
               "Ctrl + S salva la traduzione aperta e le risorse linguistiche modificate, anche mentre scrivi nei fogli. Durante la traduzione automatica il salvataggio della traduzione viene rimandato.",
               "Nello Studio di trascrizione Ctrl + S salva subito una versione della pagina nello storico, anche mentre scrivi nel foglio.",
+              "Nello Studio di trascrizione Ctrl + Alt + N crea una nota sul passaggio selezionato nel foglio.",
               "Ctrl + E apre l’esportazione quando il documento contiene frammenti. Ctrl + virgola apre la configurazione della pipeline."
             ]
           },
@@ -4073,5 +4167,28 @@
       "moreConflicts_one": "e {{count}} altro",
       "moreConflicts_other": "e altri {{count}}"
     }
+  },
+  "pageEditor": {
+    "write": "Scrivi",
+    "read": "Leggi",
+    "readEmpty": "Niente da leggere.",
+    "commands": "Comandi del testo",
+    "addNote": "Nota sul testo selezionato (Ctrl+Alt+N)",
+    "addNoteNeedsSelection": "Seleziona un passaggio per annotarlo",
+    "format": "Formattazione e dimensione del testo"
+  },
+  "promptPanel": {
+    "templates": "Template",
+    "templateUpdated": "Template «{{name}}» aggiornato",
+    "deleteFailed": "Eliminazione del template fallita",
+    "confirmDelete": "Conferma: elimina «{{name}}»",
+    "updateTemplate": "Aggiorna «{{name}}» con il testo attuale",
+    "deleteTemplate": "Elimina «{{name}}»",
+    "saveAsTemplate": "Salva il testo attuale come nuovo template",
+    "unsaved": "non salvato",
+    "templateModified": "Template «{{name}}», modificato",
+    "resetDraft": "Riporta il testo a quello di partenza",
+    "save": "Salva il prompt (Ctrl+Invio): non crea un template",
+    "discard": "Scarta le modifiche (Esc)"
   }
 }

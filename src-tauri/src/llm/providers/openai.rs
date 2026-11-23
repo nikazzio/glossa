@@ -770,6 +770,7 @@ mod ocr_cache_key_tests {
     fn ocr_cache_fields(document_prompt: &str) -> Value {
         let structured = crate::llm::prompts::build_ocr_prompt(
             document_prompt,
+            false,
             ImageAttachment {
                 bytes: vec![0xFF, 0xD8, 0xFF],
                 media_type: "image/jpeg".to_string(),

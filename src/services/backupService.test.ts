@@ -44,6 +44,9 @@ const liveSchema = vi.hoisted<Record<string, string[]>>(() => ({
   text_unit_revisions: ['id', 'unit_id', 'role', 'language', 'text', 'content_hash', 'revision_number'],
   text_embeddings: ['revision_id', 'provider', 'model', 'profile', 'dimensions', 'embedding'],
   text_unit_tags: ['unit_id', 'name'],
+  transcription_notes: [
+    'id', 'segment_id', 'type', 'content', 'passage', 'occurrence', 'origin', 'sort_order',
+  ],
   phrase_memory: ['id', 'unit_id', 'source_revision_id', 'target_revision_id'],
   provenance_events: [
     'id', 'occurred_at', 'event_type', 'entity_type', 'entity_id', 'workspace_id', 'actor', 'job_id',
@@ -354,6 +357,35 @@ describe('il ripristino', () => {
     await restoreBackup(t);
     expect(runMock.mock.calls.some(([query]) => String(query).includes('INSERT INTO transcription_revisions'))).toBe(true);
     expect(runMock.mock.calls.some(([query]) => String(query).includes('INSERT OR IGNORE INTO transcription_revisions'))).toBe(false);
+  });
+
+  it('ripristina le note della pagina dopo la pagina a cui appartengono', async () => {
+    runMock.mockClear();
+    const payload = JSON.parse(backupWith([]));
+    payload.tables.transcription_documents = [{ id: 'td1', workspace_id: 'ws1', title: 'Libro', status: 'active' }];
+    payload.tables.transcription_segments = [{ id: 'seg1', document_id: 'td1', position: 0 }];
+    payload.tables.transcription_notes = [{
+      id: 'n1', segment_id: 'seg1', type: 'doubt', content: 'lettura incerta',
+      passage: 'et dixit', occurrence: 1, origin: 'model', sort_order: 0,
+    }];
+    fsState.raw = JSON.stringify(payload);
+
+    await restoreBackup(t);
+    const queries = runMock.mock.calls.map(([query]) => String(query));
+    const segmentInsert = queries.findIndex((query) => query.includes('INTO transcription_segments'));
+    const noteInsert = queries.findIndex((query) => query.includes('INSERT INTO transcription_notes'));
+    expect(noteInsert).toBeGreaterThan(segmentInsert);
+    expect(queries.findIndex((query) => query === 'DELETE FROM transcription_notes'))
+      .toBeLessThan(queries.findIndex((query) => query === 'DELETE FROM transcription_segments'));
+  });
+
+  it('accetta un backup precedente senza note della pagina', async () => {
+    runMock.mockClear();
+    const payload = JSON.parse(backupWith([]));
+    delete payload.tables.transcription_notes;
+    fsState.raw = JSON.stringify(payload);
+
+    await expect(restoreBackup(t)).resolves.not.toBeNull();
   });
 
   it('rejects a backup created by a newer schema before changing data', async () => {

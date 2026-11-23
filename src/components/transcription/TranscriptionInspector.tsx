@@ -1,4 +1,5 @@
-import { BarChart2, History, Sparkles, Wrench } from 'lucide-react';
+import { BarChart2, History, MessageSquare, ScanText, Wrench } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { InspectorShell } from '../ui';
 import type {
@@ -10,11 +11,12 @@ import type { ViewerVersionRef } from '../../services/libraryService';
 import type { ModelProvider, Workspace } from '../../types';
 import { TranscriptionAssistTab } from './TranscriptionAssistTab';
 import { OcrStartButton } from './OcrStartButton';
+import { OcrRunBlock } from './OcrRunBlock';
 import type { OcrImageMode, OcrImagePreferences } from '../../services/ocrImageSettingsService';
 import { TranscriptionSummaryTab } from './TranscriptionSummaryTab';
 import { TranscriptionHistoryTab } from './TranscriptionHistoryTab';
 
-export type TranscriptionInspectorTab = 'history' | 'assist' | 'summary';
+export type TranscriptionInspectorTab = 'notes' | 'history' | 'assist' | 'summary';
 
 interface TranscriptionInspectorProps {
   activeTab: TranscriptionInspectorTab;
@@ -49,6 +51,10 @@ interface TranscriptionInspectorProps {
   onDocumentOcrPromptChange: (prompt: string | null) => void;
   ocrImage: OcrImagePreferences;
   onOcrImageModeChange: (mode: OcrImageMode) => void;
+  /** Il contenuto della scheda Note, montato dallo Studio che ne tiene lo stato. */
+  notesTab: ReactNode;
+  promptDraft: string | null;
+  onPromptDraftChange: (draft: string | null) => void;
 }
 
 export function TranscriptionInspector({
@@ -82,6 +88,9 @@ export function TranscriptionInspector({
   onDocumentOcrPromptChange,
   ocrImage,
   onOcrImageModeChange,
+  notesTab,
+  promptDraft,
+  onPromptDraftChange,
 }: TranscriptionInspectorProps) {
   const { t } = useTranslation();
   return (
@@ -90,8 +99,9 @@ export function TranscriptionInspector({
       headerHeightClassName="h-12"
       tabRowHeightClassName="h-12"
       tabs={[
+        { id: 'notes', label: t('transcription.tabs.notes'), icon: <MessageSquare size={16} /> },
         { id: 'history', label: t('transcription.tabs.history'), icon: <History size={16} /> },
-        { id: 'assist', label: t('transcription.tabs.assist'), icon: <Sparkles size={16} /> },
+        { id: 'assist', label: t('transcription.tabs.assist'), icon: <ScanText size={16} /> },
         { id: 'summary', label: t('transcription.tabs.summary'), icon: <BarChart2 size={16} /> },
       ]}
       activeTab={activeTab}
@@ -101,6 +111,23 @@ export function TranscriptionInspector({
       panelLabel={t('transcription.inspectorPanelTitle')}
       collapsed={collapsed}
       onCollapsedChange={onCollapsedChange}
+      beforeTabs={
+        // Leggere la pagina si fa da qualunque scheda, come avviare la
+        // traduzione nel suo Studio.
+        document && workspace ? (
+          <OcrRunBlock
+            document={document}
+            workspace={workspace}
+            viewerRef={viewerRef}
+            segmentId={segment?.id ?? null}
+            pageLabel={pageTitleShort}
+            starting={ocrStarting}
+            reading={ocrReading}
+            onStart={onStartOcr}
+            onOpenSettings={() => onTabChange('assist')}
+          />
+        ) : null
+      }
       collapsedContent={
         // Leggere la pagina non richiede il pannello aperto.
         document && workspace ? (
@@ -117,18 +144,17 @@ export function TranscriptionInspector({
         ) : null
       }
     >
-      {activeTab === 'assist' ? (
+      {activeTab === 'notes' ? (
+        notesTab
+      ) : activeTab === 'assist' ? (
         <TranscriptionAssistTab
           document={document}
           workspace={workspace}
-          viewerRef={viewerRef}
-          pageLabel={pageTitleShort}
-          starting={ocrStarting}
-          reading={ocrReading}
-          onStartOcr={onStartOcr}
           onDocumentProviderChange={onDocumentOcrProviderChange}
           onDocumentModelChange={onDocumentOcrModelChange}
           onDocumentPromptChange={onDocumentOcrPromptChange}
+          promptDraft={promptDraft}
+          onPromptDraftChange={onPromptDraftChange}
           image={ocrImage}
           onImageModeChange={onOcrImageModeChange}
         />

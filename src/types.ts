@@ -738,6 +738,9 @@ export type Workspace = {
   ocrDefaultProvider: ModelProvider | '';
   ocrDefaultModel: string;
   ocrDefaultPrompt: string;
+  /** La lettura automatica chiede le note come note a piè di pagina e le
+   *  sposta nella scheda Note, lasciando il testo pulito. */
+  ocrSeparateNotes: boolean;
   /** La ricerca dei riferimenti guarda anche le frasi degli altri workspace e
    *  delle traduzioni senza workspace (sempre della stessa coppia di lingue). */
   memorySearchAllWorkspaces: boolean;

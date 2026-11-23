@@ -36,7 +36,7 @@ import { useConfigStore } from '../stores/configStore';
  * nello stesso modo e resta fuori da questo primo giro.
  */
 
-type OcrWorkspace = Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel'>;
+type OcrWorkspace = Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrSeparateNotes'>;
 
 export type OcrUnavailableReason = 'noDigitization' | 'noModelConfigured';
 
@@ -132,6 +132,7 @@ async function buildPageInput(params: BuildPageInputParams): Promise<OcrPageJobI
     imageEdge: image.edge,
     localRequests,
     pageLabel,
+    separateNotes: workspace.ocrSeparateNotes,
   };
 }
 

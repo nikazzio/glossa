@@ -167,6 +167,9 @@ export interface OcrPageJobInput {
    *  remoto: se mancano tutte, il lavoro ripiega sull'ottimizzata. */
   localRequests: CacheRequest[];
   pageLabel: string;
+  /** Note separate dal testo, fissate al momento della messa in coda: un
+   *  cambio dell'impostazione non tocca le pagine già in coda. */
+  separateNotes: boolean;
 }
 
 export async function enqueueOcrPages(pages: OcrPageJobInput[]): Promise<Job> {
