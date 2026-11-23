@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   createNote,
   deleteNote,
   listSegmentNotes,
-  moveNoteOccurrences,
   updateNote,
   type NewTranscriptionNote,
   type TranscriptionNote,
@@ -15,7 +14,7 @@ import type { TranscriptionRevision, TranscriptionSegment } from '../../../servi
 import { occurrenceAt, resolvePassage, type TextRange } from '../../../utils/noteAnchors';
 import type { PassageHighlight } from '../../editor/passageHighlights';
 import type { TextSelection } from '../../editor/PageEditor';
-import { followEditedText } from './followEditedText';
+import { onJobChanged, OCR_JOB_TYPE } from '../../../services/jobsService';
 import { noteTypeLabelKey } from './noteTypes';
 
 export interface PlacedNote {
@@ -37,6 +36,17 @@ export interface PassageChoice {
 
 const EXCERPT_LENGTH = 80;
 
+/** Il lavoro di lettura riguarda questa pagina (configurazione in JSON). */
+function jobTouchesSegment(config: string, segmentId: string): boolean {
+  try {
+    const parsed = JSON.parse(config) as { pages?: unknown };
+    return Array.isArray(parsed.pages) && parsed.pages.some((page: unknown) =>
+      typeof page === 'object' && page !== null && 'segmentId' in page && page.segmentId === segmentId);
+  } catch {
+    return false;
+  }
+}
+
 function latestRevision(revisions: readonly TranscriptionRevision[]): TranscriptionRevision | null {
   return revisions.reduce<TranscriptionRevision | null>(
     (latest, revision) => (latest === null || revision.revision_number > latest.revision_number ? revision : latest),
@@ -56,14 +66,14 @@ export function passageFromSelection(text: string, selection: TextSelection): Pa
 /**
  * Le note della pagina aperta: caricamento, gruppi (pagina, nel testo, da
  * riagganciare) calcolati sul testo corrente, evidenziazioni per l'editor e
- * comandi. Salvando a mano un testo modificato, le note seguono i passaggi.
+ * comandi. Che le note seguano il testo modificato lo fa il salvataggio della
+ * versione (`followNotesToText`), non questa scheda.
  */
 export function usePageNotes(segment: TranscriptionSegment | null, draft: string, revisions: readonly TranscriptionRevision[]) {
   const { t } = useTranslation();
   const [notes, setNotes] = useState<TranscriptionNote[]>([]);
   const segmentId = segment?.id ?? null;
   const latest = latestRevision(revisions);
-  const lastSeenRef = useRef<{ segmentId: string | null; revision: TranscriptionRevision | null }>({ segmentId: null, revision: null });
 
   const fail = useCallback((err: unknown) => {
     toast.error(t('transcription.notes.saveFailed'), { description: err instanceof Error ? err.message : String(err) });
@@ -83,22 +93,19 @@ export function usePageNotes(segment: TranscriptionSegment | null, draft: string
     return () => { cancelled = true; };
   }, [segmentId, latest?.id, fail]);
 
-  // Una versione nuova scritta a mano: le note seguono i loro passaggi.
+  // Una lettura automatica può riscrivere le note anche lasciando il testo
+  // identico (nessuna versione nuova): si rileggono a ogni lettura finita
+  // che riguarda questa pagina.
   useEffect(() => {
-    const previous = lastSeenRef.current;
-    lastSeenRef.current = { segmentId, revision: latest };
-    if (!latest || previous.segmentId !== segmentId || !previous.revision) return;
-    if (previous.revision.id === latest.id || latest.created_by !== 'user') return;
-    const moves = followEditedText(previous.revision.text, latest.text, notes);
-    if (moves.length === 0) return;
-    setNotes((current) => current.map((note) => {
-      const move = moves.find((candidate) => candidate.id === note.id);
-      return move ? { ...note, occurrence: move.occurrence } : note;
-    }));
-    void moveNoteOccurrences(moves).catch(fail);
-    // Solo al cambio di versione: le note lette qui sono quelle del momento.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segmentId, latest?.id]);
+    if (!segmentId) return;
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    onJobChanged((job) => {
+      if (job.jobType !== OCR_JOB_TYPE || job.status !== 'completed' || !jobTouchesSegment(job.config, segmentId)) return;
+      void listSegmentNotes(segmentId).then((loaded) => { if (!cancelled) setNotes(loaded); }).catch(fail);
+    }).then((fn) => { if (!cancelled) unlisten = fn; else fn(); });
+    return () => { cancelled = true; unlisten?.(); };
+  }, [segmentId, fail]);
 
   const groups = useMemo<NoteGroups>(() => {
     const placed = notes.map((note) => ({ note, range: resolvePassage(draft, note.passage, note.occurrence) }));
@@ -119,11 +126,11 @@ export function usePageNotes(segment: TranscriptionSegment | null, draft: string
     };
   }), [groups.text, t]);
 
-  const create = async (note: Omit<NewTranscriptionNote, 'segmentId'>): Promise<TranscriptionNote | null> => {
-    if (!segmentId) return null;
+  /** La pagina della nota può essere appena nata con lei: si passa esplicita. */
+  const create = async (note: NewTranscriptionNote): Promise<TranscriptionNote | null> => {
     try {
-      const created = await createNote({ ...note, segmentId });
-      setNotes((current) => [...current, created]);
+      const created = await createNote(note);
+      if (note.segmentId === segmentId) setNotes((current) => [...current, created]);
       return created;
     } catch (err: unknown) {
       fail(err);
@@ -131,14 +138,16 @@ export function usePageNotes(segment: TranscriptionSegment | null, draft: string
     }
   };
 
-  const update = async (id: string, updates: TranscriptionNoteUpdate) => {
+  const update = async (id: string, updates: TranscriptionNoteUpdate): Promise<boolean> => {
     try {
       await updateNote(id, updates);
       setNotes((current) => current.map((note) => (note.id === id
         ? { ...note, ...updates, origin: 'user', occurrence: updates.passage === null ? null : updates.occurrence ?? note.occurrence }
         : note)));
+      return true;
     } catch (err: unknown) {
       fail(err);
+      return false;
     }
   };
 

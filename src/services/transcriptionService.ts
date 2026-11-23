@@ -1,5 +1,6 @@
 import { execute, select, runInTransaction } from './dbService';
 import { contentHash, recordFact } from './provenanceService';
+import { followNotesToText } from './transcriptionNotesService';
 import { logger } from '../utils/logger';
 import { DEFAULT_OCR_PROMPT } from '../constants';
 import type { ModelProvider, Workspace } from '../types';
@@ -346,7 +347,9 @@ export async function saveSegmentText(
   if (previous?.content_hash === contentHash(text)) {
     return previous;
   }
-  return insertRevision(segmentId, text, createdBy, previous);
+  const revision = await insertRevision(segmentId, text, createdBy, previous);
+  if (createdBy === 'user' && previous) await followNotesToText(segmentId, previous.text, revision.text);
+  return revision;
 }
 
 /**
@@ -369,7 +372,9 @@ export async function restoreRevision(
   if (previous?.content_hash === target.content_hash) {
     return previous;
   }
-  return insertRevision(segmentId, target.text, 'user', previous);
+  const revision = await insertRevision(segmentId, target.text, 'user', previous);
+  if (previous) await followNotesToText(segmentId, previous.text, revision.text);
+  return revision;
 }
 
 /** Elimina una vecchia versione, mai quella corrente o verificata. */

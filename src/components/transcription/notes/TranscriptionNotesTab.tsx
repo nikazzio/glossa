@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText, MessageSquare, Plus, TextQuote, Unlink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChoiceDots, EmptyState, IconButton, PANEL_BODY_CLASSNAME, PanelSection } from '../../ui';
@@ -19,12 +19,15 @@ export interface NewNoteRequest {
 interface TranscriptionNotesTabProps {
   groups: NoteGroups;
   selectedNoteId: string | null;
+  /** Cresce a ogni nota aperta dal testo. */
+  selectionRequest: number;
   /** Il passaggio selezionato ora nel testo, per riagganciare una nota. */
   selectionPassage: PassageChoice | null;
   newNote: NewNoteRequest | null;
   onNewNote: (request: NewNoteRequest | null) => void;
-  onCreate: (draft: NoteDraft, passage: PassageChoice | null) => void;
-  onUpdate: (id: string, updates: TranscriptionNoteUpdate) => void;
+  /** Vero se la nota è stata salvata. */
+  onCreate: (draft: NoteDraft, passage: PassageChoice | null) => Promise<boolean>;
+  onUpdate: (id: string, updates: TranscriptionNoteUpdate) => Promise<boolean>;
   onDelete: (id: string) => void;
   onLocate: (id: string) => void;
 }
@@ -37,6 +40,7 @@ interface TranscriptionNotesTabProps {
 export function TranscriptionNotesTab({
   groups,
   selectedNoteId,
+  selectionRequest,
   selectionPassage,
   newNote,
   onNewNote,
@@ -49,6 +53,15 @@ export function TranscriptionNotesTab({
   const [filter, setFilter] = useState<NoteFilter>('all');
   const all = useMemo(() => [...groups.page, ...groups.text, ...groups.detached], [groups]);
   const count = (type: TranscriptionNoteType) => all.filter(({ note }) => note.type === type).length;
+  // Una nota aperta dal testo deve vedersi anche se il filtro attivo è di un
+  // altro tipo: il filtro torna su Tutte; poi si può filtrare di nuovo.
+  useEffect(() => {
+    if (!selectedNoteId) return;
+    const selected = all.find(({ note }) => note.id === selectedNoteId);
+    if (selected) setFilter((current) => (current === 'all' || current === selected.note.type ? current : 'all'));
+    // Solo alla scelta di una nota, non a ogni cambio dell'elenco.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNoteId, selectionRequest]);
   const shown = (placed: PlacedNote[]) => (filter === 'all' ? placed : placed.filter(({ note }) => note.type === filter));
 
   const filterOptions = [
@@ -76,7 +89,7 @@ export function TranscriptionNotesTab({
           canReattach={selectionPassage !== null}
           onLocate={range ? () => onLocate(note.id) : undefined}
           onReattach={() => {
-            if (selectionPassage) onUpdate(note.id, { passage: selectionPassage.passage, occurrence: selectionPassage.occurrence });
+            if (selectionPassage) void onUpdate(note.id, { passage: selectionPassage.passage, occurrence: selectionPassage.occurrence });
           }}
           onSave={(draft) => onUpdate(note.id, draft)}
           onDelete={() => onDelete(note.id)}
@@ -113,7 +126,11 @@ export function TranscriptionNotesTab({
             key={newNote.requestId}
             initial={{ type: 'note', content: '' }}
             passage={newNote.passage?.passage ?? null}
-            onSave={(draft) => { onCreate(draft, newNote.passage); onNewNote(null); }}
+            onSave={async (draft) => {
+              const saved = await onCreate(draft, newNote.passage);
+              if (saved) onNewNote(null);
+              return saved;
+            }}
             onCancel={() => onNewNote(null)}
           />
         </PanelSection>

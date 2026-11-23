@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { followEditedText } from './followEditedText';
-import type { TranscriptionNote } from '../../../services/transcriptionNotesService';
+import type { TranscriptionNote } from '../services/transcriptionNotesService';
 
 const note = (passage: string, occurrence: number): TranscriptionNote => ({
   id: 'n1', segmentId: 's1', type: 'doubt', content: '', passage, occurrence,

@@ -27,11 +27,12 @@ function renderTab(overrides: Partial<Parameters<typeof TranscriptionNotesTab>[0
   const props = {
     groups: groups(),
     selectedNoteId: null,
+    selectionRequest: 0,
     selectionPassage: null as PassageChoice | null,
     newNote: null,
     onNewNote: vi.fn(),
-    onCreate: vi.fn(),
-    onUpdate: vi.fn(),
+    onCreate: vi.fn(async () => true),
+    onUpdate: vi.fn(async () => true),
     onDelete: vi.fn(),
     onLocate: vi.fn(),
     ...overrides,
@@ -58,6 +59,26 @@ describe('scheda Note della trascrizione', () => {
     expect(screen.getByText('forse dixerit')).toBeInTheDocument();
     expect(screen.queryByText('in margine')).toBeNull();
     expect(screen.queryByText('inchiostro sbiadito')).toBeNull();
+  });
+
+  it('una nota aperta dal testo si vede anche con il filtro di un altro tipo', async () => {
+    const base = { groups: groups(), selectionRequest: 0 };
+    const { rerender } = render(<TranscriptionNotesTab {...base} selectedNoteId={null} selectionPassage={null} newNote={null}
+      onNewNote={vi.fn()} onCreate={vi.fn(async () => true)} onUpdate={vi.fn(async () => true)} onDelete={vi.fn()} onLocate={vi.fn()} />);
+    await userEvent.click(screen.getAllByRole('radio')[2]);
+    expect(screen.queryByText('in margine')).toBeNull();
+    const addition = base.groups.text[2].note.id;
+    rerender(<TranscriptionNotesTab {...base} selectedNoteId={addition} selectionRequest={1} selectionPassage={null} newNote={null}
+      onNewNote={vi.fn()} onCreate={vi.fn(async () => true)} onUpdate={vi.fn(async () => true)} onDelete={vi.fn()} onLocate={vi.fn()} />);
+    expect(screen.getByText('in margine')).toBeInTheDocument();
+  });
+
+  it('se il salvataggio di una nota nuova fallisce il modulo resta aperto con il testo', async () => {
+    const props = renderTab({ newNote: { passage: null, requestId: 1 }, onCreate: vi.fn(async () => false) });
+    fireEvent.change(screen.getByRole('textbox', { name: 'transcription.notes.text' }), { target: { value: 'da non perdere' } });
+    await userEvent.click(screen.getByRole('button', { name: 'transcription.notes.save' }));
+    expect(props.onNewNote).not.toHaveBeenCalledWith(null);
+    expect(screen.getByRole('textbox', { name: 'transcription.notes.text' })).toHaveValue('da non perdere');
   });
 
   it('una pagina senza note mostra lo stato vuoto e il comando per aggiungerne una', async () => {

@@ -40,8 +40,11 @@ function normalize(source: string): Normalized {
         ends.push(index);
         pendingSpace = false;
       }
-      for (const lower of char.toLowerCase()) {
-        chars.push(lower);
+      // Un indice per unità UTF-16, come `indexOf` e `length` qui sotto:
+      // una lettera fuori dal piano base occupa due unità.
+      const lower = char.toLowerCase();
+      for (let unit = 0; unit < lower.length; unit += 1) {
+        chars.push(lower[unit]);
         starts.push(index);
         ends.push(end);
       }

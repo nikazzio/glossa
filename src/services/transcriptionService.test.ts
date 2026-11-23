@@ -14,8 +14,10 @@ import {
   EVENT_UNVERIFIED,
 } from './transcriptionService';
 import { contentHash } from './provenanceService';
+import { followNotesToText } from './transcriptionNotesService';
 
 vi.mock('./dbService', () => ({ select: vi.fn(), execute: vi.fn(), runInTransaction: vi.fn() }));
+vi.mock('./transcriptionNotesService', () => ({ followNotesToText: vi.fn(async () => undefined) }));
 
 const selectMock = vi.mocked(select);
 const executeMock = vi.mocked(execute);
@@ -73,6 +75,8 @@ describe('storico delle trascrizioni', () => {
     expect(insert?.params).toContain('user');
     expect(insert?.params).toContain(2);
     expect(insert?.params).toContain('seg1:r1');
+    // Le note della pagina seguono il testo corretto, con la versione stessa.
+    expect(followNotesToText).toHaveBeenCalledWith('seg1', 'Testo riconosciuto', 'Testo corretto a mano');
   });
 
   it('verificare il segmento punta l approvazione all ultima revisione', async () => {

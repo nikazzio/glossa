@@ -1,4 +1,5 @@
 import { execute, select } from './dbService';
+import { followEditedText } from '../utils/followEditedText';
 
 /**
  * Le note della pagina di trascrizione: separate dal testo, legate alla
@@ -167,4 +168,17 @@ export async function moveNoteOccurrences(moves: ReadonlyArray<{ id: string; occ
 
 export async function deleteNote(id: string): Promise<void> {
   await execute(`DELETE FROM transcription_notes WHERE id = $1`, [id]);
+}
+
+/**
+ * Il testo della pagina è stato riscritto a mano (salvataggio o ripristino):
+ * ogni nota agganciata segue il suo passaggio dal testo vecchio al nuovo.
+ * Si fa qui, con la nuova versione, e non nella scheda aperta: vale anche
+ * cambiando pagina o chiudendo lo Studio subito dopo.
+ */
+export async function followNotesToText(segmentId: string, previous: string, next: string): Promise<void> {
+  if (previous === next) return;
+  const notes = await listSegmentNotes(segmentId);
+  const moves = followEditedText(previous, next, notes);
+  if (moves.length > 0) await moveNoteOccurrences(moves);
 }

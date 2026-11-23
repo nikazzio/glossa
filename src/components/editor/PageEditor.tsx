@@ -240,7 +240,7 @@ export function PageEditor({
         spellCheck={false}
         autoCorrect="off"
         autoCapitalize="off"
-        className={`absolute inset-0 h-full w-full resize-none overflow-y-scroll bg-transparent outline-none custom-scrollbar ${textClassName} read-only:cursor-default`}
+        className={`absolute inset-0 h-full w-full resize-none overflow-y-scroll rounded bg-transparent outline-none custom-scrollbar focus-visible:ring-2 focus-visible:ring-editorial-accent ${textClassName} read-only:cursor-default`}
         style={{ ...style, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
       />
       {hovered && hovered.label ? (

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { execute, select } from './dbService';
 import {
+  followNotesToText,
   countModelNotes,
   createNote,
   deleteNote,
@@ -87,5 +88,20 @@ describe('note della pagina di trascrizione', () => {
     await deleteNote('n1');
 
     expect(executeMock).toHaveBeenCalledWith('DELETE FROM transcription_notes WHERE id = $1', ['n1']);
+  });
+
+  it('salvato il testo a mano, le note seguono il loro passaggio', async () => {
+    selectMock.mockResolvedValueOnce([
+      { id: 'n1', segment_id: 's1', type: 'doubt', content: '', passage: 'dominus', occurrence: 1, origin: 'user', sort_order: 0, created_at: '' },
+    ]);
+
+    await followNotesToText('s1', 'et dominus meus', 'dominus dixit, et dominus meus');
+
+    expect(executeMock).toHaveBeenCalledWith('UPDATE transcription_notes SET occurrence = $1 WHERE id = $2', [2, 'n1']);
+  });
+
+  it('un testo identico non tocca le note', async () => {
+    await followNotesToText('s1', 'et dominus', 'et dominus');
+    expect(selectMock).not.toHaveBeenCalled();
   });
 });

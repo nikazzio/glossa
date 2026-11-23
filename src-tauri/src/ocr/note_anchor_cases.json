@@ -7,6 +7,7 @@
   { "name": "punteggiatura dentro il passaggio", "text": "Deus, qui fecit", "passage": "Deus qui", "occurrence": 1, "count": 1, "expected": "Deus, qui" },
   { "name": "segni Markdown dentro il passaggio", "text": "*Et* dixit", "passage": "Et dixit", "occurrence": 1, "count": 1, "expected": "Et* dixit" },
   { "name": "lettere accentate", "text": "La Città di Dio", "passage": "città", "occurrence": 1, "count": 1, "expected": "Città" },
+  { "name": "lettera fuori dal piano base prima del passaggio", "text": "𐌀 et dominus", "passage": "dominus", "occurrence": 1, "count": 1, "expected": "dominus" },
   { "name": "passaggio vuoto", "text": "dominus", "passage": "  ", "occurrence": 1, "count": 0, "expected": null },
   { "name": "passaggio di sola punteggiatura", "text": "a, b", "passage": ",", "occurrence": 1, "count": 0, "expected": null }
 ]

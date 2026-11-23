@@ -131,8 +131,10 @@ export function OcrSettingsSection({
         hint={t('workspace.settings.ocrDefaultPromptHint')}
         value={prompt}
         defaultValue={DEFAULT_OCR_PROMPT}
-        onSave={handlePromptChange}
-        onTemplateUsed={handleTemplateUsed}
+        onSave={(text, template) => {
+          handlePromptChange(text);
+          if (template) handleTemplateUsed(template);
+        }}
         templateContext="ocr"
         templateWorkflow="transcription"
         refine={provider ? {

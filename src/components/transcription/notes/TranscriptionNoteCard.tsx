@@ -19,7 +19,8 @@ export interface NoteDraft {
 interface NoteFormProps {
   initial: NoteDraft;
   passage: string | null;
-  onSave: (draft: NoteDraft) => void;
+  /** Vero se la nota è stata salvata: solo allora il modulo si chiude. */
+  onSave: (draft: NoteDraft) => Promise<boolean>;
   onCancel: () => void;
 }
 
@@ -28,6 +29,14 @@ export function NoteForm({ initial, passage, onSave, onCancel }: NoteFormProps) 
   const { t } = useTranslation();
   const [type, setType] = useState(initial.type);
   const [content, setContent] = useState(initial.content);
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    const saved = await onSave({ type, content: content.trim() });
+    // Salvata, il modulo si chiude e sparisce: niente stato da aggiornare.
+    if (!saved) setSaving(false);
+  };
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -38,10 +47,10 @@ export function NoteForm({ initial, passage, onSave, onCancel }: NoteFormProps) 
           className="flex-1"
           options={TRANSCRIPTION_NOTE_TYPES.map((value) => ({ value, label: t(noteTypeLabelKey(value)) }))}
         />
-        <IconButton size="sm" onClick={() => onSave({ type, content: content.trim() })} title={t('transcription.notes.save')}>
+        <IconButton size="sm" onClick={() => void save()} disabled={saving} title={t('transcription.notes.save')}>
           <Check size={13} />
         </IconButton>
-        <IconButton size="sm" onClick={onCancel} title={t('transcription.notes.cancel')}>
+        <IconButton size="sm" onClick={onCancel} disabled={saving} title={t('transcription.notes.cancel')}>
           <X size={13} />
         </IconButton>
       </div>
@@ -67,7 +76,7 @@ interface NoteCardProps {
   canReattach: boolean;
   onLocate?: () => void;
   onReattach: () => void;
-  onSave: (draft: NoteDraft) => void;
+  onSave: (draft: NoteDraft) => Promise<boolean>;
   onDelete: () => void;
 }
 
@@ -98,7 +107,11 @@ export function TranscriptionNoteCard({
         <NoteForm
           initial={{ type: note.type, content: note.content }}
           passage={note.passage}
-          onSave={(draft) => { onSave(draft); setEditing(false); }}
+          onSave={async (draft) => {
+            const saved = await onSave(draft);
+            if (saved) setEditing(false);
+            return saved;
+          }}
           onCancel={() => setEditing(false)}
         />
       </li>

@@ -23,7 +23,9 @@ interface PromptPanelProps {
   value: string;
   /** Il testo di partenza, a cui riporta il ripristino. */
   defaultValue: string;
-  onSave: (text: string) => void;
+  /** `template`: il template usato in questa modifica, se c'è (porta con sé
+   *  servizio e modello). */
+  onSave: (text: string, template: PromptTemplate | null) => void;
   templateContext: PromptTemplateContext;
   templateWorkflow: PromptTemplateWorkflow;
   refine?: PromptRefine;
@@ -32,8 +34,6 @@ interface PromptPanelProps {
   draft?: string | null;
   onDraftChange?: (draft: string | null) => void;
   disabledReason?: string | null;
-  /** Un template usato porta con sé anche servizio e modello, se li ha. */
-  onTemplateUsed?: (template: PromptTemplate) => void;
 }
 
 const PREVIEW_LINES = 'line-clamp-6';
@@ -55,7 +55,6 @@ export function PromptPanel({
   draft: controlledDraft,
   onDraftChange,
   disabledReason = null,
-  onTemplateUsed,
 }: PromptPanelProps) {
   const { t } = useTranslation();
   const id = useId();
@@ -65,6 +64,7 @@ export function PromptPanel({
   const loadTemplates = usePromptTemplateStore((state) => state.loadTemplates);
   const [ownDraft, setOwnDraft] = useState<string | null>(null);
   const [baseTemplateId, setBaseTemplateId] = useState<string | null>(null);
+  const [usedTemplate, setUsedTemplate] = useState<PromptTemplate | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [refining, setRefining] = useState(false);
 
@@ -107,16 +107,17 @@ export function PromptPanel({
   const discard = () => {
     setDraft(null);
     setBaseTemplateId(null);
+    setUsedTemplate(null);
   };
   const save = () => {
     if (draft === null || refining || !draft.trim()) return;
-    onSave(draft);
+    onSave(draft, usedTemplate);
     discard();
   };
   const useTemplate = (template: PromptTemplate) => {
     setDraft(template.prompt);
     setBaseTemplateId(template.id);
-    onTemplateUsed?.(template);
+    setUsedTemplate(template);
     editorRef.current?.focus();
   };
   const runRefine = async () => {
@@ -163,7 +164,7 @@ export function PromptPanel({
                 defaultModel={refine?.model}
                 defaultProvider={refine?.provider}
               />
-              <IconButton size="sm" onClick={() => { setDraft(defaultValue); setBaseTemplateId(null); }} title={t('promptPanel.resetDraft')}>
+              <IconButton size="sm" onClick={() => { setDraft(defaultValue); setBaseTemplateId(null); setUsedTemplate(null); }} title={t('promptPanel.resetDraft')}>
                 <RotateCcw size={14} />
               </IconButton>
               <IconButton size="sm" onClick={save} disabled={refining || !draft.trim()} title={t('promptPanel.save')}>

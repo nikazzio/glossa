@@ -7,6 +7,7 @@ import { INSPECTOR_WIDTH, ResizeHandle } from '../ui';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { ensureSegment } from '../../services/transcriptionService';
 import { useTranscriptionSources } from './useTranscriptionSources';
 import { TranscriptionInspector, type TranscriptionInspectorTab } from './TranscriptionInspector';
 import { useSegmentEditor } from './useSegmentEditor';
@@ -21,6 +22,9 @@ import { StudioViewerPane } from './StudioViewerPane';
 import { StudioTextHeader } from './StudioTextHeader';
 import { passageFromSelection, usePageNotes } from './notes/usePageNotes';
 import { TranscriptionNotesTab, type NewNoteRequest } from './notes/TranscriptionNotesTab';
+import type { NoteDraft } from './notes/TranscriptionNoteCard';
+import type { PassageChoice } from './notes/usePageNotes';
+import type { TranscriptionNoteUpdate } from '../../services/transcriptionNotesService';
 
 interface TranscriptionStudioProps {
   documentId: string;
@@ -47,6 +51,9 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   const [activeTab, setActiveTab] = useState<TranscriptionInspectorTab>('notes');
   const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0 });
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  // Cresce a ogni nota aperta dal testo, anche la stessa due volte: la scheda
+  // Note ne fa vedere la nota anche con un filtro di un altro tipo attivo.
+  const [noteRequest, setNoteRequest] = useState(0);
   const [newNote, setNewNote] = useState<NewNoteRequest | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ highlightId: string; requestId: number } | null>(null);
   // La bozza del prompt del documento sta qui, non nella scheda OCR: cambiare
@@ -85,12 +92,41 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   const openNote = (id: string) => {
     setActiveTab('notes');
     setSelectedNoteId(id);
+    setNoteRequest((request) => request + 1);
   };
-  const noteFromSelection = (range: TextSelection) => {
-    const passage = passageFromSelection(draft, range);
+  // Un passaggio si aggancia al testo salvato: con modifiche in sospeso, prima
+  // si salva una versione, così le note già agganciate seguono quel testo e la
+  // nuova parte dalla stessa base.
+  const flushText = async () => {
+    if (editor.draftRef.current !== editor.savedRef.current) await editor.save(editor.draftRef.current);
+  };
+  const noteFromSelection = async (range: TextSelection) => {
+    const text = editor.draftRef.current;
+    const passage = passageFromSelection(text, range);
     if (!passage) return;
+    await flushText();
     setActiveTab('notes');
     setNewNote({ passage, requestId: Date.now() });
+  };
+  const createNote = async (note: NoteDraft, passage: PassageChoice | null): Promise<boolean> => {
+    if (!detail) return false;
+    // Una nota della pagina può essere la prima cosa scritta su una pagina
+    // mai toccata: la pagina nasce qui, come al primo salvataggio del testo.
+    const target = segment ?? await ensureSegment(detail.id, pageIndex, editor.pageLabel).catch(() => null);
+    if (!target) return false;
+    if (!segment) editor.setSegment(target);
+    const created = await notes.create({
+      segmentId: target.id,
+      type: note.type,
+      content: note.content,
+      passage: passage?.passage ?? null,
+      occurrence: passage?.occurrence ?? null,
+    });
+    return created !== null;
+  };
+  const updateNote = async (id: string, updates: TranscriptionNoteUpdate): Promise<boolean> => {
+    if (updates.passage) await flushText();
+    return notes.update(id, updates);
   };
 
   // Fuori sincronia il visore sfoglia per conto suo: i suoi eventi non
@@ -210,7 +246,7 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                       highlights={notes.highlights}
                       onHighlightClick={openNote}
                       onSelectionChange={handleSelectionChange}
-                      onCreateNote={segment ? noteFromSelection : undefined}
+                      onCreateNote={(range) => void noteFromSelection(range)}
                       focusRequest={focusRequest}
                     />
                     <PagePendingOverlay
@@ -277,16 +313,12 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
               <TranscriptionNotesTab
                 groups={notes.groups}
                 selectedNoteId={selectedNoteId}
+                selectionRequest={noteRequest}
                 selectionPassage={selectionPassage}
-                newNote={segment ? newNote : null}
+                newNote={detail ? newNote : null}
                 onNewNote={setNewNote}
-                onCreate={(note, passage) => void notes.create({
-                  type: note.type,
-                  content: note.content,
-                  passage: passage?.passage ?? null,
-                  occurrence: passage?.occurrence ?? null,
-                })}
-                onUpdate={(id, updates) => void notes.update(id, updates)}
+                onCreate={createNote}
+                onUpdate={updateNote}
                 onDelete={(id) => void notes.remove(id)}
                 onLocate={(id) => {
                   setSelectedNoteId(id);

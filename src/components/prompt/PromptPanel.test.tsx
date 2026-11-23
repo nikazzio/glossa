@@ -20,14 +20,14 @@ beforeEach(() => {
   });
 });
 
-function Harness({ onSave = vi.fn() }: { onSave?: (text: string) => void }) {
+function Harness({ onSave = vi.fn() }: { onSave?: (text: string, template: PromptTemplate | null) => void }) {
   const [value, setValue] = useState('Testo salvato.');
   return (
     <PromptPanel
       label="Prompt"
       value={value}
       defaultValue="Testo predefinito."
-      onSave={(text) => { onSave(text); setValue(text); }}
+      onSave={(text, template) => { onSave(text, template); setValue(text); }}
       templateContext="ocr"
       templateWorkflow="transcription"
     />
@@ -54,7 +54,7 @@ describe('pannello del prompt', () => {
     await userEvent.click(screen.getByRole('button', { name: 'pipeline.editPrompt' }));
     fireEvent.change(editor(), { target: { value: 'Testo nuovo.' } });
     fireEvent.keyDown(editor(), { key: 'Enter', ctrlKey: true });
-    expect(onSave).toHaveBeenCalledWith('Testo nuovo.');
+    expect(onSave).toHaveBeenCalledWith('Testo nuovo.', null);
     expect(saveTemplate).not.toHaveBeenCalled();
     expect(screen.getByText('pipeline.promptSource.custom')).toBeInTheDocument();
   });
@@ -89,6 +89,22 @@ describe('pannello del prompt', () => {
     expect(editor()).toHaveValue('Trascrivi la minuta.');
     fireEvent.change(editor(), { target: { value: 'Trascrivi la minuta, riga per riga.' } });
     expect(screen.getByText(/promptPanel.templateModified/)).toBeInTheDocument();
+  });
+
+  it('il template usato arriva solo al salvataggio, mai se la bozza si scarta', async () => {
+    const onSave = vi.fn();
+    render(<Harness onSave={onSave} />);
+    await userEvent.click(screen.getByRole('button', { name: 'pipeline.editPrompt' }));
+    await userEvent.click(screen.getByRole('button', { name: 'promptPanel.templates' }));
+    await userEvent.click(await screen.findByText('Minuta'));
+    await userEvent.click(screen.getByRole('button', { name: 'promptPanel.discard' }));
+    expect(onSave).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'pipeline.editPrompt' }));
+    await userEvent.click(screen.getByRole('button', { name: 'promptPanel.templates' }));
+    await userEvent.click(await screen.findByText('Minuta'));
+    await userEvent.click(screen.getByRole('button', { name: 'promptPanel.save' }));
+    expect(onSave).toHaveBeenCalledWith('Trascrivi la minuta.', minuta);
   });
 
   it('dal menu si elimina un template con conferma nella riga, senza toccare il prompt', async () => {

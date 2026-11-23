@@ -1,6 +1,12 @@
 import { diffChars } from 'diff';
-import { findPassageOccurrences, resolvePassage } from '../../../utils/noteAnchors';
-import type { TranscriptionNote } from '../../../services/transcriptionNotesService';
+import { findPassageOccurrences, resolvePassage } from './noteAnchors';
+
+/** Il minimo di una nota che serve per seguirne il passaggio. */
+interface AnchoredNote {
+  id: string;
+  passage: string | null;
+  occurrence: number | null;
+}
 
 export interface OccurrenceMove {
   id: string;
@@ -33,7 +39,7 @@ function mapPosition(previous: string, next: string, position: number): number |
  * ne prende la ripetizione aggiornata; altrimenti va riagganciata. Restituisce
  * solo le note che cambiano.
  */
-export function followEditedText(previous: string, next: string, notes: readonly TranscriptionNote[]): OccurrenceMove[] {
+export function followEditedText(previous: string, next: string, notes: readonly AnchoredNote[]): OccurrenceMove[] {
   return notes.flatMap((note) => {
     const range = resolvePassage(previous, note.passage, note.occurrence);
     if (!note.passage || !range) return [];
