@@ -7,11 +7,15 @@ La trascrizione dei documenti in Glossa, compresa la lettura automatica delle pa
 
 ### Requirement: Il prompt del documento è l'unica istruzione editoriale della lettura automatica
 
-La lettura automatica di una pagina SHALL inviare al modello il prompt in vigore per il documento, l'immagine della pagina e una frase fissa e neutra che accompagna l'immagine. L'unica altra istruzione di Glossa SHALL essere il blocco di formato delle note, quando è attivo. Glossa MUST NOT aggiungere istruzioni proprie su ruolo, regole editoriali, a capo, commenti o intestazioni. Il prompt in vigore SHALL essere, in ordine di precedenza: il prompt del documento, altrimenti il prompt OCR predefinito del workspace, altrimenti il prompt di partenza di Glossa.
+La lettura automatica di una pagina SHALL inviare al modello il prompt in vigore per il documento, l'immagine della pagina e una frase fissa e neutra che accompagna l'immagine. L'unica altra istruzione di Glossa SHALL essere il blocco di formato delle note, quando è attivo. Glossa MUST NOT aggiungere istruzioni proprie su ruolo, regole editoriali, a capo, commenti o intestazioni.
 
 #### Scenario: Un prompt personale non è contraddetto
 - **WHEN** il documento ha un prompt che chiede testo continuo, commenti fra parentesi graffe e un segno di pagina iniziale, le note separate sono spente, e si avvia la lettura di una pagina
 - **THEN** il prompt inviato, visibile nel log della trascrizione, contiene quel prompt e nessun'altra istruzione su a capo, commenti o intestazioni
+
+### Requirement: Precedenza del prompt della lettura automatica
+
+Il prompt in vigore SHALL essere, in ordine di precedenza: il prompt del documento, altrimenti il prompt OCR predefinito del workspace, altrimenti il prompt di partenza di Glossa.
 
 #### Scenario: Documento senza prompt proprio
 - **WHEN** il documento non ha un prompt proprio e il workspace ha un prompt OCR predefinito
@@ -59,12 +63,31 @@ Ogni riga del log della trascrizione SHALL restare su una sola riga di intestazi
 
 ### Requirement: Riepilogo della trascrizione
 
-La scheda Riepilogo dello Studio di trascrizione SHALL mostrare tre sezioni.
-- **Pagina aperta:** numero ed etichetta, stato, versioni divise fra lettura automatica e mano, letture automatiche con l'ora dell'ultima, costo della pagina.
-- **Documento:** pagine con testo, pagine verificate con la barra di avanzamento, parole e caratteri.
-- **Lettura automatica del documento:** letture riuscite ed errori, pagine lette e quante rilette, token inviati con la percentuale dalla cache, token ricevuti, costo stimato totale e per pagina letta, tempo medio per lettura, modelli usati.
+La scheda Riepilogo dello Studio di trascrizione SHALL mostrare tre sezioni: pagina aperta, documento, lettura automatica del documento. Le voci senza dati SHALL essere omesse oppure mostrare zero, mai valori inventati.
 
-Le voci senza dati SHALL essere omesse oppure mostrare zero, mai valori inventati.
+#### Scenario: Pagina mai letta automaticamente
+- **WHEN** la pagina aperta ha solo versioni scritte a mano
+- **THEN** la sezione della pagina mostra le versioni a mano e nessuna lettura automatica, senza costo
+
+### Requirement: Riepilogo della pagina aperta
+
+La sezione della pagina aperta SHALL mostrare numero ed etichetta, stato, versioni divise fra lettura automatica e mano, letture automatiche con l'ora dell'ultima e costo della pagina.
+
+#### Scenario: Pagina letta due volte
+- **WHEN** la pagina aperta ha due letture automatiche e una correzione a mano
+- **THEN** la sezione mostra due versioni da lettura automatica, una a mano, due letture con l'ora dell'ultima e il costo della pagina
+
+### Requirement: Riepilogo del documento
+
+La sezione del documento SHALL mostrare pagine con testo, pagine verificate con la barra di avanzamento, parole e caratteri.
+
+#### Scenario: Documento in corso
+- **WHEN** un documento ha testo su 3 pagine, di cui 1 verificata
+- **THEN** la sezione mostra 3 pagine con testo e 1 verificata, con la barra di avanzamento
+
+### Requirement: Riepilogo della lettura automatica del documento
+
+La sezione della lettura automatica SHALL mostrare letture riuscite ed errori, pagine lette e quante rilette, token inviati con la percentuale dalla cache, token ricevuti, costo stimato totale e per pagina letta, tempo medio per lettura e modelli usati, aggiornati a ogni lettura finita.
 
 #### Scenario: Documento con letture ripetute
 - **WHEN** un documento ha 14 letture riuscite su 11 pagine e un errore
@@ -77,10 +100,6 @@ Le voci senza dati SHALL essere omesse oppure mostrare zero, mai valori inventat
 #### Scenario: Token inviati con Anthropic
 - **WHEN** una lettura con Anthropic registra 500 token di input e 2.000 letti dalla cache
 - **THEN** log e Riepilogo mostrano 2.500 token inviati, di cui 2.000 dalla cache
-
-#### Scenario: Pagina mai letta automaticamente
-- **WHEN** la pagina aperta ha solo versioni scritte a mano
-- **THEN** la sezione della pagina mostra le versioni a mano e nessuna lettura automatica, senza costo
 
 ### Requirement: Blocco di formato per le note separate
 
