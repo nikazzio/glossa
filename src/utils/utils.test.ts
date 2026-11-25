@@ -5,8 +5,6 @@ import {
   estimateTextStats,
   indexPad,
   normalizeQualityRating,
-  resolveSplitIndex,
-  recommendChunkCount,
 } from './index';
 import type { TranslationChunk } from '../types';
 import { makeTranslationChunk } from '../test/chunkFactory';
@@ -66,10 +64,9 @@ describe('normalizeQualityRating', () => {
 });
 
 describe('document chunking', () => {
-  it('estimates words and recommends long-document chunk counts', () => {
+  it('estimates the word count of a long document', () => {
     const text = Array.from({ length: 1500 }, (_, i) => `word${i}`).join(' ');
     expect(estimateTextStats(text).words).toBe(1500);
-    expect(recommendChunkCount(text)).toBe(3);
   });
 
   it('splits text into a requested number of chunks', () => {
@@ -332,12 +329,5 @@ describe('document chunking', () => {
       'Paragraph one with several words.',
       'Paragraph two keeps markdown spacing intact.',
     ]);
-  });
-
-  it('allows manual split on markdown content without blank-line boundaries', () => {
-    const text = '- item one\n- item two\n- item three';
-    const splitAt = resolveSplitIndex(text, 10, { markdownAware: true });
-
-    expect(splitAt).toBe(10);
   });
 });

@@ -163,10 +163,6 @@ impl LlmProvider for AnthropicProvider {
         "Anthropic"
     }
 
-    fn api_key_env_var(&self) -> Option<&'static str> {
-        Some("ANTHROPIC_API_KEY")
-    }
-
     fn default_test_model(&self) -> &'static str {
         "claude-haiku-4-5-20251001"
     }

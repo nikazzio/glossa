@@ -1102,21 +1102,6 @@
     "optional": "opzionale",
     "next": "Avanti",
     "back": "Indietro",
-    "relative": {
-      "justNow": "adesso",
-      "minutesAgo_one": "{{count}} minuto fa",
-      "minutesAgo_other": "{{count}} minuti fa",
-      "hoursAgo_one": "{{count}} ora fa",
-      "hoursAgo_other": "{{count}} ore fa",
-      "daysAgo_one": "{{count}} giorno fa",
-      "daysAgo_other": "{{count}} giorni fa",
-      "weeksAgo_one": "{{count}} settimana fa",
-      "weeksAgo_other": "{{count}} settimane fa",
-      "monthsAgo_one": "{{count}} mese fa",
-      "monthsAgo_other": "{{count}} mesi fa",
-      "yearsAgo_one": "{{count}} anno fa",
-      "yearsAgo_other": "{{count}} anni fa"
-    },
     "openLinkFailed": "Non è stato possibile aprire il collegamento nel browser.",
     "resizeColumns": "Ridimensiona le colonne"
   },

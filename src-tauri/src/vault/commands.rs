@@ -56,20 +56,6 @@ pub fn get_vault_status(app: tauri::AppHandle) -> Result<VaultStatus, String> {
     status(&app, configured.as_deref())
 }
 
-/// Crea la radice e il marcatore, se mancano. Idempotente.
-///
-/// Rifiuta una cartella che contiene altro: l'unico modo di adottare un
-/// deposito è passare dalla finestra aperta dal backend, che classifica prima
-/// di scrivere.
-#[tauri::command]
-pub fn initialize_vault(app: tauri::AppHandle) -> Result<(), String> {
-    let root = root_of(&app)?;
-    if classify_folder(&root)? == FolderKind::Foreign {
-        return Err("vault_folder_not_empty".to_string());
-    }
-    super::ensure_root(&root)
-}
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FreedSpace {
@@ -315,24 +301,6 @@ fn versions_of_source(app: &tauri::AppHandle, source_id: &str) -> Result<Vec<Str
         .map_err(|error| error.to_string())?;
     rows.collect::<Result<Vec<String>, _>>()
         .map_err(|error| error.to_string())
-}
-
-/// Cancella manifesto, miniature, pagine **e copie ricavate in locale** di una
-/// digitalizzazione: l'opera sparisce del tutto, non solo dalle biblioteche.
-#[tauri::command]
-pub async fn delete_version_files(
-    app: tauri::AppHandle,
-    writes: State<'_, crate::db::DbWriteCoordinator>,
-    provider_key: String,
-    version_id: String,
-) -> Result<FreedSpace, String> {
-    let _write_guard = writes.lock().await;
-    refuse_while_version_working(&app, &version_id)?;
-    let root = root_of(&app)?;
-    if !root.is_dir() {
-        return Err("vault_unreachable".to_string());
-    }
-    wipe_version(&root, &provider_key, &version_id)
 }
 
 /// Le cartelle di una copia, scaricate e ricavate, sotto ogni chiave di

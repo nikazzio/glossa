@@ -5,10 +5,6 @@ export type ProviderKeyStatusMap = Partial<Record<'gemini' | 'openai' | 'anthrop
 
 const REMOTE_PROVIDERS: Array<keyof ProviderKeyStatusMap> = ['gemini', 'openai', 'anthropic', 'deepseek'];
 
-export function providerNeedsApiKey(provider: string): provider is keyof ProviderKeyStatusMap {
-  return REMOTE_PROVIDERS.includes(provider as keyof ProviderKeyStatusMap);
-}
-
 export function canRefineWithProvider(
   provider: string,
   statuses: ProviderKeyStatusMap,

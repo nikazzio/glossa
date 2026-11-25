@@ -65,10 +65,6 @@ export async function adoptDefaultVaultFolder(): Promise<VaultStatus> {
   return invoke<VaultStatus>('use_default_vault_folder');
 }
 
-export async function initializeVault(): Promise<void> {
-  await invoke('initialize_vault');
-}
-
 const VERIFY_ON_STARTUP_KEY = 'verify_vault_on_startup';
 
 /**
@@ -127,18 +123,10 @@ export async function freeVersionDocument(
 }
 
 /**
- * Cancella tutto quello che una digitalizzazione ha nel deposito — manifesto,
- * miniature, pagine — quando l'opera esce dalla Biblioteca.
- */
-export async function deleteVersionFiles(providerKey: string, versionId: string): Promise<FreedSpace> {
-  return invoke<FreedSpace>('delete_version_files', { providerKey, versionId });
-}
-
-/**
- * Come sopra, ma per **tutte** le copie di un'opera: le immagini e il
- * documento. È quello che serve quando l'opera esce dalla Biblioteca, perché
- * cancellare la sola copia con cui era stata trovata lasciava il documento sul
- * disco.
+ * Cancella dal deposito tutto quello che le copie di un'opera hanno — manifesto,
+ * miniature, pagine e documento — quando l'opera esce dalla Biblioteca. Vale
+ * per **tutte** le copie: cancellare solo quella con cui l'opera era stata
+ * trovata lascerebbe il documento sul disco.
  */
 export async function deleteSourceFiles(providerKey: string, sourceId: string): Promise<FreedSpace> {
   return invoke<FreedSpace>('delete_source_files', { providerKey, sourceId });

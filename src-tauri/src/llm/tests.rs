@@ -65,10 +65,6 @@ impl LlmProvider for DelegatingTestProvider {
         self.inner.display_name()
     }
 
-    fn api_key_env_var(&self) -> Option<&'static str> {
-        self.inner.api_key_env_var()
-    }
-
     fn default_test_model(&self) -> &'static str {
         self.inner.default_test_model()
     }
@@ -1146,7 +1142,6 @@ async fn call_openai_compatible_returns_content_on_success() {
         "openai",
         "OpenAI",
         &server.uri().to_string(),
-        "OPENAI_API_KEY",
         "gpt-4.1-mini",
         false,
     );
@@ -1186,7 +1181,6 @@ async fn call_openai_compatible_maps_unauthorized_to_friendly_error() {
         "openai",
         "OpenAI",
         &server.uri().to_string(),
-        "OPENAI_API_KEY",
         "gpt-4.1-mini",
         false,
     );
@@ -1227,7 +1221,6 @@ async fn call_openai_compatible_maps_rate_limit_to_friendly_error() {
         "openai",
         "OpenAI",
         &server.uri().to_string(),
-        "OPENAI_API_KEY",
         "gpt-4.1-mini",
         false,
     );

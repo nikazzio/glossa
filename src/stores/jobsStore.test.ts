@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import type { Job } from '../services/jobsService';
-import { isFinishedRecently, isRunning, isWaiting, summarizeJobs, useJobsStore } from './jobsStore';
+import { isFinishedRecently, isRunning, summarizeJobs, useJobsStore } from './jobsStore';
 
 vi.mock('../services/jobsService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../services/jobsService')>();
@@ -69,13 +69,6 @@ describe('come si raggruppano i lavori', () => {
     expect(isRunning(job({ status: 'pausing' }))).toBe(true);
     expect(isRunning(job({ status: 'cancelling' }))).toBe(true);
     expect(isRunning(job({ status: 'paused' }))).toBe(false);
-  });
-
-  it('in attesa comprende la pausa, la coda e l’attesa di un nuovo tentativo', () => {
-    expect(isWaiting(job({ status: 'paused' }))).toBe(true);
-    expect(isWaiting(job({ status: 'queued' }))).toBe(true);
-    expect(isWaiting(job({ status: 'queued', nextAttemptAt: '2026-08-13 10:00:00' }))).toBe(true);
-    expect(isWaiting(job({ status: 'running' }))).toBe(false);
   });
 
   it('i lavori finiti restano visibili per la giornata, poi no', () => {

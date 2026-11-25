@@ -1693,8 +1693,8 @@ pagine con una copia derivata — altrimenti un pareggio alfabetico
 mostrerebbe come "scaricata" una copia che non lo è mai stata. Solo se
 l'originale è stato liberato e resta solo la copia, quella diventa principale.
 `vault::commands::free_version_size` libera **una sola** cartella di misura
-(scaricata o derivata); `delete_version_files` (rimozione dell'opera) e lo
-spazzino delle cartelle orfane coprono ora anche `derived/`.
+(scaricata o derivata); `delete_source_files` (rimozione dell'opera) e lo
+spazzino delle cartelle orfane coprono anche `derived/`.
 
 ### Il documento unico (#462, 16 settembre 2026)
 
@@ -1803,9 +1803,9 @@ visualizzare le immagini o il PDF. La scelta arriva al visore con
 comandi di visualizzazione delle misure fanno la stessa cosa al contrario.
 
 Rimozione dell'opera: `delete_source_files` cancella le cartelle di **tutte** le
-copie del lavoro (le legge da `source_versions`), perché `delete_version_files`
-sulla sola copia di catalogo lasciava il documento sul disco fino al passaggio
-dello spazzino delle cartelle orfane.
+copie del lavoro (le legge da `source_versions`): cancellare la sola copia di
+catalogo lascerebbe il documento sul disco fino al passaggio dello spazzino
+delle cartelle orfane.
 
 Lettura: `document_bytes` serve i byte grezzi (`tauri::ipc::Response`) con un
 tetto di 256 MB, `open_document_externally` apre il file con il lettore del
@@ -2173,9 +2173,10 @@ volta sola per digitalizzazione.
 
 ### Rimozione di un'opera e cache dei byte
 
-Togliere un'opera dalla biblioteca esegue `delete_version_files` (manifesto,
-miniature, pagine e copie ricavate spariscono dal deposito) e poi `DELETE FROM
-sources`, con cascata sulle righe collegate, e infine `forget_version_cache`.
+Togliere un'opera dalla biblioteca esegue `delete_source_files` (manifesto,
+miniature, pagine, documento e copie ricavate di tutte le copie spariscono dal
+deposito), poi `forget_version_cache` e infine `DELETE FROM sources`, con
+cascata sulle righe collegate.
 
 Quest'ultimo è **l'unico caso in cui una voce di cache se ne va prima del
 tempo**: tutto il resto sono pixel di libri storici, che non cambiano. Senza di

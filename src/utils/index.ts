@@ -101,12 +101,6 @@ export function estimateTextStats(text: string): TextStats {
   };
 }
 
-export function recommendChunkCount(text: string, targetWordsPerChunk = 700): number {
-  const words = estimateTextStats(text).words;
-  if (words === 0) return 0;
-  return Math.max(1, Math.ceil(words / targetWordsPerChunk));
-}
-
 export function chunkText(text: string, options: ChunkTextOptions = {}): string[] {
   const normalized = trimOuterBlankLines(text);
   if (!normalized.trim()) return [];
@@ -148,16 +142,6 @@ export function findBestSplitIndex(
   }
 
   return midpoint;
-}
-
-export function resolveSplitIndex(
-  text: string,
-  requestedSplitAt: number,
-  options: { markdownAware?: boolean } = {},
-): number | null {
-  const boundedSplitAt = Math.max(1, Math.min(requestedSplitAt, text.length - 1));
-  if (!options.markdownAware) return boundedSplitAt;
-  return findNearestMarkdownBoundary(text, boundedSplitAt) ?? boundedSplitAt;
 }
 
 function splitParagraphs(text: string, options: ChunkTextOptions = {}): string[] {
@@ -496,30 +480,6 @@ function chooseNearestValidSplit(
   return candidates.sort(
     (left, right) => Math.abs(left - midpoint) - Math.abs(right - midpoint),
   )[0];
-}
-
-type RelativeUnit = {
-  key: 'justNow' | 'minutesAgo' | 'hoursAgo' | 'daysAgo' | 'weeksAgo' | 'monthsAgo' | 'yearsAgo';
-  count?: number;
-};
-
-export function relativeDateUnit(updatedAt: string | number | Date, now: Date = new Date()): RelativeUnit {
-  const then = new Date(updatedAt);
-  const diffMs = now.getTime() - then.getTime();
-  const seconds = Math.max(0, Math.floor(diffMs / 1000));
-  if (seconds < 60) return { key: 'justNow' };
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return { key: 'minutesAgo', count: minutes };
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { key: 'hoursAgo', count: hours };
-  const days = Math.floor(hours / 24);
-  if (days < 7) return { key: 'daysAgo', count: days };
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return { key: 'weeksAgo', count: weeks };
-  const months = Math.floor(days / 30);
-  if (months < 12) return { key: 'monthsAgo', count: months };
-  const years = Math.floor(days / 365);
-  return { key: 'yearsAgo', count: years };
 }
 
 export function generateId(prefix: string): string {

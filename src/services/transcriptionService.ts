@@ -181,13 +181,6 @@ export async function addSegment(
   return segment;
 }
 
-export async function listSegments(documentId: string): Promise<TranscriptionSegment[]> {
-  return select<TranscriptionSegment>(
-    'SELECT * FROM transcription_segments WHERE document_id = $1 ORDER BY position ASC',
-    [documentId],
-  );
-}
-
 /** Il segmento di quella pagina, se qualcuno l'ha già toccata. Non ne crea
  *  uno: sfogliare pagine mai trascritte non deve lasciare righe vuote. */
 export async function getSegmentByPosition(

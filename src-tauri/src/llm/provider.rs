@@ -70,10 +70,6 @@ impl UsageAccumulator {
 pub trait LlmProvider: Send + Sync {
     fn id(&self) -> &'static str;
     fn display_name(&self) -> &'static str;
-    /// Environment variable name for the provider's API key. Reserved for future
-    /// tooling (e.g., auto-detecting key setup); not called in production paths.
-    #[allow(dead_code)]
-    fn api_key_env_var(&self) -> Option<&'static str>;
     fn default_test_model(&self) -> &'static str;
     fn stream_timeouts(&self) -> StreamTimeouts;
 

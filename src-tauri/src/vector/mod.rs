@@ -9,7 +9,7 @@ mod text_units_tests;
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, Result as RusqliteResult};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
 
 #[derive(Clone)]
 pub struct VectorDatabase {
@@ -79,17 +79,6 @@ pub fn verify_phrase_memory_schema(conn: &Connection) -> Result<(), String> {
         );
     }
     Ok(())
-}
-
-#[tauri::command]
-pub fn vec_ping(database: State<'_, VectorDatabase>) -> Result<String, String> {
-    let database_connection = database.connection()?;
-    let connection = database_connection
-        .lock()
-        .map_err(|_| "Vector database connection is unavailable".to_string())?;
-    connection
-        .query_row("SELECT vec_version()", [], |row| row.get::<_, String>(0))
-        .map_err(|error| error.to_string())
 }
 
 pub fn get_db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {

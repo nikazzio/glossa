@@ -147,14 +147,6 @@ export function isRunning(job: Job): boolean {
   return job.status === 'running' || job.status === 'pausing' || job.status === 'cancelling';
 }
 
-/**
- * Fermo in attesa: aspetta di poter riprovare, oppure aspetta una decisione
- * dell'utente. Non è un errore, e va detto diversamente.
- */
-export function isWaiting(job: Job): boolean {
-  return isWaitingToRetry(job) || job.status === 'paused' || job.status === 'queued';
-}
-
 /** Finito oggi: resta visibile per la giornata, poi sparisce. */
 export function isFinishedRecently(job: Job, now: number): boolean {
   if (!isTerminal(job)) return false;

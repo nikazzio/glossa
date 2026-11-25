@@ -1,7 +1,7 @@
 import { Columns2, Highlighter, LayoutGrid, Link2, Link2Off, PanelLeft, PanelRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useState, type ReactNode } from 'react';
-import { ClickPopover, IconButton, SettingRow, Tooltip } from '../ui';
+import { ClickPopover, IconButton, SettingRow } from '../ui';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 
@@ -102,43 +102,5 @@ export function DocumentViewOptionsMenu() {
       )}
       </div>
     </ClickPopover>
-  );
-}
-
-/**
- * Un numero del frammento: icona, valore, e l'etichetta al passaggio del mouse.
- *
- * L'etichetta esce **verso l'alto**: i comandi di vista stanno nella riga
- * sotto e mandano le loro verso il basso, così le due file non si coprono a
- * vicenda.
- *
- * Le tre voci — unità, token, costo — stavano in colonne con l'etichetta scritta
- * sopra: occupavano mezza barra per dire tre numeri. Qui l'etichetta arriva
- * quando serve, come per il resto dei comandi dell'app.
- */
-export function ChunkMetric({
-  icon,
-  label,
-  value,
-  tone = 'default',
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  tone?: 'default' | 'accent';
-}) {
-  return (
-    <Tooltip label={label} side="top">
-      <span className="flex cursor-default items-center gap-1.5">
-        <span className="text-editorial-muted">{icon}</span>
-        <span
-          className={`font-display text-base italic tabular-nums ${
-            tone === 'accent' ? 'text-editorial-accent' : 'text-editorial-ink'
-          }`}
-        >
-          {value}
-        </span>
-      </span>
-    </Tooltip>
   );
 }

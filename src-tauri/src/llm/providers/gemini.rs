@@ -64,10 +64,6 @@ impl LlmProvider for GeminiProvider {
         "Gemini"
     }
 
-    fn api_key_env_var(&self) -> Option<&'static str> {
-        Some("GEMINI_API_KEY")
-    }
-
     fn default_test_model(&self) -> &'static str {
         "gemini-3-flash-preview"
     }
