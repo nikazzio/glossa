@@ -84,6 +84,10 @@ async fn enqueue(
     // raggruppano sopra, e senza restavano fuori da ogni conto.
     workspace_id: Option<String>,
 ) -> Result<JobRecord, String> {
+    // Le pagine di una copia importata si estraggono dal PDF, non si scaricano.
+    if crate::pdfpages::is_import_url(&manifest_url) {
+        return Err(crate::pdfpages::PAGE_NOT_LOCAL.to_string());
+    }
     let conn = jobs.0.connection()?;
 
     // Tentativi e attese sono del profilo della biblioteca, non costanti nostre

@@ -31,14 +31,22 @@ UI/UX, design system e guide accompagnano ciascun intervento.
    del PDF dentro Glossa esiste già ed è distinto da questa importazione.
    Includere il percorso di OCR delle pagine PDF, già richiesto da #502.
    Il dettaglio dell'importazione va definito in OpenSpec.
-2. **Valutare il metodo editoriale punto per punto (#502).** Le note separate
-   dal testo sono già fatte. Discutere singolarmente minuta e trascrizione
-   pulita, passaggi fra fasi, dubbi dell'intero documento, cartulazione, stati
-   di revisione e controllo del curatore, profili riusabili. Il contenuto
-   dell'issue non implica che serva tutto né una grande catena automatica:
-   scegliere e specificare i singoli interventi prima di implementarli.
-3. **Strumenti visivi, ritagli e catalogazione come insieme unico
-   (#221, #222, #223).** Progettare un percorso continuo: migliorare la
+2. **Metodo editoriale: solo l'indispensabile per il tag (#502).** Le note
+   separate dal testo sono già fatte. Scegliere singolarmente, fra minuta e
+   trascrizione pulita, passaggi fra fasi, dubbi dell'intero documento,
+   cartulazione, stati di revisione e controllo del curatore, profili
+   riusabili, i soli interventi necessari a consegnare una trascrizione; gli
+   altri vengono dopo il tag. Nessuna grande catena automatica: ogni
+   intervento si specifica prima di implementarlo.
+3. **Esportazione della trascrizione (#500, #375).** Quando testo e note sono
+   definiti: documento unico con pagine ordinate e segni di pagina; decidere
+   formati, resa delle note e cartella predefinita di destinazione.
+4. **Tag 2.0.** Dopo questo percorso di Trascrizione, dall'acquisizione del
+   documento alla consegna del risultato, provato sui materiali reali. La
+   pubblicazione richiede una decisione esplicita; non dipende dal
+   completamento di tutto il backlog.
+5. **Dopo il tag: strumenti visivi, ritagli e catalogazione come insieme
+   unico (#221, #222, #223).** Progettare un percorso continuo: migliorare la
    leggibilità della pagina, ritagliare un segno, classificarlo, ritrovarlo e
    confrontarlo con altre occorrenze. Comprendere regolazioni di luce,
    contrasto, gamma e colori; ricercare e valutare sui materiali reali gli
@@ -47,17 +55,11 @@ UI/UX, design system e guide accompagnano ciascun intervento.
    con categorie, note e provenienza. Progettazione comune, implementazione
    suddivisa in change OpenSpec gestibili; scelte degli strumenti e UI da
    approvare, senza assumere un elenco definitivo di algoritmi.
-4. **Esportazione della trascrizione (#500, #375).** Alla fine, quando testo,
-   note e materiali da consegnare sono definiti: documento unico con pagine
-   ordinate e segni di pagina; decidere formati, resa delle note e cartella
-   predefinita di destinazione.
-5. **Valutare il tag 2.0.** Il punto previsto è dopo questo percorso di
-   Trascrizione, dall'acquisizione del documento alla consegna del risultato,
-   provato sui materiali reali. La pubblicazione richiede una decisione
-   esplicita; non dipende dal completamento di tutto il backlog.
 6. **Poi completare la Traduzione e affrontare il resto.** Consolidare il
    flusso, fare il refactor necessario e uniformare codice e UI/UX; dettaglio
-   e ordine degli interventi da definire prima dell'implementazione.
+   e ordine degli interventi da definire prima dell'implementazione. La
+   rimozione del codice inutilizzato si rifà da capo su questa base, quando
+   l'app è più stabile.
 
 La lettura automatica a intervalli o di più pagine (#499) è secondaria: non è
 una condizione per completare questo percorso o valutare il tag 2.0.
@@ -104,7 +106,7 @@ aggiunta e non filtro dei cataloghi remoti.
 ## Percorso fonte → trascrizione → traduzione
 
 - #221/#222/#223 e #208/#209: strumenti visivi, ritagli e catalogazione
-  compresi nel percorso prioritario di Trascrizione sopra; corpus di evidenze
+  previsti subito dopo il tag 2.0 (punto 5 sopra); corpus di evidenze
   visive collegato al corpus testuale ma distinto da esso.
 - #224/#189: creare una traduzione dal testo approvato preservando versione,
   provenienza e workspace; non partire direttamente da immagini grezze.

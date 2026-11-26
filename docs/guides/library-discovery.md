@@ -199,6 +199,42 @@ Ogni verifica ha una **scadenza**: se la biblioteca è occupata o non risponde,
 lo stato resta «non verificato» e si può riprovare. Nessuna attesa resta appesa,
 e una richiesta lenta non blocca le altre.
 
+## Importare un PDF dal computer
+
+Quando una biblioteca blocca le richieste automatiche ma il PDF si può scaricare
+dal browser, il file si importa come **opera nuova**: icona di importazione
+accanto al titolo Biblioteca, poi scelta del PDF. La finestra mostra pagine e
+dimensione del file, oppure dichiara che non è un PDF leggibile; il titolo è
+obbligatorio, autore, data, lingua e pagina della biblioteca sono facoltativi.
+
+Insieme al PDF si può scegliere il **manifesto IIIF** salvato dal browser. I
+dati letti dal manifesto valgono come dati della biblioteca; i campi scritti o
+cambiati a mano sono correzioni, come nella scheda. Il manifesto si può caricare
+anche dopo dalla scheda dell'opera: riempie i dati della biblioteca senza
+toccare le correzioni. Le etichette delle pagine del manifesto (per esempio
+«f. 1r») si usano solo se il manifesto conta tante pagine quante il PDF.
+
+**Estrai le pagine** disegna ogni pagina del PDF come immagine JPEG alla
+risoluzione della scansione originale. È un lavoro in coda, con avanzamento,
+pausa e annullamento; rilanciato dopo un'interruzione riparte dalla prima pagina
+mancante, e una pagina che non si riesce a disegnare viene elencata senza fermare
+le altre. La finestra di importazione lo avvia subito, se la scelta resta
+accesa; altrimenti si avvia dalla riga del PDF nella scheda.
+
+A estrazione completata l'opera ha una copia a immagini che si comporta come una
+copia scaricata: visore, miniature, riduzione e lettura automatica. La
+numerazione coincide con quella del PDF. Il PDF resta sul computer finché non
+lo si toglie.
+
+Un PDF si può importare anche in un'opera già presente che non ne ha uno sul
+computer, dalla riga del PDF della sua scheda.
+
+Limiti dichiarati: le copie importate non fanno richieste di rete, quindi una
+pagina non estratta resta mancante e la lettura automatica si ferma con un
+messaggio, senza costi. Un PDF protetto da password, malformato o oltre i
+512 MB non si importa. Le pagine di servizio che alcune biblioteche aggiungono
+all'inizio del PDF non vengono saltate.
+
 ## Archiviazione ed eliminazione
 
 | Azione | Effetto |

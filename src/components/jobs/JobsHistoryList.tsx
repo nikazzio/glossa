@@ -35,7 +35,7 @@ const OUTCOMES: { key: string; statuses: JobStatus[]; icon: typeof Activity }[] 
   { key: 'cancelled', statuses: ['cancelled'], icon: Ban },
 ];
 
-const JOB_TYPES = ['source_download', 'source_pdf_download', 'image_optimization', 'ocr_page', 'provider_search', 'vault_verification'];
+const JOB_TYPES = ['source_download', 'source_pdf_download', 'pdf_page_extraction', 'image_optimization', 'ocr_page', 'provider_search', 'vault_verification'];
 
 /**
  * Tutti i lavori con il loro esito, nella colonna di destra della Panoramica.

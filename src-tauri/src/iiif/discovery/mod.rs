@@ -392,6 +392,10 @@ pub async fn inspect_manifest(
     provider_key: String,
     manifest_url: String,
 ) -> Result<ManifestFacts, String> {
+    // Una copia importata dal computer non ha una biblioteca da interrogare.
+    if crate::pdfpages::is_import_url(&manifest_url) {
+        return Ok(ManifestFacts::default());
+    }
     let profile = crate::db::open_connection(&crate::storage_config::db_path(&app)?)
         .map(|conn| crate::iiif::settings::effective_profile(&conn, &provider_key, None))
         .unwrap_or(super::network::CAUTIOUS);
@@ -541,6 +545,21 @@ pub async fn read_iiif_manifest_text(
 /// usa la schermata delle impostazioni.
 pub const EUROPEANA_KEY_ID: &str = "europeana";
 
+/// I dati dell'opera letti da un manifesto già in memoria (salvato dal browser
+/// e scelto dal computer), senza nessuna richiesta di rete. L'indirizzo del
+/// manifesto è quello che il manifesto dichiara di sé.
+pub(crate) fn preview_from_manifest_bytes(bytes: &[u8]) -> Result<ManifestPreview, String> {
+    let value: serde_json::Value = serde_json::from_slice(bytes)
+        .map_err(|_| crate::iiif::search::MANIFEST_UNREADABLE.to_string())?;
+    let manifest_url = value
+        .get("id")
+        .or_else(|| value.get("@id"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    Ok(manifest::manifest_preview(manifest_url, value))
+}
+
 #[tauri::command]
 pub fn recognize_work(input: String) -> Vec<Recognition> {
     recognitions(&input)
@@ -553,6 +572,9 @@ pub async fn open_work(
     provider_key: String,
     input: String,
 ) -> Result<ManifestPreview, String> {
+    if crate::pdfpages::is_import_url(&input) {
+        return Err(crate::pdfpages::PAGE_NOT_LOCAL.to_string());
+    }
     let provider = find_provider(&provider_key).ok_or_else(|| "Unknown collection.".to_string())?;
     let profile = crate::db::open_connection(&crate::storage_config::db_path(&app)?)
         .map(|conn| crate::iiif::settings::effective_profile(&conn, &provider_key, None))

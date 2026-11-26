@@ -92,9 +92,13 @@ pub fn has_active_version_work(conn: &Connection, version_id: &str) -> Result<bo
         "SELECT EXISTS(\
              SELECT 1 FROM jobs \
              WHERE status NOT IN ('completed', 'cancelled', 'error') \
-               AND job_type IN ('source_download', 'source_pdf_download', 'image_optimization') \
-               AND CASE WHEN json_valid(config) \
-                        THEN json_extract(config, '$.versionId') END = ?1\
+               AND CASE WHEN json_valid(config) THEN \
+                     (job_type IN ('source_download', 'source_pdf_download', 'image_optimization') \
+                      AND json_extract(config, '$.versionId') = ?1) \
+                     OR (job_type = 'pdf_page_extraction' \
+                      AND ?1 IN (json_extract(config, '$.pdfVersionId'), \
+                                 json_extract(config, '$.imageVersionId'))) \
+                   ELSE 0 END\
          )",
         params![version_id],
         |row| row.get::<_, bool>(0),

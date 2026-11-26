@@ -414,6 +414,11 @@ async fn resolve(
     let Some(url) = remote else {
         return Err("Questa pagina non è disponibile in locale.".to_string());
     };
+    // Le copie importate dal computer non hanno una biblioteca dietro: una
+    // pagina che non è nel deposito è mancante, non da chiedere alla rete.
+    if crate::pdfpages::is_import_url(url) {
+        return Err(crate::pdfpages::PAGE_NOT_LOCAL.to_string());
+    }
 
     let provider_key = request.provider_key().unwrap_or_default();
     let host = request.host();

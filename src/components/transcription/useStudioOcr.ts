@@ -16,6 +16,7 @@ import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
 import type { ViewerVersionRef } from '../../services/libraryService';
 import type { ModelProvider, Workspace } from '../../types';
 import type { SegmentEditor } from './useSegmentEditor';
+import { PAGE_NOT_EXTRACTED } from '../../services/importedCopies';
 
 interface StudioOcrOptions {
   editor: SegmentEditor;
@@ -140,7 +141,11 @@ export function useStudioOcr({ editor, documentId, detail, workspace, viewerRef 
       });
       toast.success(t('transcription.assist.jobStarted'));
     } catch (err: unknown) {
-      toast.error(t('transcription.assist.jobStartFailed'), errorDescription(err));
+      if (err instanceof Error && err.message === PAGE_NOT_EXTRACTED) {
+        toast.error(t('transcription.assist.pageNotExtracted'));
+      } else {
+        toast.error(t('transcription.assist.jobStartFailed'), errorDescription(err));
+      }
     } finally {
       setStarting(false);
     }

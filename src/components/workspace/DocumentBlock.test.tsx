@@ -6,6 +6,7 @@ import { enqueuePdfDownload } from '../../services/jobsService';
 import { registerDeclaredDocument } from '../../services/libraryService';
 import { freeVersionDocument } from '../../services/vaultService';
 import { versionInventory } from '../../services/inventoryService';
+import { enqueuePdfExtraction, importPdfIntoWork } from '../../services/pdfImportService';
 import type { LibrarySourceVersion } from '../../types';
 import '../../test/i18n-mock';
 
@@ -24,6 +25,14 @@ vi.mock('../../hooks/useManifestFacts', () => ({
 vi.mock('../../services/jobsService', () => ({
   enqueuePdfDownload: vi.fn().mockResolvedValue({ id: 'pdf:v-pdf', status: 'queued' }),
   isTerminal: () => true,
+  parseJobDetail: () => ({}),
+}));
+
+vi.mock('../../services/pdfImportService', () => ({
+  enqueuePdfExtraction: vi.fn().mockResolvedValue({ id: 'extract:v-pdf', status: 'queued' }),
+  importPdfIntoWork: vi.fn().mockResolvedValue('v-pdf'),
+  isImportUrl: (url: string | null) => Boolean(url?.startsWith('glossa-import:')),
+  pickPdfFile: vi.fn().mockResolvedValue('/scaricati/opera.pdf'),
 }));
 
 vi.mock('../../services/vaultService', () => ({
@@ -195,5 +204,51 @@ describe('DocumentBlock', () => {
     );
 
     expect(onShowVersion).toHaveBeenCalledWith('v-pdf');
+  });
+
+  it('PDF sul computer: il comando estrae le pagine come immagini', async () => {
+    vi.mocked(versionInventory).mockResolvedValue({
+      versionId: 'v-pdf',
+      providerKey: 'gallica',
+      sizes: [],
+      principal: null,
+      hasManifest: false,
+      document: { bytes: 4_000_000, pages: 3, sourceUrl: null, downloadedAt: null },
+    });
+
+    renderBlock({ documentVersion });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'areas.library.extractAction' }));
+
+    await waitFor(() => expect(enqueuePdfExtraction).toHaveBeenCalledWith('v-pdf'));
+  });
+
+  it('con tutte le pagine estratte il comando dice che sono estratte', async () => {
+    vi.mocked(versionInventory).mockImplementation(async (versionId: string) => ({
+      versionId,
+      providerKey: 'gallica',
+      sizes: versionId === 'v-pdf-img'
+        ? [{ sizeTag: 'max', pages: 3, bytes: 10, missing: 0, derived: false }]
+        : [],
+      principal: null,
+      hasManifest: false,
+      document: versionId === 'v-pdf'
+        ? { bytes: 4_000_000, pages: 3, sourceUrl: null, downloadedAt: null }
+        : null,
+    }));
+
+    renderBlock({ documentVersion, extractedVersionId: 'v-pdf-img' });
+
+    expect(await screen.findByRole('button', { name: 'areas.library.extractDone' })).toBeInTheDocument();
+  });
+
+  it('senza PDF sul computer il file si importa dal computer', async () => {
+    const onChanged = vi.fn();
+    renderBlock({ documentVersion, onChanged });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'areas.library.importPdfAction' }));
+
+    await waitFor(() => expect(importPdfIntoWork).toHaveBeenCalledWith('s1', '/scaricati/opera.pdf'));
+    expect(onChanged).toHaveBeenCalled();
   });
 });

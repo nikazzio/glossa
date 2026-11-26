@@ -15,7 +15,8 @@ import {
   type TranscriptionSegment,
 } from './transcriptionService';
 import type { ViewerVersionRef } from './libraryService';
-import type { CacheRequest } from './cacheService';
+import { hasLocalPage, THUMB_SIZE, type CacheRequest } from './cacheService';
+import { isImportUrl, PAGE_NOT_EXTRACTED } from './importedCopies';
 import type { Workspace } from '../types';
 import { useConfigStore } from '../stores/configStore';
 
@@ -38,7 +39,7 @@ import { useConfigStore } from '../stores/configStore';
 
 type OcrWorkspace = Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrSeparateNotes'>;
 
-export type OcrUnavailableReason = 'noDigitization' | 'noModelConfigured';
+export type OcrUnavailableReason = 'noDigitization' | 'needsExtractedPages' | 'noModelConfigured';
 
 /** Perché il comando OCR è disattivato, se lo è — il motivo va nel
  *  suggerimento del comando, non in un testo a parte. Non dipende dal
@@ -49,6 +50,8 @@ export function ocrUnavailableReason(
   provider: string,
   model: string,
 ): OcrUnavailableReason | null {
+  // Un PDF importato si legge dalle pagine estratte, non dal documento.
+  if (viewerRef?.versionKind === 'pdf') return 'needsExtractedPages';
   if (!viewerRef || viewerRef.versionKind !== 'iiif_manifest' || !viewerRef.sourceUrl) {
     return 'noDigitization';
   }
@@ -118,6 +121,11 @@ async function buildPageInput(params: BuildPageInputParams): Promise<OcrPageJobI
   const settings = resolveOcrSettings(document, workspace);
   if (!settings.provider || !settings.model) throw new Error('noModelConfigured');
   const { page, presentation2 } = await manifestPageOf(viewerRef, segment.position);
+  // Una copia importata non ha biblioteca dietro: se la pagina non è stata
+  // estratta ci si ferma qui, prima di mettere in coda e di spendere.
+  if (isImportUrl(viewerRef.sourceUrl) && !(await hasLocalPage(pageRequest(viewerRef, page, THUMB_SIZE, null)))) {
+    throw new Error(PAGE_NOT_EXTRACTED);
+  }
   const size = String(image.edge);
   const cacheRequest = pageRequest(viewerRef, page, size, pageSourceUrl(page.imageService, size, presentation2));
   const localRequests = image.mode === 'local' ? await localRequestsFor(viewerRef, page) : [];

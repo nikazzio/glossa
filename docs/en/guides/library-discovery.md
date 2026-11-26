@@ -174,6 +174,41 @@ Every check has a **deadline**: if the library is busy or does not answer, the
 status stays “not verified” and you can try again. No wait is left hanging, and
 a slow request does not block the others.
 
+## Importing a PDF from the computer
+
+When a library blocks automatic requests but the PDF can be downloaded from the
+browser, the file is imported as a **new work**: import icon next to the Library
+title, then choose the PDF. The dialog shows the file's pages and size, or says
+it is not a readable PDF; the title is required, author, date, language and
+library page are optional.
+
+Together with the PDF you can choose the **IIIF manifest** saved from the
+browser. Data read from the manifest count as the library's data; fields written
+or changed by hand are corrections, as on the work page. The manifest can also
+be loaded later from the work page: it fills in the library's data without
+touching the corrections. Page labels from the manifest (for example «f. 1r»)
+are used only when the manifest counts as many pages as the PDF.
+
+**Extract the pages** draws every page of the PDF as a JPEG image at the
+resolution of the original scan. It is a queued job, with progress, pause and
+cancel; relaunched after an interruption it restarts from the first missing
+page, and a page that cannot be drawn is listed without stopping the others.
+The import dialog starts it right away when the option stays on; otherwise it
+starts from the PDF row on the work page.
+
+When the extraction is complete the work has an image copy that behaves like a
+downloaded one: viewer, thumbnails, reduction and automatic reading. The
+numbering matches the PDF. The PDF stays on the computer until you remove it.
+
+A PDF can also be imported into a work already in the Library that has none on
+the computer, from the PDF row of its page.
+
+Declared limits: imported copies make no network requests, so a page that was
+not extracted stays missing and automatic reading stops with a message, at no
+cost. A PDF protected by a password, malformed or larger than 512 MB is not
+imported. Service pages that some libraries add at the start of the PDF are not
+skipped.
+
 ## Archiving and deletion
 
 | Action | Effect |

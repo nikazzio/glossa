@@ -1,5 +1,5 @@
 import {
-  Ban, CheckCircle2, ChevronRight, Download, FileDown, Layers, Pause, Play, RotateCcw, ScanText, Search,
+  Ban, CheckCircle2, ChevronRight, Download, FileDown, Images, Layers, Pause, Play, RotateCcw, ScanText, Search,
   ShieldCheck, Trash2, Wand2, X, XCircle, type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -269,7 +269,9 @@ function JobDetails({ job, detail, singleColumn }: { job: Job; detail: JobDetail
         ? t('jobs.error.optimizationIncomplete', {
             count: Number(job.error.split(':')[1]) || detail.skipped || 1,
           })
-        : job.error,
+        : job.error.startsWith('extraction_incomplete:')
+          ? t('jobs.error.extractionIncomplete', { pages: job.error.split(':')[1].split(',').join(', ') })
+          : job.error,
       wide: true,
     },
     { label: t('jobs.detail.id'), value: job.id, wide: true },
@@ -360,6 +362,7 @@ const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   image_optimization: Wand2,
   vault_verification: ShieldCheck,
   source_pdf_download: FileDown,
+  pdf_page_extraction: Images,
   ocr_page: ScanText,
 };
 

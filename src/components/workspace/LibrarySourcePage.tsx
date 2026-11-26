@@ -52,6 +52,8 @@ import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor, WorkIdentity } from '../common';
 import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
+import { ImportManifestButton } from './PdfImport';
+import { isImportUrl, LOCAL_IMPORT_PROVIDER } from '../../services/importedCopies';
 import { useDebounce } from '../../hooks/useDebounce';
 import { MULTI_VALUE_SEPARATOR } from '../../types';
 import type {
@@ -124,6 +126,10 @@ export function LibrarySourcePage({
   const manifestVersion =
     readableVersions.find((version) => version.id === selectedVersionId) ?? initialManifestVersion;
   const readingDocument = manifestVersion?.versionKind === 'pdf';
+  // Un'opera nata da un PDF del computer: nessuna biblioteca da interrogare.
+  const importedWork = detail.versions.some(
+    (version) => version.isPrimary && version.versionKind === 'pdf' && isImportUrl(version.sourceUrl),
+  );
   // L'opera sul sito della biblioteca: quello che ha dichiarato lei, e in
   // mancanza quello che si ricava dall'indirizzo del manifesto per le fonti di
   // cui la forma è verificata. Trovato il libro, la ricerca generica della
@@ -264,6 +270,9 @@ export function LibrarySourcePage({
             {/* Senza l'indirizzo dell'opera resta la porta della biblioteca:
                 si cerca lì e si torna con l'indirizzo giusto. */}
             {!libraryPageUrl && <ProviderSiteLink provider={provider} tooltipSide="bottom" />}
+            {importedWork && detail.providerKey === LOCAL_IMPORT_PROVIDER && (
+              <ImportManifestButton sourceId={detail.source.id} onDone={onRefresh} />
+            )}
             {entry && (
               <SourceHeaderActions
                 entry={entry}
@@ -383,7 +392,7 @@ export function LibrarySourcePage({
                   <SourceInfoSection
                     detail={detail}
                     providerLabel={providerLabel}
-                    onResyncSource={onResyncSource}
+                    onResyncSource={importedWork ? undefined : onResyncSource}
                   />
                   <DataSection detail={detail} onCorrectField={onCorrectField} />
                 </>
@@ -660,7 +669,8 @@ function SourceInfoSection({
 }: {
   detail: LibrarySourceDetail;
   providerLabel?: string;
-  onResyncSource: () => Promise<void>;
+  /** Assente per le opere importate: non c'è una biblioteca da rileggere. */
+  onResyncSource?: () => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [resyncing, setResyncing] = useState(false);
@@ -673,7 +683,7 @@ function SourceInfoSection({
       confirmLabel: t('areas.library.resyncConfirm'),
       danger: true,
     });
-    if (!confirmed) return;
+    if (!confirmed || !onResyncSource) return;
     setResyncing(true);
     try {
       await onResyncSource();
@@ -704,14 +714,16 @@ function SourceInfoSection({
       icon={Library}
       label={t('areas.library.sourceSection')}
       actions={
-        <IconButton
-          size="sm"
-          onClick={() => void resync()}
-          disabled={resyncing}
-          title={t('areas.library.resyncAction')}
-        >
-          <RefreshCw size={13} className={resyncing ? 'animate-spin' : undefined} />
-        </IconButton>
+        onResyncSource && (
+          <IconButton
+            size="sm"
+            onClick={() => void resync()}
+            disabled={resyncing}
+            title={t('areas.library.resyncAction')}
+          >
+            <RefreshCw size={13} className={resyncing ? 'animate-spin' : undefined} />
+          </IconButton>
+        )
       }
     >
       <dl className="space-y-2.5">

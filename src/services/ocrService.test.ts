@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { startOcrForPage } from './ocrService';
+import { ocrUnavailableReason, startOcrForPage } from './ocrService';
 import { fetchViewerManifestWithRetry } from './iiifViewerService';
 import { enqueueOcrPages } from './jobsService';
 import type { ViewerPage } from './iiifViewerService';
@@ -14,6 +14,7 @@ vi.mock('./iiifViewerService', () => ({
 }));
 vi.mock('./inventoryService', () => ({ versionInventory: vi.fn(), readableLocalSize: vi.fn() }));
 vi.mock('./jobsService', () => ({ enqueueOcrPages: vi.fn() }));
+vi.mock('./cacheService', () => ({ THUMB_SIZE: 'thumb', hasLocalPage: vi.fn().mockResolvedValue(false) }));
 
 const manifestMock = vi.mocked(fetchViewerManifestWithRetry);
 const enqueueMock = vi.mocked(enqueueOcrPages);
@@ -98,6 +99,21 @@ describe('pagina inviata al modello', () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
+  it('una pagina non estratta di un PDF importato si ferma prima di mettere in coda', async () => {
+    await expect(startOcrForPage({
+      document,
+      segment: segmentAt(0),
+      workspace: { ocrDefaultPrompt: '', ocrDefaultProvider: 'openai', ocrDefaultModel: 'gpt-5.6-terra', ocrSeparateNotes: true },
+      viewerRef: {
+        sourceId: 's1', versionId: 'v1-img', versionKind: 'iiif_manifest',
+        sourceUrl: 'glossa-import:v1-img', providerKey: 'local_import',
+      },
+      pageLabel: '1',
+      image: { edge: 2000, mode: 'optimized' },
+    })).rejects.toThrow('pageNotExtracted');
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
   it('congela nel lavoro l indirizzo Ollama configurato', async () => {
     const previousUrl = useConfigStore.getState().ollamaBaseUrl;
     useConfigStore.setState({ ollamaBaseUrl: 'http://127.0.0.1:11435' });
@@ -116,5 +132,23 @@ describe('pagina inviata al modello', () => {
     } finally {
       useConfigStore.setState({ ollamaBaseUrl: previousUrl });
     }
+  });
+});
+
+describe('motivo per cui la lettura automatica è spenta', () => {
+  const ref = (versionKind: 'iiif_manifest' | 'pdf', sourceUrl: string | null) => ({
+    sourceId: 'source-1',
+    versionId: 'sver-1',
+    versionKind,
+    sourceUrl,
+    providerKey: 'local_import',
+  });
+
+  it('su un documento aperto sul solo PDF chiede le pagine estratte', () => {
+    expect(ocrUnavailableReason(ref('pdf', 'glossa-import:sver-1'), 'anthropic', 'modello')).toBe('needsExtractedPages');
+  });
+
+  it('accetta le pagine estratte da un PDF importato come una copia a immagini', () => {
+    expect(ocrUnavailableReason(ref('iiif_manifest', 'glossa-import:sver-1-img'), 'anthropic', 'modello')).toBeNull();
   });
 });
