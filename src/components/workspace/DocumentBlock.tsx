@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Eraser, ExternalLink, Eye, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Eraser, ExternalLink, Eye, FileUp, Images, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { IconButton, StatRow } from '../ui';
 import { useJobsStore } from '../../stores/jobsStore';
-import { enqueuePdfDownload, isTerminal } from '../../services/jobsService';
+import { enqueuePdfDownload, isTerminal, parseJobDetail } from '../../services/jobsService';
 import { registerDeclaredDocument } from '../../services/libraryService';
 import { openDocumentExternally } from '../../services/documentService';
 import { freeVersionDocument } from '../../services/vaultService';
 import { versionInventory, type DocumentCopy } from '../../services/inventoryService';
 import { readManifestFacts } from '../../hooks/useManifestFacts';
+import { enqueuePdfExtraction, importPdfIntoWork, isImportUrl, pickPdfFile } from '../../services/pdfImportService';
 import { errorMessage, logger } from '../../utils/logger';
 import { confirm } from '../../stores/confirmStore';
 import { humanSize } from '../../utils';
@@ -17,6 +18,15 @@ import type { LibrarySourceVersion } from '../../types';
 
 /** Esito della verifica presso la biblioteca. */
 type Availability = 'unverified' | 'checking' | 'available' | 'unavailable';
+
+/** A che punto è l'estrazione delle pagine del PDF. */
+type Extraction = 'todo' | 'running' | 'done' | 'incomplete';
+
+/** Le pagine non estratte, dall'errore del lavoro (`extraction_incomplete:3,7`). */
+function failedPages(error: string | null | undefined): string | null {
+  const match = /extraction_incomplete:([\d,]+)/.exec(error ?? '');
+  return match ? match[1].split(',').join(', ') : null;
+}
 
 /**
  * Il PDF dell'opera: disponibilità, scaricamento, stato locale, comandi.
@@ -33,6 +43,7 @@ export function DocumentBlock({
   sourceId,
   imagesVersion,
   documentVersion,
+  extractedVersionId = null,
   shownVersionId,
   onShowVersion,
   onChanged,
@@ -43,6 +54,8 @@ export function DocumentBlock({
   imagesVersion: LibrarySourceVersion | null;
   /** La copia PDF registrata, quando la biblioteca l'ha dichiarata. */
   documentVersion: LibrarySourceVersion | null;
+  /** La copia a immagini nata dall'estrazione delle pagine del PDF, se c'è. */
+  extractedVersionId?: string | null;
   /** La copia che il visore sta mostrando. */
   shownVersionId?: string | null;
   /** Cambia la copia mostrata dal visore: immagini o PDF. */
@@ -118,6 +131,78 @@ export function DocumentBlock({
     void verify(false);
   }, [documentVersionId, verify]);
 
+  // Quante pagine estratte ci sono sul computer: con tutte le pagine del PDF
+  // l'estrazione è fatta, anche senza il lavoro in elenco.
+  const [extractedPages, setExtractedPages] = useState(0);
+  useEffect(() => {
+    if (!extractedVersionId) {
+      setExtractedPages(0);
+      return;
+    }
+    let cancelled = false;
+    void versionInventory(extractedVersionId)
+      .then((inventory) => {
+        const pages = inventory?.sizes.reduce((most, size) => Math.max(most, size.pages), 0) ?? 0;
+        if (!cancelled) setExtractedPages(pages);
+      })
+      .catch(() => {
+        if (!cancelled) setExtractedPages(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [extractedVersionId, reloadTick, reloadToken]);
+
+  const extractJob = documentVersionId ? jobs.find((entry) => entry.id === `extract:${documentVersionId}`) : null;
+  const extraction: Extraction = extractJob && !isTerminal(extractJob)
+    ? 'running'
+    : local?.pages && extractedPages >= local.pages
+      ? 'done'
+      : extractJob?.status === 'error' || extractedPages > 0
+        ? 'incomplete'
+        : 'todo';
+  const extractionFinished = extractJob && isTerminal(extractJob) ? extractJob.id + extractJob.status : null;
+  useEffect(() => {
+    if (!extractionFinished) return;
+    setReloadTick((tick) => tick + 1);
+    onChanged();
+  }, [extractionFinished, onChanged]);
+  const missingPages = failedPages(extractJob?.error);
+
+  const extract = async () => {
+    if (!documentVersion) return;
+    setBusy(true);
+    try {
+      applyChange(await enqueuePdfExtraction(documentVersion.id));
+      onChanged();
+    } catch (error: unknown) {
+      logger.warn('library.document.extractFailed', { reason: errorMessage(error) });
+      toast.error(t('areas.library.extractFailed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const importLocal = async () => {
+    const path = await pickPdfFile(t('areas.library.importPdfPick'));
+    if (!path) return;
+    setBusy(true);
+    try {
+      await importPdfIntoWork(sourceId, path);
+      toast.success(t('areas.library.importPdfDone'));
+      setReloadTick((tick) => tick + 1);
+      onChanged();
+    } catch (error: unknown) {
+      const reason = errorMessage(error);
+      logger.warn('library.document.importFailed', { reason });
+      toast.error(t(reason.includes('pdf_invalid') || reason.includes('pdf_pages_unreadable')
+        ? 'areas.library.importPdfInvalid'
+        : 'areas.library.importPdfFailed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const job = documentVersionId ? jobs.find((entry) => entry.id === `pdf:${documentVersionId}`) : null;
   const downloading = Boolean(job && !isTerminal(job));
   // Uno scaricamento finito ha cambiato il disco: senza rileggerlo la riga
@@ -191,7 +276,12 @@ export function DocumentBlock({
   // Uno stato solo, con le parole che descrivono la situazione vera.
   const status = documentVersion
     ? local
-      ? t('areas.library.documentDownloaded')
+      ? extraction === 'running'
+        ? t('areas.library.extractProgress', {
+          done: parseJobDetail(extractJob?.detail ?? null).units?.done ?? 0,
+          total: local.pages ?? 0,
+        })
+        : t(isImportUrl(documentVersion.sourceUrl) ? 'areas.library.documentImported' : 'areas.library.documentDownloaded')
       : downloading
         ? t('areas.library.documentDownloading')
         : t('areas.library.documentNotDownloaded')
@@ -235,6 +325,23 @@ export function DocumentBlock({
                   <ExternalLink size={13} />
                 </IconButton>
               )}
+              {local && (
+                <IconButton
+                  size="sm"
+                  tone={extraction === 'running' ? 'running' : extraction === 'done' ? 'success' : extraction === 'incomplete' ? 'warning' : 'default'}
+                  disabled={busy || extraction === 'running'}
+                  onClick={() => void extract()}
+                  title={extraction === 'running'
+                    ? t('areas.library.extractRunning')
+                    : extraction === 'done'
+                      ? t('areas.library.extractDone')
+                      : missingPages
+                        ? t('areas.library.extractIncomplete', { pages: missingPages })
+                        : t('areas.library.extractAction')}
+                >
+                  {extraction === 'running' ? <Loader2 size={13} className="animate-spin" /> : <Images size={13} />}
+                </IconButton>
+              )}
               {local ? (
                 <IconButton
                   size="sm"
@@ -246,6 +353,16 @@ export function DocumentBlock({
                   <Eraser size={13} />
                 </IconButton>
               ) : (
+                <>
+                <IconButton
+                  size="sm"
+                  disabled={busy || downloading}
+                  onClick={() => void importLocal()}
+                  title={t('areas.library.importPdfAction')}
+                >
+                  <FileUp size={13} />
+                </IconButton>
+                {!isImportUrl(documentVersion.sourceUrl) && (
                 <IconButton
                   size="sm"
                   disabled={busy || downloading || !documentVersion.sourceUrl}
@@ -258,9 +375,20 @@ export function DocumentBlock({
                     <Download size={13} />
                   )}
                 </IconButton>
+                )}
+                </>
               )}
             </>
           ) : (
+            <>
+            <IconButton
+              size="sm"
+              disabled={busy}
+              onClick={() => void importLocal()}
+              title={t('areas.library.importPdfAction')}
+            >
+              <FileUp size={13} />
+            </IconButton>
             <IconButton
               size="sm"
               disabled={availability === 'checking' || !imagesVersion?.sourceUrl}
@@ -273,6 +401,7 @@ export function DocumentBlock({
                 <RefreshCw size={13} />
               )}
             </IconButton>
+            </>
           )}
         </span>
       </div>

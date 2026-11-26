@@ -14,6 +14,7 @@ mod languages;
 mod llm;
 mod ocr;
 mod optimize;
+mod pdfpages;
 mod provenance;
 mod storage_config;
 mod vault;
@@ -230,6 +231,11 @@ pub fn run() {
             download::inventory::version_inventory,
             download::inventory::library_inventory,
             optimize::commands::enqueue_optimization,
+            pdfpages::commands::enqueue_pdf_extraction,
+            pdfpages::import::read_manifest_file,
+            pdfpages::import::inspect_pdf_file,
+            pdfpages::import::import_pdf_document,
+            pdfpages::import::import_source_manifest,
             documents::import_document,
             documents::export_markdown_docx,
             vector::vec_ping,

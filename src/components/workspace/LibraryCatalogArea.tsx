@@ -1,6 +1,6 @@
 import { useEffect, useState, type DragEvent } from 'react';
 import { motion } from 'motion/react';
-import { AlertCircle, BookOpenText, RefreshCw } from 'lucide-react';
+import { AlertCircle, BookOpenText, FileUp, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from '../layout/motion';
@@ -21,6 +21,7 @@ import { LibraryCatalogTable } from './LibraryCatalogTable';
 import { groupCatalog } from '../../utils/libraryGrouping';
 import { romanNumeral } from '../../utils/workYear';
 import { LibrarySelectionBar } from './LibrarySelectionBar';
+import { ImportPdfDialog } from './PdfImport';
 import { useCatalogSelection } from './useCatalogSelection';
 import { enqueueEntryDownload } from '../../services/sourceDownload';
 import { CreateTranscriptionDialog } from '../transcription/CreateTranscriptionDialog';
@@ -179,6 +180,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     navigate(libraryLocation({ itemId: sourceId, workspaceFilter }));
   };
   const openCatalogue = () => navigate(libraryLocation({ workspaceFilter }));
+  const [importOpen, setImportOpen] = useState(false);
 
   /** Si torna al catalogo **dopo** che l'opera è sparita davvero: navigare
    *  prima farebbe intravedere l'opera ancora in elenco, come se la rimozione
@@ -375,8 +377,22 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           <main className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${AREA_PAPER_CLASSNAME.library}`}>
             <div className="px-5 pt-5 md:px-6">
               <AreaHeading area="library" title={t('areas.library.title')}>
-                {catalog.length > 0 && <CatalogViewSwitch view={view} onChange={setView} />}
+                <span className="flex items-center gap-2">
+                  <IconButton size="sm" onClick={() => setImportOpen(true)} title={t('areas.library.importPdfAction')}>
+                    <FileUp size={14} />
+                  </IconButton>
+                  {catalog.length > 0 && <CatalogViewSwitch view={view} onChange={setView} />}
+                </span>
               </AreaHeading>
+              <ImportPdfDialog
+                open={importOpen}
+                onOpenChange={setImportOpen}
+                workspaceId={workspaceFilter ?? null}
+                onImported={(sourceId) => {
+                  void loadCatalog();
+                  openSource(sourceId);
+                }}
+              />
             </div>
             {catalog.length > 0 && (
               <LibraryQuickFilters filters={filters} onChange={changeFilters} counts={counts}

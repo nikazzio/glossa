@@ -33,6 +33,7 @@ import { VersionTechnicalData } from './VersionTechnicalData';
 import { OpenPageSection, type ShownPage } from './OpenPageSection';
 import type { PageStatus } from '../viewer/PageViewer';
 import { DocumentBlock } from './DocumentBlock';
+import { isImportUrl } from '../../services/importedCopies';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -119,6 +120,30 @@ export function CopiesSection({
   const imageVersions = detail.versions.filter((version) => version.versionKind !== 'pdf');
   const documentVersion = detail.versions.find((version) => version.versionKind === 'pdf') ?? null;
 
+  const extractedVersionId = documentVersion
+    ? detail.versions.find((version) => version.id === `${documentVersion.id}-img`)?.id ?? null
+    : null;
+
+  // Un'opera importata dal computer, prima dell'estrazione, ha solo il PDF:
+  // la sua riga sta da sola, senza una copia a immagini che la contenga.
+  if (imageVersions.length === 0 && documentVersion) {
+    return (
+      <section className="space-y-3">
+        <SectionLabel icon={HardDrive} label={t('areas.library.bookSection')} />
+        <DocumentBlock
+          sourceId={detail.source.id}
+          imagesVersion={null}
+          documentVersion={documentVersion}
+          extractedVersionId={extractedVersionId}
+          shownVersionId={shownVersionId}
+          onShowVersion={onShowVersion}
+          onChanged={onRefresh}
+          reloadToken={reloadToken}
+        />
+      </section>
+    );
+  }
+
   return (
     // Niente intestazione di sezione qui: la tab la dà già ("Copie digitali").
     // Niente riquadro a sfondo: la tab stessa è già il contenitore, un'altra
@@ -144,6 +169,7 @@ export function CopiesSection({
             version={version}
             sourceId={detail.source.id}
             documentVersion={documentVersion}
+            extractedVersionId={extractedVersionId}
             shownVersionId={shownVersionId}
             onShowVersion={onShowVersion}
             shownPage={version.id === openVersionId ? shownPage : null}
@@ -178,6 +204,7 @@ function CopyDetails({
   version,
   sourceId,
   documentVersion,
+  extractedVersionId,
   shownVersionId,
   onShowVersion,
   entry,
@@ -193,6 +220,8 @@ function CopyDetails({
   sourceId: string;
   /** La copia PDF della stessa opera, quando la biblioteca l'ha dichiarata. */
   documentVersion: LibrarySourceVersion | null;
+  /** La copia a immagini estratta dal PDF, se c'è. */
+  extractedVersionId: string | null;
   shownVersionId?: string | null;
   onShowVersion?: (versionId: string) => void;
   /** La pagina aperta nel visore, quando è di questa copia. */
@@ -471,7 +500,9 @@ function CopyDetails({
             documento unico ha la sua sezione. Per un file di altro tipo non
             c'è niente da chiedere alla biblioteca, e offrirlo prometterebbe un
             lavoro che finisce in errore. */}
-        {version.versionKind === 'iiif_manifest' ? (
+        {isImportUrl(version.sourceUrl) ? (
+          <p className="text-xs text-editorial-muted">{t('areas.library.extractedPagesCopy')}</p>
+        ) : version.versionKind === 'iiif_manifest' ? (
           <DownloadRow
             version={version}
             existingSizes={sizes}
@@ -535,6 +566,7 @@ function CopyDetails({
           sourceId={sourceId}
           imagesVersion={version}
           documentVersion={documentVersion}
+          extractedVersionId={extractedVersionId}
           shownVersionId={shownVersionId}
           onShowVersion={onShowVersion}
           onChanged={reloadAll}

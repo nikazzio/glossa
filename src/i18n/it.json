@@ -1314,7 +1314,9 @@
       "modelFromWorkspace": "dal workspace",
       "modelFromDocument": "solo questo documento",
       "refineNeedsKey": "manca la chiave del servizio",
-      "image": "Immagine inviata"
+      "image": "Immagine inviata",
+      "needsExtractedPages": "Per la lettura automatica servono le pagine estratte dal PDF: estraile dalla scheda dell'opera in Biblioteca.",
+      "pageNotExtracted": "Questa pagina non è sul computer: estrai le pagine del PDF dalla scheda dell'opera."
     },
     "log": {
       "title": "Log trascrizione",
@@ -1901,7 +1903,42 @@
         "pages": "Pagine",
         "state": "Stato"
       },
-      "viewTable": "Tabella"
+      "viewTable": "Tabella",
+      "importPdfAction": "Importa un PDF dal computer",
+      "importPdfPick": "Scegli il PDF",
+      "importPdfDone": "PDF importato",
+      "importPdfInvalid": "Il file non è un PDF leggibile.",
+      "importPdfFailed": "Importazione non riuscita",
+      "importPdfTitle": "Importa un PDF",
+      "importPdfConfirm": "Importa",
+      "importPdfField": "PDF",
+      "importNoFile": "nessun file",
+      "importPdfFacts_one": "{{count}} pagina · {{size}}",
+      "importPdfFacts_other": "{{count}} pagine · {{size}}",
+      "importManifestField": "Manifesto",
+      "importManifestHint": "Il manifesto IIIF della biblioteca salvato dal browser: riempie i campi da solo. Facoltativo.",
+      "importManifestNone": "nessuno (facoltativo)",
+      "importManifestPick": "Scegli il manifesto",
+      "importManifestClear": "Togli il manifesto",
+      "importManifestUnreadable": "Il manifesto non si riesce a leggere.",
+      "importManifestDone": "Manifesto caricato",
+      "importManifestAction": "Carica il manifesto",
+      "importFromManifest": "dal manifesto",
+      "importTitleField": "Titolo",
+      "importCreatorField": "Autore",
+      "importDateField": "Data",
+      "importLanguageField": "Lingua",
+      "importPageUrlField": "Pagina della biblioteca",
+      "importExtractNow": "Estrai subito le pagine",
+      "importExtractNowHint": "Dopo l'importazione disegna ogni pagina del PDF come immagine, in sottofondo nei Lavori. Servono le immagini per la lettura automatica.",
+      "extractAction": "Estrai le pagine",
+      "extractRunning": "Estrazione delle pagine in corso",
+      "extractDone": "Pagine estratte",
+      "extractIncomplete": "Pagine non estratte: {{pages}}. Riprova",
+      "extractFailed": "Estrazione non avviata",
+      "extractProgress": "estrazione {{done}} di {{total}}",
+      "documentImported": "importato dal computer",
+      "extractedPagesCopy": "Pagine estratte dal PDF importato: stanno solo sul computer."
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -3173,6 +3210,16 @@
             ]
           },
           {
+            "title": "Importare un PDF dal computer",
+            "paragraphs": [
+              "Quando una biblioteca blocca le richieste di Glossa ma ti lascia scaricare il PDF dal browser, puoi portarlo in Biblioteca come opera nuova. Premi l'icona di importazione accanto al titolo Biblioteca, scegli il PDF e scrivi almeno il titolo: la finestra mostra subito quante pagine ha il file e quanto pesa, oppure avvisa se non è un PDF leggibile.",
+              "Se hai salvato dal browser anche il manifesto IIIF dell'opera (il file .json che la biblioteca pubblica per ogni libro), sceglilo nella stessa finestra: titolo, autore, data e gli altri dati si compilano da soli e valgono come dati della biblioteca. I campi venuti dal manifesto hanno un piccolo segno; se ne cambi uno, il tuo valore diventa una correzione, come nella scheda. Il manifesto si può caricare anche dopo, dalla scheda dell'opera: riempie i dati della biblioteca e lascia le tue correzioni.",
+              "Con «Estrai subito le pagine» acceso, Glossa disegna ogni pagina del PDF come immagine alla risoluzione dell'originale, in sottofondo: il lavoro compare nei Lavori con avanzamento e pausa, e se chiudi l'app riparte dalla prima pagina mancante. Puoi anche avviarlo più tardi dall'icona «Estrai le pagine» nella riga del PDF. Finché l'estrazione non è finita il visore mostra il PDF; dopo puoi passare alle immagini, con la stessa numerazione.",
+              "Le pagine estratte funzionano come quelle scaricate: miniature, riduzione e lettura automatica. La lettura automatica ha bisogno delle immagini: su una pagina non ancora estratta si ferma e te lo dice, senza costi. Le opere importate non chiedono mai niente alla rete. Il PDF resta sul computer finché non lo togli tu.",
+              "Puoi importare un PDF anche in un'opera già in Biblioteca che non ne ha uno sul computer: usa l'icona di importazione nella riga del PDF della sua scheda. Le pagine di servizio che alcune biblioteche aggiungono all'inizio del PDF restano come pagine normali."
+            ]
+          },
+          {
             "title": "Archiviare, liberare spazio o eliminare",
             "paragraphs": [
               "Archivia nasconde l’opera dall’elenco attivo e conserva i file. La successiva proposta di liberare spazio è facoltativa.",
@@ -3850,7 +3897,8 @@
       "vault_verification": "Verifica del deposito",
       "image_optimization": "Ottimizzazione delle immagini",
       "source_pdf_download": "Scaricamento documento",
-      "ocr_page": "Lettura OCR della pagina"
+      "ocr_page": "Lettura OCR della pagina",
+      "pdf_page_extraction": "Estrazione delle pagine dal PDF"
     },
     "phase": {
       "starting": "avvio",
@@ -3859,7 +3907,8 @@
       "checking_files": "controllo dei file",
       "looking_for_orphans": "ricerca dei file orfani",
       "optimizing": "riduzione delle immagini",
-      "reading_document": "lettura del documento"
+      "reading_document": "lettura del documento",
+      "extracting": "disegno delle pagine"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
@@ -3877,11 +3926,13 @@
       "debug_counter": "prova",
       "debug_restart_only": "prova",
       "image_optimization": "ottimizzazione",
-      "source_pdf_download": "documento"
+      "source_pdf_download": "documento",
+      "pdf_page_extraction": "pagine dal PDF"
     },
     "error": {
       "optimizationIncomplete_one": "Non è stato possibile ottimizzare una pagina.",
-      "optimizationIncomplete_other": "Non è stato possibile ottimizzare {{count}} pagine."
+      "optimizationIncomplete_other": "Non è stato possibile ottimizzare {{count}} pagine.",
+      "extractionIncomplete": "Pagine non estratte: {{pages}}."
     },
     "detail": {
       "type": "tipo",

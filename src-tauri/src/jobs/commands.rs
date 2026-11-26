@@ -227,6 +227,13 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         Arc::new(crate::optimize::ImageOptimizationJob),
     );
 
+    // Le pagine di un PDF importato disegnate come immagini: processore, nessuna
+    // rete.
+    engine.register(
+        crate::pdfpages::JOB_TYPE,
+        Arc::new(crate::pdfpages::PdfPageExtractionJob),
+    );
+
     // La verifica del deposito: il primo lavoro che pesa sul processore e non
     // sulla rete.
     engine.register(

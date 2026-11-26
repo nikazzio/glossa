@@ -139,6 +139,20 @@ fn scaled_to_edge(width: u32, height: u32, edge: u32) -> (u32, u32) {
     }
 }
 
+/// Codifica in JPEG pixel RGB già in memoria, tre byte per pixel riga per riga.
+pub fn encode_rgb_jpeg(
+    width: u32,
+    height: u32,
+    rgb: &[u8],
+    quality: u8,
+) -> Result<Vec<u8>, ImageError> {
+    let mut encoded = Vec::new();
+    JpegEncoder::new_with_quality(&mut encoded, quality)
+        .write_image(rgb, width, height, ExtendedColorType::Rgb8)
+        .map_err(|error| ImageError::Encode(error.to_string()))?;
+    Ok(encoded)
+}
+
 fn encode_jpeg_at(image: &DynamicImage, quality: u8) -> Result<Vec<u8>, ImageError> {
     // Il JPEG non ha canale alpha: una PNG con trasparenza va portata a tre
     // canali prima, altrimenti la codifica rifiuta i byte che le passiamo.

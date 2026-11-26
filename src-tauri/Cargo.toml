@@ -57,6 +57,11 @@ pdf-extract = "0.12"
 # del parallelismo di `rayon`, che tirava dentro una catena di dipendenze in più
 # (una con un avviso di sicurezza aperto) per niente.
 lopdf = { version = "0.47", default-features = false }
+# Disegna le pagine di un PDF importato come immagini. Puro Rust, con i propri
+# decodificatori JPEG2000 e JBIG2 (le compressioni delle scansioni): nessuna
+# libreria di sistema da distribuire. Provato su un PDF di Internet Archive a
+# due strati con maschera, dove copiare le immagini incorporate non basta.
+hayro = "0.9"
 aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"

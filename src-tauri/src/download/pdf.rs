@@ -87,6 +87,10 @@ pub struct DocumentRecord {
     pub pages: Option<u32>,
     pub checksum: String,
     pub downloaded_at: i64,
+    /// `local_file` per un PDF importato dal computer: nessun indirizzo da cui
+    /// riscaricarlo. Assente per i documenti scaricati dalla biblioteca.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub imported_from: Option<String>,
 }
 
 /// Mette in coda lo scaricamento del documento di una digitalizzazione.
@@ -98,6 +102,10 @@ pub async fn enqueue_pdf_download(
     version_id: String,
     workspace_id: Option<String>,
 ) -> Result<JobRecord, String> {
+    // Un PDF importato dal computer non ha un indirizzo da cui riscaricarlo.
+    if crate::pdfpages::is_import_url(&source_url) {
+        return Err(crate::pdfpages::PAGE_NOT_LOCAL.to_string());
+    }
     let conn = jobs.0.connection()?;
     let profile = crate::iiif::settings::effective_profile(
         &conn,
@@ -326,6 +334,7 @@ impl PdfDownloadJob {
                 pages,
                 checksum,
                 downloaded_at: now_secs(),
+                imported_from: None,
             },
         )?;
 
@@ -503,7 +512,7 @@ pub fn record_at(meta_path: &Path) -> Option<DocumentRecord> {
     serde_json::from_slice(&bytes).ok()
 }
 
-fn write_record(meta_path: &Path, record: &DocumentRecord) -> Result<(), JobError> {
+pub(crate) fn write_record(meta_path: &Path, record: &DocumentRecord) -> Result<(), JobError> {
     let body = serde_json::to_vec_pretty(record)
         .map_err(|error| JobError::new(ErrorKind::Internal, error.to_string()))?;
     std::fs::write(meta_path, body)
@@ -588,6 +597,7 @@ mod tests {
             pages: Some(12),
             checksum: "abcdef0123456789".to_string(),
             downloaded_at: 1_700_000_000,
+            imported_from: None,
         };
         write_record(&path, &record).expect("scrittura della scheda");
         let read = record_at(&path).expect("la scheda si rilegge");

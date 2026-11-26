@@ -1314,7 +1314,9 @@
       "modelFromWorkspace": "from the workspace",
       "modelFromDocument": "this document only",
       "refineNeedsKey": "the service key is missing",
-      "image": "Image sent"
+      "image": "Image sent",
+      "needsExtractedPages": "Automatic reading needs the pages extracted from the PDF: extract them from the work page in the Library.",
+      "pageNotExtracted": "This page is not on the computer: extract the PDF pages from the work page."
     },
     "log": {
       "title": "Transcription log",
@@ -1901,7 +1903,42 @@
         "pages": "Pages",
         "state": "State"
       },
-      "viewTable": "Table"
+      "viewTable": "Table",
+      "importPdfAction": "Import a PDF from the computer",
+      "importPdfPick": "Choose the PDF",
+      "importPdfDone": "PDF imported",
+      "importPdfInvalid": "The file is not a readable PDF.",
+      "importPdfFailed": "Import failed",
+      "importPdfTitle": "Import a PDF",
+      "importPdfConfirm": "Import",
+      "importPdfField": "PDF",
+      "importNoFile": "no file",
+      "importPdfFacts_one": "{{count}} page · {{size}}",
+      "importPdfFacts_other": "{{count}} pages · {{size}}",
+      "importManifestField": "Manifest",
+      "importManifestHint": "The library's IIIF manifest saved from the browser: it fills in the fields. Optional.",
+      "importManifestNone": "none (optional)",
+      "importManifestPick": "Choose the manifest",
+      "importManifestClear": "Remove the manifest",
+      "importManifestUnreadable": "The manifest cannot be read.",
+      "importManifestDone": "Manifest loaded",
+      "importManifestAction": "Load the manifest",
+      "importFromManifest": "from the manifest",
+      "importTitleField": "Title",
+      "importCreatorField": "Author",
+      "importDateField": "Date",
+      "importLanguageField": "Language",
+      "importPageUrlField": "Library page",
+      "importExtractNow": "Extract the pages now",
+      "importExtractNowHint": "After the import, draws every PDF page as an image, in the background in Jobs. Automatic reading needs the images.",
+      "extractAction": "Extract the pages",
+      "extractRunning": "Extracting the pages",
+      "extractDone": "Pages extracted",
+      "extractIncomplete": "Pages not extracted: {{pages}}. Try again",
+      "extractFailed": "Extraction not started",
+      "extractProgress": "extracting {{done}} of {{total}}",
+      "documentImported": "imported from the computer",
+      "extractedPagesCopy": "Pages extracted from the imported PDF: they are only on the computer."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -3173,6 +3210,16 @@
             ]
           },
           {
+            "title": "Importing a PDF from the computer",
+            "paragraphs": [
+              "When a library blocks Glossa's requests but lets you download the PDF from the browser, you can bring it into the Library as a new work. Press the import icon next to the Library title, choose the PDF and write at least the title: the dialog shows how many pages the file has and how large it is, or warns you if it is not a readable PDF.",
+              "If you also saved the work's IIIF manifest from the browser (the .json file the library publishes for each book), choose it in the same dialog: title, author, date and the other data fill in by themselves and count as the library's data. Fields that came from the manifest carry a small mark; if you change one, your value becomes a correction, as on the work page. You can also load the manifest later from the work page: it fills in the library's data and keeps your corrections.",
+              "With «Extract the pages now» on, Glossa draws every page of the PDF as an image at the original resolution, in the background: the job appears in Jobs with progress and pause, and if you close the app it restarts from the first missing page. You can also start it later from the «Extract the pages» icon in the PDF row. Until the extraction is over the viewer shows the PDF; then you can switch to the images, with the same numbering.",
+              "Extracted pages work like downloaded ones: thumbnails, reduction and automatic reading. Automatic reading needs the images: on a page not yet extracted it stops and tells you, with no cost. Imported works never ask the network for anything. The PDF stays on the computer until you remove it.",
+              "You can also import a PDF into a work already in the Library that has none on the computer: use the import icon in the PDF row of its page. Service pages that some libraries add at the start of the PDF stay as ordinary pages."
+            ]
+          },
+          {
             "title": "Archiving, freeing space or deleting",
             "paragraphs": [
               "Archive hides the work from the active list and keeps its files. The subsequent offer to free space is optional.",
@@ -3850,7 +3897,8 @@
       "vault_verification": "Vault check",
       "image_optimization": "Image optimisation",
       "source_pdf_download": "Document download",
-      "ocr_page": "Page OCR reading"
+      "ocr_page": "Page OCR reading",
+      "pdf_page_extraction": "Page extraction from PDF"
     },
     "phase": {
       "starting": "starting",
@@ -3859,7 +3907,8 @@
       "checking_files": "checking files",
       "looking_for_orphans": "looking for orphans",
       "optimizing": "shrinking the images",
-      "reading_document": "reading the document"
+      "reading_document": "reading the document",
+      "extracting": "drawing the pages"
     },
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",
@@ -3877,11 +3926,13 @@
       "debug_counter": "test",
       "debug_restart_only": "test",
       "image_optimization": "optimisation",
-      "source_pdf_download": "document"
+      "source_pdf_download": "document",
+      "pdf_page_extraction": "PDF pages"
     },
     "error": {
       "optimizationIncomplete_one": "One page could not be optimised.",
-      "optimizationIncomplete_other": "{{count}} pages could not be optimised."
+      "optimizationIncomplete_other": "{{count}} pages could not be optimised.",
+      "extractionIncomplete": "Pages not extracted: {{pages}}."
     },
     "detail": {
       "type": "type",

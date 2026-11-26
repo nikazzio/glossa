@@ -855,9 +855,9 @@ provenienza per il log), la stessa catena che il visore usa per
 mostrare le pagine: deposito alla misura esatta → cache di rete → deposito a
 misura più grande (ridotta al volo) → biblioteca remota. Una copia solo in
 cache (mai scaricata formalmente, solo vista) è servita da lì, allo stesso
-modo — l'OCR non chiede altro. Limite v1: `src/services/ocrService.ts`
-risolve solo copie `versionKind === 'iiif_manifest'` — un documento unico
-(PDF) resta fuori da questo primo giro.
+modo — l'OCR non chiede altro. `src/services/ocrService.ts` risolve solo
+copie `versionKind === 'iiif_manifest'`: un documento unico (PDF) si legge
+dalle sue pagine estratte (vedi «PDF importati dal computer»).
 
 **Un prompt per documento** (decisione di Niki, 22 settembre 2026).
 `transcriptionService.resolveOcrSettings(document, workspace)` è la sola
@@ -1384,7 +1384,7 @@ sparire, uno tolto dal codice si ignora.
 
 L'elenco completo divide le righe per giorno di creazione (intestazione ferma in
 cima) e filtra per esito e per tutti i tipi di job registrati
-(`JOB_TYPES` in `JobsHistoryList`: scaricamento pagine e PDF, ottimizzazione,
+(`JOB_TYPES` in `JobsHistoryList`: scaricamento pagine e PDF, estrazione delle pagine dal PDF, ottimizzazione,
 lettura OCR, ricerca, verifica del deposito). Un tipo nuovo va aggiunto lì, in
 `JOB_TYPE_ICONS` e in `jobs.type.*` dei testi.
 
@@ -1837,6 +1837,57 @@ restituisce lo stesso proxy per richieste contemporanee della stessa pagina:
 evitando che la doppia chiamata di `StrictMode` liberi risorse usate dal
 disegno ancora attivo. La rimozione precedente del `cleanup` non aveva
 risolto le pagine bianche: la causa era il decoder WASM descritto sopra.
+
+### PDF importati dal computer ed estrazione delle pagine
+
+Un'opera può nascere da un PDF sul computer invece che da un manifesto remoto
+(change OpenSpec `pdf-import`). `ImportPdfDialog` chiama
+`pdfImportService.importPdfAsNewWork`: prima i file, poi le righe, così un PDF
+non valido non lascia righe orfane.
+
+- `import_pdf_document` (`pdfpages::import`) copia il file in transito, lo valida
+  con `integrity::FileKind::Pdf`, conta le pagine con `count_pages` (rifiuta
+  protetti, malformati e oltre 512 MB), lo promuove in `document.pdf` e scrive
+  `document.json` con `importedFrom: "local_file"`. Il manifesto facoltativo si
+  valida con `download::manifest::parse` e si conserva come
+  `source-manifest.json` accanto al documento; `read_manifest_file` ne ricava i
+  dati con `iiif::discovery::preview_from_manifest_bytes` e la biblioteca con
+  `recognitions` sull'indirizzo dichiarato, senza rete.
+- Cartella: con il manifesto quella della biblioteca riconosciuta, senza
+  manifesto la chiave riservata `local_import`, che non è registrata fra le
+  biblioteche e quindi non compare nella Ricerca.
+- Righe: `sources` + copia `pdf` **primaria** con `source_url =
+  glossa-import:<versione>` e i dati della biblioteca nel blob `metadata`. È
+  l'unico caso di PDF primario: la primaria porta i dati dell'opera. I campi
+  scritti a mano vanno in `source_field_overrides`; il manifesto caricato dopo
+  (`importSourceManifest`) aggiorna i valori di base senza cancellare le
+  correzioni, a differenza di `resyncSourceFromManifest`.
+- `importPdfIntoWork` riempie la riga PDF dichiarata dalla biblioteca, se c'è,
+  o ne crea una non primaria.
+
+**Estrazione.** `enqueue_pdf_extraction` crea, se manca, la copia a immagini
+`<versione pdf>-img` (`iiif_manifest`, mai primaria, `source_url =
+glossa-import:<id>`) e mette in coda `pdf_page_extraction` (`extract:<versione
+pdf>`, `Cpu`, `Resumable`). Il gestore (`pdfpages::PdfPageExtractionJob`) apre il
+PDF con `hayro` e disegna una pagina alla volta in `spawn_blocking`, alla scala
+che porta la pagina alla larghezza dell'immagine incorporata più grande
+(ripiego 300 dpi, tetto 10 000 px): nei PDF di Internet Archive sfondo e
+inchiostro sono immagini separate, e solo il disegno le unisce. Ogni pagina
+passa da transito e promozione in `pages/max/NNNN.jpg` (JPEG 90) con la riga in
+`pages.jsonl` e la miniatura; la ripresa salta le pagine già presenti. A fine
+giro scrive un manifesto Presentation 3 generato (un canvas per pagina del PDF,
+etichette dal manifesto caricato solo a conteggi uguali, indirizzi
+`glossa-import:`) e `expected_asset_count`. Le pagine non disegnabili finiscono
+nell'errore `extraction_incomplete:<pagine>`. `has_active_version_work`
+conosce il nuovo tipo su entrambe le copie.
+
+**Nessuna rete.** Lo schema `glossa-import:` blocca la rete in un punto solo per
+i byte di pagina (`httpcache::commands::resolve` risponde `page_not_local`) e
+nei comandi che contatterebbero una biblioteca: `inspect_manifest`, `open_work`,
+`enqueue_source_download`, `enqueue_pdf_download`. Nella finestra la scheda non
+offre riallineamento né scaricamento per queste copie, e l'OCR controlla con
+`hasLocalPage` che la pagina sia sul computer prima di mettere in coda
+(`pageNotExtracted`); sul solo PDF il comando dice `needsExtractedPages`.
 
 ### Riconoscimento e ricerca per biblioteca
 

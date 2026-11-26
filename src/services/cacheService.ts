@@ -242,6 +242,16 @@ export async function imageSource(request: CacheRequest): Promise<ImageSource | 
   return source === 'vault' || source === 'cache' || source === 'network' ? source : null;
 }
 
+/** Vero se l'immagine è già sul computer (deposito o cache), senza rete. */
+export async function hasLocalPage(request: CacheRequest): Promise<boolean> {
+  try {
+    await invoke<ArrayBuffer>('local_cached_image', { request });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function keepViewerPage(request: CacheRequest): Promise<boolean> {
   if (request.kind !== 'page' || request.size === THUMB_SIZE) return false;
   return invoke<boolean>('keep_viewer_page', { request });

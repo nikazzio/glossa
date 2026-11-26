@@ -8,6 +8,7 @@ import type { Workspace } from '../../types';
 
 const UNAVAILABLE_REASON_KEYS: Record<OcrUnavailableReason, string> = {
   noDigitization: 'transcription.assist.noDigitization',
+  needsExtractedPages: 'transcription.assist.needsExtractedPages',
   noModelConfigured: 'transcription.assist.noModelConfigured',
 };
 

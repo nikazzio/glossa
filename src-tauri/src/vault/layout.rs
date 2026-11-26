@@ -31,6 +31,11 @@ pub(crate) const DOCUMENT_FILE: &str = "document.pdf";
 /// apertura della scheda.
 pub(crate) const DOCUMENT_META_FILE: &str = "document.json";
 
+/// Il manifesto della biblioteca caricato a mano insieme a un PDF importato.
+/// Sta accanto al documento: dice titolo, autore ed etichette delle pagine,
+/// ma le sue immagini non vengono mai chieste.
+pub(crate) const SOURCE_MANIFEST_FILE: &str = "source-manifest.json";
+
 /// Radice delle copie ricavate in locale (l'ottimizzazione, oggi; un domani
 /// anche i ritagli) — mai dentro `providers/`: sono un fatto di Niki, non
 /// della biblioteca, e "libera spazio" sulle pagine scaricate non deve
@@ -96,6 +101,11 @@ pub fn document_path(provider_key: &str, version_id: &str) -> Result<PathBuf, St
 /// La scheda del documento, accanto al documento stesso.
 pub fn document_meta_path(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
     Ok(version_dir(provider_key, version_id)?.join(DOCUMENT_META_FILE))
+}
+
+/// Il manifesto caricato a mano insieme al PDF importato.
+pub fn source_manifest_path(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
+    Ok(version_dir(provider_key, version_id)?.join(SOURCE_MANIFEST_FILE))
 }
 
 /// Percorso della miniatura derivata dalla pagina scaricata.
